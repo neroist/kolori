@@ -91,14 +91,14 @@ main :: proc ()
                 direction: [2]f32
 
                 switch event.key.key {
-                case sdl.K_I, sdl.K_MINUS:
-                    zoom *= zoom_speed
-                case sdl.K_O, sdl.K_EQUALS:
-                    zoom /= zoom_speed
                 case sdl.K_F11:
                     is_fullscreen := .FULLSCREEN in sdl.GetWindowFlags(window)
                     sdl.SetWindowFullscreen(window, !is_fullscreen)
                     sdl.SyncWindow(window)
+                case sdl.K_X, sdl.K_MINUS:
+                    zoom *= zoom_speed
+                case sdl.K_C, sdl.K_EQUALS:
+                    zoom /= zoom_speed
                 case sdl.K_W, sdl.K_UP:
                     direction = [2]f32{0, 1}
                 case sdl.K_A, sdl.K_LEFT:
