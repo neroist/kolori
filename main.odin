@@ -2,14 +2,13 @@
 
 package kolori
 
-import "core:c"
+import "imgui/imgui_impl_opengl3"
+import "imgui/imgui_impl_sdl3"
+import math "core:math/linalg"
 import gl "vendor:OpenGL"
 import sdl "vendor:sdl3"
-import imgui "odin-imgui"
-import "imgui/imgui_impl_sdlrenderer3"
-import "imgui/imgui_impl_sdl3"
-// import "core:fmt"
 import "core:log"
+import "imgui"
 
 // three coloring modes:
 //  1. predefined coloring functions for H, S, and L
@@ -40,17 +39,19 @@ main :: proc ()
 {
     context.logger = log.create_console_logger()
 
-    window, renderer, gl_ctx := setup_sdl()
+    window, gl_ctx := setup_sdl()
     defer {
         sdl.GL_DestroyContext(gl_ctx)
-        sdl.DestroyRenderer(renderer)
         sdl.DestroyWindow(window)
         sdl.Quit()
     }
 
-    // nvg_ctx := nvg_gl.Create({.ANTI_ALIAS, .STENCIL_STROKES, .DEBUG})
-    // nvg.CreateFont(nvg_ctx, "normal", "./fonts/CourbeSans.ttf")
-    // defer nvg_gl.Destroy(nvg_ctx)
+    io := setup_imgui(window, gl_ctx)
+    defer {
+	    imgui_impl_opengl3.Shutdown()
+        imgui_impl_sdl3.Shutdown()
+        imgui.DestroyContext()
+    }
 
     vao, program, uniforms := setup_gl(window, gl_ctx)
     defer {
@@ -58,23 +59,18 @@ main :: proc ()
         gl.DeleteProgram(program)
     }
 
-    // mu_ctx, atlas_texture := setup_mu(renderer)
-    // defer {
-    //     sdl.DestroyTexture(atlas_texture)
-    //     free(mu_ctx)
-    // }
-
     zoom: f32 = 1
+    pan_speed: f32 = 15
     zoom_speed: f32 = 1.1
     shift: [2]f32
 
     render_loop: for {
-        // gl.ClearColor(0.3, 0.3, 0.32, 1.0)
-		// gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT)
-        gl.UseProgram(program)
-
+        gl.UseProgram(program)        
+        
         event: sdl.Event
         for sdl.PollEvent(&event) {
+            imgui_impl_sdl3.ProcessEvent(&event)
+
             #partial switch event.type {
             case .QUIT:
                 break render_loop
@@ -83,7 +79,44 @@ main :: proc ()
                 sdl.GetWindowSize(window, &width, &height)
                 gl.Viewport(0, 0, width, height)
                 gl.Uniform2i(uniforms["resolution"], width, height)
+            case .KEY_DOWN:
+                if io.WantCaptureMouse {
+                    break
+                }
+
+                width, height: i32
+                sdl.GetWindowSize(window, &width, &height)
+
+                scale := [2]f32{(f32)(width), (f32)(height)}
+                direction: [2]f32
+
+                switch event.key.key {
+                case sdl.K_I, sdl.K_MINUS:
+                    zoom *= zoom_speed
+                case sdl.K_O, sdl.K_EQUALS:
+                    zoom /= zoom_speed
+                case sdl.K_F11:
+                    is_fullscreen := .FULLSCREEN in sdl.GetWindowFlags(window)
+                    sdl.SetWindowFullscreen(window, !is_fullscreen)
+                    sdl.SyncWindow(window)
+                case sdl.K_W, sdl.K_UP:
+                    direction = [2]f32{0, 1}
+                case sdl.K_A, sdl.K_LEFT:
+                    direction = [2]f32{-1, 0}
+                case sdl.K_S, sdl.K_DOWN:
+                    direction = [2]f32{0, -1}
+                case sdl.K_D, sdl.K_RIGHT:
+                    direction = [2]f32{1, 0}
+                }
+
+                shift += (pan_speed * direction / scale) * (zoom * 2)
+                gl.Uniform2f(uniforms["shift"], shift.x, shift.y)
+                gl.Uniform1f(uniforms["zoom"], zoom)
             case .MOUSE_WHEEL:
+                if io.WantCaptureMouse {
+                    break
+                }
+
                 if event.wheel.y > 0 {
                     zoom *= zoom_speed 
                 } else if event.wheel.y < 0 {
@@ -92,6 +125,10 @@ main :: proc ()
 
                 gl.Uniform1f(uniforms["zoom"], zoom)
             case .MOUSE_MOTION:
+                if io.WantCaptureMouse {
+                    break
+                }
+
                 if .LEFT in event.motion.state {
                     width, height: i32
                     sdl.GetWindowSize(window, &width, &height)
@@ -106,24 +143,36 @@ main :: proc ()
         }
 
         render_graph(vao, program)
-        // draw_ui(mu_ctx)
-        // render_ui(mu_ctx, nvg_ctx, atlas_texture)
+        imgui_impl_opengl3.NewFrame()
+        imgui_impl_sdl3.NewFrame()
+        imgui.NewFrame()
+        {
+            imgui.Begin("Demo Window")
+            imgui.Button("Hello!")
+        }
+        imgui.End()
+        
+        imgui.Render()
+        imgui_impl_opengl3.RenderDrawData(imgui.GetDrawData())
         sdl.GL_SwapWindow(window)
     }
 }
 
-setup_sdl :: proc () -> (window: ^sdl.Window, renderer: ^sdl.Renderer, gl_ctx: sdl.GLContext)
+setup_sdl :: proc () -> (window: ^sdl.Window, gl_ctx: sdl.GLContext)
 {
     if !sdl.Init({.VIDEO}) {
         log.error("[sdl.Init]", sdl.GetError())
         sdl.Quit()
     }
 
-    sdl.CreateWindowAndRenderer("Kolori", 800, 600, {.OPENGL, .RESIZABLE}, &window, &renderer)
-    if window == nil || renderer == nil {
-        log.error("[sdl.CreateWindowAndRenderer]", sdl.GetError())
+    window = sdl.CreateWindow("Kolori", 800, 600, {.OPENGL, .RESIZABLE})
+    if window == nil {
+        log.error("[sdl.CreateWindow]", sdl.GetError())
         sdl.Quit()
     }
+    sdl.SetHint(sdl.HINT_TOUCH_MOUSE_EVENTS, "true")
+    sdl.SetWindowPosition(window, sdl.WINDOWPOS_CENTERED, sdl.WINDOWPOS_CENTERED)
+    sdl.ShowWindow(window)
 
     gl_ctx = sdl.GL_CreateContext(window)
     if gl_ctx == nil {
@@ -131,7 +180,22 @@ setup_sdl :: proc () -> (window: ^sdl.Window, renderer: ^sdl.Renderer, gl_ctx: s
         sdl.Quit()
     }
 
-    return window, renderer, gl_ctx
+    return window, gl_ctx
+}
+
+setup_imgui :: proc (window: ^sdl.Window, gl_ctx: sdl.GLContext) -> (io: ^imgui.IO)
+{
+    imgui.CHECKVERSION()
+    imgui.CreateContext()
+    
+    io = imgui.GetIO()
+    io.ConfigFlags += {.NavEnableKeyboard, .DockingEnable}
+    
+    imgui_impl_sdl3.InitForOpenGL(window, gl_ctx)
+	imgui_impl_opengl3.Init("#version 330 core")
+    imgui.StyleColorsDark()
+
+    return io
 }
 
 setup_gl :: proc (window: ^sdl.Window, gl_ctx: sdl.GLContext) -> (vao, program: u32, uniforms: map[string]i32)
@@ -148,6 +212,8 @@ setup_gl :: proc (window: ^sdl.Window, gl_ctx: sdl.GLContext) -> (vao, program: 
     sdl.GL_SetAttribute(.DOUBLEBUFFER, 1)
     sdl.GL_SetAttribute(.DEPTH_SIZE, 24)
     sdl.GL_SetAttribute(.STENCIL_SIZE, 8)
+
+    sdl.GL_SetSwapInterval(1)
 
     sdl.GL_MakeCurrent(window, gl_ctx)
 
@@ -219,7 +285,6 @@ setup_gl :: proc (window: ^sdl.Window, gl_ctx: sdl.GLContext) -> (vao, program: 
 
     return vao, program, uniforms
 }
-
 
 render_graph :: proc (vao, program: u32)
 {
