@@ -406,6 +406,17 @@ vec4 color_default_hsluv(vec2 z)
 	return hsluvToRgb(hue, 100.0f, lightness, 1);
 }
 
+// From https://iquilezles.org/www/articles/palettes/palettes.htm
+vec3 palette(float t, vec3 a, vec3 b, vec3 c, vec3 d)
+{
+    return a + b*cos(2. * PI *(c*t+d) );
+}
+
+vec4 color_palette(vec2 z)
+{
+    return vec4(palette(z.y, vec3(0.50,.52,0.53), vec3(.46,.32,.35), vec3(.82,.84,.65), vec3(0.53,0.23,0.22)), 1);
+}
+
 vec2 transform_coordinates(vec4 FragCoord)
 {
     vec2 pos = FragCoord.xy;
