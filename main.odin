@@ -2,13 +2,13 @@
 
 package kolori
 
-import "imgui/imgui_impl_opengl3"
-import "imgui/imgui_impl_sdl3"
+import imgui_impl_opengl3 "odin-imgui/imgui_impl_opengl3"
+import imgui_impl_sdl3 "odin-imgui/imgui_impl_sdl3"
 import math "core:math/linalg"
 import gl "vendor:OpenGL"
 import sdl "vendor:sdl3"
 import "core:log"
-import "imgui"
+import imgui "odin-imgui"
 
 // three coloring modes:
 //  1. predefined coloring functions for H, S, and L
