@@ -1,4 +1,5 @@
 #+feature dynamic-literals
+#+feature using-stmt
 
 package kolori
 
@@ -22,7 +23,11 @@ App_Context :: struct {
     gl_ctx: sdl.GLContext,
     vao: u32,
     program: u32,
-    uniforms: map[string]i32
+    uniforms: map[string]i32,
+    io: ^imgui.IO,
+    zoom: f32,
+    shift: [2]f32,
+
 }
 
 Coloring_Method :: enum u32 {
@@ -34,35 +39,38 @@ Coloring_Method :: enum u32 {
 
 GL_MAJOR_VERSION :: 3
 GL_MINOR_VERSION :: 3
+pan_speed: f32 : 15
+zoom_speed: f32 : 1.1
 
 main :: proc ()
 {
     context.logger = log.create_console_logger()
 
-    window, gl_ctx := setup_sdl()
+    using app := new(App_Context)
+    app.zoom = 1
+
+    setup_sdl(app)
     defer {
         sdl.GL_DestroyContext(gl_ctx)
         sdl.DestroyWindow(window)
         sdl.Quit()
     }
 
-    io := setup_imgui(window, gl_ctx)
+    setup_imgui(app)
     defer {
 	    imgui_impl_opengl3.Shutdown()
         imgui_impl_sdl3.Shutdown()
         imgui.DestroyContext()
     }
 
-    vao, program, uniforms := setup_gl(window, gl_ctx)
+    setup_gl(app)
     defer {
         delete(uniforms)
         gl.DeleteProgram(program)
     }
 
-    zoom: f32 = 1
     pan_speed: f32 = 15
     zoom_speed: f32 = 1.1
-    shift: [2]f32
 
     render_loop: for {
         gl.UseProgram(program)        
@@ -72,6 +80,8 @@ main :: proc ()
             imgui_impl_sdl3.ProcessEvent(&event)
 
             #partial switch event.type {
+            // todo(touchscreens) support pinching motions for zoom in/out 
+
             case .QUIT:
                 break render_loop
             case .WINDOW_RESIZED:
@@ -142,7 +152,7 @@ main :: proc ()
             }
         }
 
-        render_graph(vao, program)
+        render_graph(app)
         imgui_impl_opengl3.NewFrame()
         imgui_impl_sdl3.NewFrame()
         imgui.NewFrame()
@@ -158,7 +168,7 @@ main :: proc ()
     }
 }
 
-setup_sdl :: proc () -> (window: ^sdl.Window, gl_ctx: sdl.GLContext)
+setup_sdl :: proc (using app: ^App_Context)
 {
     if !sdl.Init({.VIDEO}) {
         log.error("[sdl.Init]", sdl.GetError())
@@ -180,10 +190,10 @@ setup_sdl :: proc () -> (window: ^sdl.Window, gl_ctx: sdl.GLContext)
         sdl.Quit()
     }
 
-    return window, gl_ctx
+    // return window, gl_ctx
 }
 
-setup_imgui :: proc (window: ^sdl.Window, gl_ctx: sdl.GLContext) -> (io: ^imgui.IO)
+setup_imgui :: proc (using app: ^App_Context)
 {
     imgui.CHECKVERSION()
     imgui.CreateContext()
@@ -195,10 +205,10 @@ setup_imgui :: proc (window: ^sdl.Window, gl_ctx: sdl.GLContext) -> (io: ^imgui.
 	imgui_impl_opengl3.Init("#version 330 core")
     imgui.StyleColorsDark()
 
-    return io
+    // return io
 }
 
-setup_gl :: proc (window: ^sdl.Window, gl_ctx: sdl.GLContext) -> (vao, program: u32, uniforms: map[string]i32)
+setup_gl :: proc (using app: ^App_Context)
 {
     context_flags: sdl.GLContextFlag
     when ODIN_DEBUG { context_flags |= sdl.GL_CONTEXT_DEBUG_FLAG }
@@ -283,10 +293,10 @@ setup_gl :: proc (window: ^sdl.Window, gl_ctx: sdl.GLContext) -> (vao, program: 
     gl.Uniform1f(uniforms["zoom"], 1)
 	gl.Uniform2i(uniforms["resolution"], width, height)
 
-    return vao, program, uniforms
+    // return vao, program, uniforms
 }
 
-render_graph :: proc (vao, program: u32)
+render_graph :: proc (using app: ^App_Context)
 {
     gl.UseProgram(program)
 	gl.BindVertexArray(vao)
