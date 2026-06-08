@@ -117,9 +117,9 @@ main :: proc ()
                     break
                 }
 
-                if event.wheel.y > 0 {
+                if event.wheel.y < 0 {
                     zoom *= zoom_speed 
-                } else if event.wheel.y < 0 {
+                } else if event.wheel.y > 0 {
                     zoom /= zoom_speed 
                 }
 
