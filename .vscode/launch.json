@@ -9,8 +9,7 @@
             "type": "lldb",
             "preLaunchTask": "build",
             "request": "launch",
-            "program": "${workspaceRoot}/vivi",
-            "args": ["x"],
+            "program": "${workspaceRoot}/kolori",
             "cwd": "${workspaceRoot}"
         }
     ]
