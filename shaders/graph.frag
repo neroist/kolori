@@ -406,8 +406,9 @@ vec4 color_hsv(vec2 z)
 
 vec4 color_hsluv(vec2 z)
 {
-    float hue = degrees(atan(z.y,z.x));
-    float lightness = TWO_OVER_PI * atan(length(z)) * 100;
+    float hue = degrees(atan(z.y,z.x)/TAU);
+    float lightness = TWO_OVER_PI * atan(length(z)) * 50;
+    // float lightness = 2 / (1 + exp(-length(z))) * 50;
 	return hsluvToRgb(hue, 100.0f, lightness, 1);
 }
 
@@ -454,5 +455,5 @@ vec2 f(vec2 z) {
 void main()
 {
     vec2 z = transform_coordinates(gl_FragCoord);
-	FragColor = color_palette(f(z));
+	FragColor = color_hsluv(f(z));
 }

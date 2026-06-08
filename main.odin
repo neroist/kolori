@@ -25,9 +25,10 @@ App_Context :: struct {
     program: u32,
     uniforms: map[string]i32,
     io: ^imgui.IO,
+
     zoom: f32,
     shift: [2]f32,
-
+    show_ui: bool
 }
 
 Coloring_Method :: enum u32 {
@@ -47,7 +48,8 @@ main :: proc ()
     context.logger = log.create_console_logger()
 
     using app := new(App_Context)
-    app.zoom = 1
+    zoom = 1
+    show_ui = true
 
     setup_sdl(app)
     defer {
@@ -73,97 +75,24 @@ main :: proc ()
     zoom_speed: f32 = 1.1
 
     render_loop: for {
-        gl.UseProgram(program)        
-        
         event: sdl.Event
         for sdl.PollEvent(&event) {
-            imgui_impl_sdl3.ProcessEvent(&event)
-
-            #partial switch event.type {
-            // todo(touchscreens) support pinching motions for zoom in/out 
-
-            case .QUIT:
+            if event.type == .QUIT {
                 break render_loop
-            case .WINDOW_RESIZED:
-                width, height: i32
-                sdl.GetWindowSize(window, &width, &height)
-                gl.Viewport(0, 0, width, height)
-                gl.Uniform2i(uniforms["resolution"], width, height)
-            case .KEY_DOWN:
-                if io.WantCaptureMouse {
-                    break
-                }
-
-                width, height: i32
-                sdl.GetWindowSize(window, &width, &height)
-
-                scale := [2]f32{(f32)(width), (f32)(height)}
-                direction: [2]f32
-
-                switch event.key.key {
-                case sdl.K_F11:
-                    is_fullscreen := .FULLSCREEN in sdl.GetWindowFlags(window)
-                    sdl.SetWindowFullscreen(window, !is_fullscreen)
-                    sdl.SyncWindow(window)
-                case sdl.K_X, sdl.K_MINUS:
-                    zoom *= zoom_speed
-                case sdl.K_C, sdl.K_EQUALS:
-                    zoom /= zoom_speed
-                case sdl.K_W, sdl.K_UP:
-                    direction = [2]f32{0, 1}
-                case sdl.K_A, sdl.K_LEFT:
-                    direction = [2]f32{-1, 0}
-                case sdl.K_S, sdl.K_DOWN:
-                    direction = [2]f32{0, -1}
-                case sdl.K_D, sdl.K_RIGHT:
-                    direction = [2]f32{1, 0}
-                }
-
-                shift += (pan_speed * direction / scale) * (zoom * 2)
-                gl.Uniform2f(uniforms["shift"], shift.x, shift.y)
-                gl.Uniform1f(uniforms["zoom"], zoom)
-            case .MOUSE_WHEEL:
-                if io.WantCaptureMouse {
-                    break
-                }
-
-                if event.wheel.y < 0 {
-                    zoom *= zoom_speed 
-                } else if event.wheel.y > 0 {
-                    zoom /= zoom_speed 
-                }
-
-                gl.Uniform1f(uniforms["zoom"], zoom)
-            case .MOUSE_MOTION:
-                if io.WantCaptureMouse {
-                    break
-                }
-
-                if .LEFT in event.motion.state {
-                    width, height: i32
-                    sdl.GetWindowSize(window, &width, &height)
-
-                    motion := [2]f32{event.motion.xrel, event.motion.yrel}
-                    scale := [2]f32{(f32)(-width), (f32)(height)}
-                    shift += (motion / scale) * zoom
-                    
-                    gl.Uniform2f(uniforms["shift"], shift.x, shift.y)
-                }
             }
+
+            imgui_impl_sdl3.ProcessEvent(&event)
+            handle_event(app, &event)
         }
 
         render_graph(app)
-        imgui_impl_opengl3.NewFrame()
-        imgui_impl_sdl3.NewFrame()
-        imgui.NewFrame()
-        {
-            imgui.Begin("Demo Window")
-            imgui.Button("Hello!")
+
+        if show_ui {
+            draw_ui(app)
+            imgui.Render()
+            imgui_impl_opengl3.RenderDrawData(imgui.GetDrawData())
         }
-        imgui.End()
-        
-        imgui.Render()
-        imgui_impl_opengl3.RenderDrawData(imgui.GetDrawData())
+
         sdl.GL_SwapWindow(window)
     }
 }
@@ -296,6 +225,83 @@ setup_gl :: proc (using app: ^App_Context)
     // return vao, program, uniforms
 }
 
+handle_event :: proc (using app: ^App_Context, event: ^sdl.Event)
+{
+    gl.UseProgram(program)
+
+    #partial switch event.type {
+    // todo(touchscreens) support pinching motions for zoom in/out 
+
+    case .WINDOW_RESIZED:
+        width, height: i32
+        sdl.GetWindowSize(window, &width, &height)
+        gl.Viewport(0, 0, width, height)
+        gl.Uniform2i(uniforms["resolution"], width, height)
+    case .KEY_DOWN:
+        if io.WantCaptureMouse {
+            break
+        }
+
+        width, height: i32
+        sdl.GetWindowSize(window, &width, &height)
+
+        scale := [2]f32{(f32)(width), (f32)(height)}
+        direction: [2]f32
+
+        switch event.key.key {
+        case sdl.K_F11:
+            is_fullscreen := .FULLSCREEN in sdl.GetWindowFlags(window)
+            sdl.SetWindowFullscreen(window, !is_fullscreen)
+            sdl.SyncWindow(window)
+        case sdl.K_H:
+            show_ui = !show_ui
+        case sdl.K_X, sdl.K_MINUS:
+            zoom *= zoom_speed
+        case sdl.K_C, sdl.K_EQUALS:
+            zoom /= zoom_speed
+        case sdl.K_W, sdl.K_UP:
+            direction = [2]f32{0, 1}
+        case sdl.K_A, sdl.K_LEFT:
+            direction = [2]f32{-1, 0}
+        case sdl.K_S, sdl.K_DOWN:
+            direction = [2]f32{0, -1}
+        case sdl.K_D, sdl.K_RIGHT:
+            direction = [2]f32{1, 0}
+        }
+
+        shift += (pan_speed * direction / scale) * (zoom * 2)
+        gl.Uniform2f(uniforms["shift"], shift.x, shift.y)
+        gl.Uniform1f(uniforms["zoom"], zoom)
+    case .MOUSE_WHEEL:
+        if io.WantCaptureMouse {
+            break
+        }
+
+        if event.wheel.y < 0 {
+            zoom *= zoom_speed 
+        } else if event.wheel.y > 0 {
+            zoom /= zoom_speed 
+        }
+
+        gl.Uniform1f(uniforms["zoom"], zoom)
+    case .MOUSE_MOTION:
+        if io.WantCaptureMouse {
+            break
+        }
+
+        if .LEFT in event.motion.state {
+            width, height: i32
+            sdl.GetWindowSize(window, &width, &height)
+
+            motion := [2]f32{event.motion.xrel, event.motion.yrel}
+            scale := [2]f32{(f32)(-width), (f32)(height)}
+            shift += (motion / scale) * zoom
+            
+            gl.Uniform2f(uniforms["shift"], shift.x, shift.y)
+        }
+    }
+}
+
 render_graph :: proc (using app: ^App_Context)
 {
     gl.UseProgram(program)
@@ -310,4 +316,19 @@ render_graph :: proc (using app: ^App_Context)
 		0, // Begin drawing at index 0.
 		4, // Use 4 indices.
 	) 
+}
+
+draw_ui :: proc (using app: ^App_Context)
+{
+    imgui_impl_opengl3.NewFrame()
+    imgui_impl_sdl3.NewFrame()
+    imgui.NewFrame()
+
+    // imgui.ShowDemoWindow()
+    // imgui.ShowUserGuide()
+
+    if imgui.Begin("Demo Window") {
+        imgui.Button("Hello!")
+    }
+    imgui.End()
 }
