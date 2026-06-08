@@ -11,7 +11,7 @@ out vec4 FragColor;
 uniform float zoom;
 uniform ivec2 resolution;
 uniform vec2 shift;
-uniform uint coloring_method;
+uniform int coloring_method;
 uniform sampler2D texture;
 
 #define USE_DEFAULT = 0
@@ -45,7 +45,7 @@ float hue2rgb(float f1, float f2, float hue)
 	return res;
 }
 
-vec3 hsl2rgb(vec3 hsl)
+vec4 hsl2rgb(vec3 hsl)
 {
 	vec3 rgb;
 	
@@ -66,7 +66,12 @@ vec3 hsl2rgb(vec3 hsl)
 		rgb.b = hue2rgb(f1, f2, hsl.x - (1.0/3.0));
 	}
 
-	return rgb;
+	return vec4(rgb, 1);
+}
+
+vec4 hsl2rgb(float h, float s, float l)
+{
+    return hsl2rgb(vec3(h, s, l));
 }
 
 /*
@@ -388,7 +393,7 @@ vec4   luvToRgb(float x, float y, float z, float a) {return   luvToRgb( vec4(x,y
 END HSLUV-GLSL
 */
 
-vec4 color_default(vec2 z)
+vec4 color_hsv(vec2 z)
 {
 	// gamma correction
 	const float a = 0.65f;
@@ -396,17 +401,17 @@ vec4 color_default(vec2 z)
     float hue = atan(z.y,z.x)/TAU;
     float lightness = TWO_OVER_PI * atan(pow(length(z),a));
 
-    return vec4(hsl2rgb(vec3(hue,1.0f,lightness)), 1);
+    return hsl2rgb(hue, 1.0f, lightness);
 }
 
-vec4 color_default_hsluv(vec2 z)
+vec4 color_hsluv(vec2 z)
 {
     float hue = degrees(atan(z.y,z.x));
-    float lightness = TWO_OVER_PI * atan(length(z)) * 65;
+    float lightness = TWO_OVER_PI * atan(length(z)) * 100;
 	return hsluvToRgb(hue, 100.0f, lightness, 1);
 }
 
-// From https://iquilezles.org/www/articles/palettes/palettes.htm
+// From https://iquilezles.org/articles/palettes/
 vec3 palette(float t, vec3 a, vec3 b, vec3 c, vec3 d)
 {
     return a + b*cos(2. * PI *(c*t+d) );
@@ -422,18 +427,18 @@ vec2 transform_coordinates(vec4 FragCoord)
     vec2 pos = FragCoord.xy;
     float bound = min(resolution.x, resolution.y);
 
-    return zoom * (pos - 0.5f * resolution)/bound + shift;
+    return zoom * (pos - 0.5f*resolution)/bound + shift;
 }
 
-vec2 cmul(in vec2 a, in vec2 b) {
+vec2 cmul(vec2 a, vec2 b) {
     return vec2(a.x*b.x - a.y*b.y, a.x*b.y + a.y*b.x);
 }
 
-vec2 cexp(in vec2 a) {
+vec2 cexp(vec2 a) {
     return vec2(cos(a.x), sin(a.y));
 }
 
-vec2 cln(in vec2 a) {
+vec2 cln(vec2 a) {
     return vec2(length(a), atan(a.x, a.y));
 }
 
@@ -449,7 +454,5 @@ vec2 f(vec2 z) {
 void main()
 {
     vec2 z = transform_coordinates(gl_FragCoord);
-	FragColor = color_default_hsluv(f(z));
-
-    // FragColor = color_default_hsluv(vec2(1, 1));
+	FragColor = color_palette(f(z));
 }
