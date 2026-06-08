@@ -1,0 +1,13 @@
+{
+    "version": "2.0.0",
+    "command": "",
+    "args": [],
+    "tasks": [
+        {
+            "label": "build",
+            "type": "shell",
+            "command": "odin build . -debug -o:none -no-bounds-check",
+            "group": "build"
+        }
+    ]
+}
