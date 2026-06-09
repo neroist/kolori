@@ -171,7 +171,9 @@ scanner_scan_token :: proc(s: ^Scanner) {
 		scanner_add_token(s, .ASTERISK)
 	case '^':
 		scanner_add_token(s, .CARET)
-	case '\t', '\n', '\v', '\f', '\r', ' ':
+	// add "SCANNER_IGNORE_NIL" scanner flag
+	// or "ignore_characters" scanner field 
+	case '\t', '\n', '\v', '\f', '\r', '\x00', ' ':
 	case:
 		if is_digit(c) {
 			scanner_scan_number(s)

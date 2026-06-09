@@ -5,11 +5,11 @@ package kolori
 
 import imgui_impl_opengl3 "odin-imgui/imgui_impl_opengl3"
 import imgui_impl_sdl3 "odin-imgui/imgui_impl_sdl3"
-import math "core:math/linalg"
+import imgui "odin-imgui"
 import gl "vendor:OpenGL"
 import sdl "vendor:sdl3"
+import "core:strings"
 import "core:log"
-import imgui "odin-imgui"
 
 // three coloring modes:
 //  1. predefined coloring functions for H, S, and L
@@ -28,7 +28,9 @@ App_Context :: struct {
 
     zoom: f32,
     shift: [2]f32,
-    show_ui: bool
+    show_ui: bool,
+    function: string,
+    err_msg: string
 }
 
 Coloring_Method :: enum u32 {
@@ -42,6 +44,8 @@ GL_MAJOR_VERSION :: 3
 GL_MINOR_VERSION :: 3
 pan_speed: f32 : 15
 zoom_speed: f32 : 1.1
+vertex_shader :: #load("shaders/graph.vert", string)
+fragment_shader :: #load("shaders/graph.frag", string)
 
 main :: proc ()
 {
@@ -50,6 +54,7 @@ main :: proc ()
     using app := new(App_Context)
     zoom = 1
     show_ui = true
+    function = (string)(make([]u8, 1024))
 
     setup_sdl(app)
     defer {
@@ -77,11 +82,11 @@ main :: proc ()
     render_loop: for {
         event: sdl.Event
         for sdl.PollEvent(&event) {
+            imgui_impl_sdl3.ProcessEvent(&event)
+
             if event.type == .QUIT {
                 break render_loop
             }
-
-            imgui_impl_sdl3.ProcessEvent(&event)
             handle_event(app, &event)
         }
 
@@ -196,18 +201,13 @@ setup_gl :: proc (using app: ^App_Context)
     gl.EnableVertexAttribArray(0)
 
 	ok: bool
-	vertex_shader := #load("shaders/graph.vert", string)
-	fragment_shader := #load("shaders/graph.frag", string)
-
-	program, ok = gl.load_shaders_source(vertex_shader, fragment_shader)
+	program, ok = gl.load_shaders_source(vertex_shader, strings.concatenate({fragment_shader, "\n\n", translate("z")}))
 
 	if !ok {
 		log.error("[gl.load_shaders_source]", gl.get_last_error_message())
 		sdl.Quit()
 	}
 
-    // we dont unbind the program
-    // this is to make it easier e.g. to set uniforms
     gl.UseProgram(program)
 
     uniforms = {
@@ -327,8 +327,46 @@ draw_ui :: proc (using app: ^App_Context)
     // imgui.ShowDemoWindow()
     // imgui.ShowUserGuide()
 
-    if imgui.Begin("Demo Window") {
-        imgui.Button("Hello!")
+    imgui.Begin("Demo Window")
+    {
+        if imgui.InputText("Function:", (cstring)(raw_data(function)), 1024, {.EnterReturnsTrue}) {
+            result, ok := translate(function)
+            if !ok {
+                imgui.OpenPopup("Error")
+                err_msg = result
+                log.error(err_msg)
+            } else {
+                ok: bool
+                program, ok = gl.load_shaders_source(vertex_shader, strings.concatenate({fragment_shader, "\n\n", result}))
+
+                if !ok {
+                    log.error("[gl.load_shaders_source]", gl.get_last_error_message())
+                    sdl.Quit()
+                }
+
+                gl.UseProgram(program)
+
+                uniforms = {
+                    "zoom" = gl.GetUniformLocation(program, "zoom"),
+                    "resolution" = gl.GetUniformLocation(program, "resolution"),
+                    "shift" = gl.GetUniformLocation(program, "shift"),
+                    "coloring_method" = gl.GetUniformLocation(program, "coloring_method"),
+                    "texture" = gl.GetUniformLocation(program, "texture"),
+                }
+
+                imgui.End()
+                return
+            }
+        }
+        // imgui.Button("Hello!")
+        if imgui.BeginPopupModal("Error") {
+            imgui.Text((cstring)(raw_data(err_msg)))
+            if imgui.Button("Close") {
+                imgui.CloseCurrentPopup()
+            }
+            imgui.EndPopup()
+        }
     }
     imgui.End()
+
 }
