@@ -1,4 +1,4 @@
-- libc++ required to build
+- libc++ required to build (just on Linux?)
 - ldd (Linux):
         linux-vdso.so.1
         libc++.so.1
@@ -14,3 +14,11 @@
         libSDL3.so.0
         libm.so.6
         libc.so.6
+- dumpbin (Windows):
+        KERNEL32.dll
+        bcrypt.dll
+        ADVAPI32.dll
+        SDL3.dll
+        USER32.dll
+        SHELL32.dll
+        IMM32.dll
