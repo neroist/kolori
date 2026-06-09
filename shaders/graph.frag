@@ -401,17 +401,17 @@ vec4 color_hsv(vec2 z)
 	// gamma correction
 	const float a = 0.65f;
 
-		float hue = atan(z.y,z.x)/TAU;
-		float lightness = TWO_OVER_PI * atan(pow(length(z),a));
+	float hue = atan(z.y,z.x)/TAU;
+	float lightness = TWO_OVER_PI * atan(pow(length(z),a));
 
-		return hsl2rgb(hue, 1.0f, lightness);
+	return hsl2rgb(hue, 1.0f, lightness);
 }
 
 vec4 color_hsluv(vec2 z)
 {
-		float hue = degrees(atan(z.y,z.x)/TAU);
-		float lightness = TWO_OVER_PI * atan(length(z)) * 50;
-		// float lightness = 2 / (1 + exp(-length(z))) * 50;
+	float hue = degrees(atan(z.y,z.x));
+	float lightness = TWO_OVER_PI * atan(length(z)) * 50;
+	// float lightness = 2 / (1 + exp(-length(z))) * 50;
 	return hsluvToRgb(hue, 100.0f, lightness, 1);
 }
 

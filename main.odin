@@ -55,6 +55,11 @@ main :: proc ()
     zoom = 1
     show_ui = true
     function = (string)(make([]u8, 1024))
+    (transmute([]u8)(function))[0] = 'z'
+    defer {
+        free(app)
+        delete(function)
+    }
 
     setup_sdl(app)
     defer {
@@ -201,7 +206,7 @@ setup_gl :: proc (using app: ^App_Context)
     gl.EnableVertexAttribArray(0)
 
 	ok: bool
-	program, ok = gl.load_shaders_source(vertex_shader, strings.concatenate({fragment_shader, "\n\n", translate("z")}))
+	program, ok = gl.load_shaders_source(vertex_shader, strings.concatenate({fragment_shader, "\n\n", translate(function)}))
 
 	if !ok {
 		log.error("[gl.load_shaders_source]", gl.get_last_error_message())
@@ -320,6 +325,7 @@ render_graph :: proc (using app: ^App_Context)
 
 draw_ui :: proc (using app: ^App_Context)
 {
+
     imgui_impl_opengl3.NewFrame()
     imgui_impl_sdl3.NewFrame()
     imgui.NewFrame()
@@ -327,38 +333,18 @@ draw_ui :: proc (using app: ^App_Context)
     // imgui.ShowDemoWindow()
     // imgui.ShowUserGuide()
 
-    imgui.Begin("Demo Window")
+    imgui.Begin("Settings")
     {
-        if imgui.InputText("Function:", (cstring)(raw_data(function)), 1024, {.EnterReturnsTrue}) {
+        if imgui.InputText("Function", (cstring)(raw_data(function)), 1024, {.EnterReturnsTrue}) {
             result, ok := translate(function)
             if !ok {
                 imgui.OpenPopup("Error")
                 err_msg = result
                 log.error(err_msg)
             } else {
-                ok: bool
-                program, ok = gl.load_shaders_source(vertex_shader, strings.concatenate({fragment_shader, "\n\n", result}))
-
-                if !ok {
-                    log.error("[gl.load_shaders_source]", gl.get_last_error_message())
-                    sdl.Quit()
-                }
-
-                gl.UseProgram(program)
-
-                uniforms = {
-                    "zoom" = gl.GetUniformLocation(program, "zoom"),
-                    "resolution" = gl.GetUniformLocation(program, "resolution"),
-                    "shift" = gl.GetUniformLocation(program, "shift"),
-                    "coloring_method" = gl.GetUniformLocation(program, "coloring_method"),
-                    "texture" = gl.GetUniformLocation(program, "texture"),
-                }
-
-                imgui.End()
-                return
+                change_function(app, result)
             }
         }
-        // imgui.Button("Hello!")
         if imgui.BeginPopupModal("Error") {
             imgui.Text((cstring)(raw_data(err_msg)))
             if imgui.Button("Close") {
@@ -369,4 +355,37 @@ draw_ui :: proc (using app: ^App_Context)
     }
     imgui.End()
 
+    change_function :: proc (using app: ^App_Context, expr: string)
+    {
+        gl.UseProgram(0)
+        gl.DeleteProgram(program)
+
+        ok: bool
+        program, ok = gl.load_shaders_source(vertex_shader, strings.concatenate({fragment_shader, "\n\n", expr}))
+
+        if !ok {
+            log.error("[gl.load_shaders_source]", gl.get_last_error_message())
+            sdl.Quit()
+        }
+
+        gl.UseProgram(program)
+
+        uniforms = {
+            "zoom" = gl.GetUniformLocation(program, "zoom"),
+            "resolution" = gl.GetUniformLocation(program, "resolution"),
+            "shift" = gl.GetUniformLocation(program, "shift"),
+            "coloring_method" = gl.GetUniformLocation(program, "coloring_method"),
+            "texture" = gl.GetUniformLocation(program, "texture"),
+        }
+
+        width, height: i32
+        sdl.GetWindowSize(window, &width, &height)
+        gl.Viewport(0, 0, width, height)
+        gl.Uniform2i(uniforms["resolution"], width, height)
+        gl.Uniform2f(uniforms["shift"], shift.x, shift.y)
+        gl.Uniform1f(uniforms["zoom"], zoom)
+
+        render_graph(app)
+        sdl.GL_SwapWindow(window)
+    }
 }
