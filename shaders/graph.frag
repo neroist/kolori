@@ -19,9 +19,12 @@ uniform sampler2D texture;
 #define USE_TEXTURE = 2
 #define USE_USER    = 4
 
-const float PI = 3.141591f;
-const float TAU = 2.0f * PI;
-const float TWO_OVER_PI = 2.0f / PI;
+const vec2  I           = vec2(0, 1);
+const float PI          = 3.14159265358979323846f;
+const float TAU         = 6.28318530717958647692f;
+const float E           = 2.71828182845904523536f;
+const float PHI         = 1.61803398874989484820f;
+const float TWO_OVER_PI = 0.63661977236758134308f;
 
 vec2 f(vec2 z);
 
