@@ -104,6 +104,7 @@ main :: proc ()
         }
 
         sdl.GL_SwapWindow(window)
+        free_all(context.temp_allocator)
     }
 }
 
