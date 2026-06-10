@@ -83,7 +83,7 @@ scanner_is_function :: proc(s: ^Scanner, ident: string) -> bool {
 
 scanner_is_at_end :: proc(s: ^Scanner) -> bool {
 	if .Source_Nil_Terminated in s.scan_flags {
-		return scanner_peek(s) == '\x00'
+		return s.source[s.current] == '\x00'
 	}
 
 	return s.current >= len(s.source)
