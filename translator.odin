@@ -1,9 +1,10 @@
 package kolori
 
-import "core:fmt"
-import "core:slice"
-import "core:strings"
 import mp "math-parser"
+import "core:strings"
+import "core:slice"
+import "core:fmt"
+import "core:log"
 
 Translation_Error :: enum {
 	None,
@@ -58,7 +59,7 @@ funcs := []string {
 binary_funcs := []string{"logbase"}
 
 expr_to_glsl :: proc(expr: mp.Expression) -> (str: string, err: Maybe(Error_Report)) {
-	func_names := [mp.BinaryOperationType]string {
+	func_names := [mp.BinaryType]string {
 		.Addition       = "c_add",
 		.Subtraction    = "c_sub",
 		.Multiplication = "c_mul",
@@ -93,7 +94,7 @@ expr_to_glsl :: proc(expr: mp.Expression) -> (str: string, err: Maybe(Error_Repo
 
 			return "", err
 		}
-	case ^mp.BinaryOperation:
+	case ^mp.Binary:
 		return fmt.tprintf(
 			"%s(%s, %s)",
 			func_names[expr.operation],
@@ -144,7 +145,7 @@ translate :: proc(source: string) -> (string, bool) #optional_ok {
 	} 
 
 	result := fmt.tprintf("vec2 f(vec2 z) {{ return %s; }}", glsl)
-	fmt.printfln(result)
+	log.debug("generated glsl:", result)
 
 	return result, true
 }
