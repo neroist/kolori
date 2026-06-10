@@ -132,7 +132,7 @@ expr_to_glsl :: proc(expr: mp.Expression) -> (str: string, err: Maybe(Error_Repo
 	return
 }
 
-translate :: proc(source: string) -> (string, bool) #optional_ok {
+translate_string :: proc(source: string) -> (string, bool) #optional_ok {
 	expr, errors := mp.parse(source, funcs, {.Source_Nil_Terminated, .Implicit_Multiplication})
 	defer mp.expression_free(expr)
 	for err in errors {
@@ -148,4 +148,13 @@ translate :: proc(source: string) -> (string, bool) #optional_ok {
 	log.debug("generated glsl:", result)
 
 	return result, true
+}
+
+translate_slice :: proc(source: []u8) -> (string, bool) #optional_ok {
+	return translate_string((string)(source))
+}
+
+translate :: proc {
+	translate_string,
+	translate_slice
 }
