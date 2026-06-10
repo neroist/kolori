@@ -1,15 +1,5 @@
 package math_parser
 
-ScanError :: enum {
-	None,
-	UnexpectedCharacter,
-}
-
-ScanErrorReport :: struct {
-	column: uint,
-	error:  ScanError,
-}
-
 TokenType :: enum {
 	// single-character tokens
 	LEFT_PAREN,
@@ -25,6 +15,11 @@ TokenType :: enum {
 	VARIABLE,
 	FUNCTION,
 	NUMBER,
+
+	// error
+	ERROR,
+
+	// EOF
 	EOF,
 }
 
@@ -35,13 +30,19 @@ Token :: struct {
 }
 
 Scanner :: struct {
-	tokens:    [dynamic]Token,
-	errors:    [dynamic]ScanErrorReport,
-	functions: []string,
-	source:    string,
-	start:     uint,
-	current:   uint,
+	tokens:     [dynamic]Token,
+	errors:     [dynamic]Error_Report,
 	// list of function names. all other identifiers are regarded as variables
+	functions:  []string,
+	source:     string,
+	scan_flags: bit_set[Scan_Flag],
+	start:      uint,
+	current:    uint
+}
+
+Scan_Flag :: enum {
+	Source_Nil_Terminated,
+	Implicit_Multiplication
 }
 
 is_digit :: proc(c: u8) -> bool {
@@ -72,13 +73,19 @@ scanner_reset_state :: proc(s: ^Scanner) {
 
 scanner_is_function :: proc(s: ^Scanner, ident: string) -> bool {
 	for func in s.functions {
-		if ident == func do return true
+		if ident == func {
+			return true
+		}
 	}
 
 	return false
 }
 
 scanner_is_at_end :: proc(s: ^Scanner) -> bool {
+	if .Source_Nil_Terminated in s.scan_flags {
+		return scanner_peek(s) == '\x00'
+	}
+
 	return s.current >= len(s.source)
 }
 
@@ -171,16 +178,16 @@ scanner_scan_token :: proc(s: ^Scanner) {
 		scanner_add_token(s, .ASTERISK)
 	case '^':
 		scanner_add_token(s, .CARET)
-	// add "SCANNER_IGNORE_NIL" scanner flag
-	// or "ignore_characters" scanner field 
-	case '\t', '\n', '\v', '\f', '\r', '\x00', ' ':
+	case '\t', '\n', '\v', '\f', '\r', ' ':
+		/* */
 	case:
 		if is_digit(c) {
 			scanner_scan_number(s)
 		} else if is_alpha(c) {
 			scanner_scan_identifier(s)
 		} else {
-			append(&s.errors, ScanErrorReport{s.current, .UnexpectedCharacter})
+			scanner_add_token(s, .ERROR)
+			append(&s.errors, new_report(s.tokens[len(s.tokens) - 1], .UnexpectedCharacter))
 		}
 	}
 }
@@ -189,7 +196,9 @@ scanner_insert_muls :: proc(s: ^Scanner) {
 	start :: bit_set[TokenType]{.VARIABLE, .NUMBER, .RIGHT_PAREN}
 	end :: bit_set[TokenType]{.VARIABLE, .FUNCTION, .LEFT_PAREN}
 	for t, idx in s.tokens {
-		if idx == len(s.tokens) - 1 do break
+		if idx == len(s.tokens) - 1 {
+			break
+		}
 
 		curr := t
 		next := s.tokens[idx + 1]
@@ -203,7 +212,7 @@ scanner_insert_muls :: proc(s: ^Scanner) {
 	}
 }
 
-scanner_scan_tokens :: proc(s: ^Scanner, implicit_multiplication := true) -> bool {
+scanner_scan_tokens :: proc(s: ^Scanner) -> (ok: bool) {
 	for !scanner_is_at_end(s) {
 		s.start = s.current
 		scanner_scan_token(s)
@@ -214,7 +223,26 @@ scanner_scan_tokens :: proc(s: ^Scanner, implicit_multiplication := true) -> boo
 	shrink(&s.errors)
 	shrink(&s.tokens)
 
-	if implicit_multiplication do scanner_insert_muls(s)
+	if .Implicit_Multiplication in s.scan_flags {
+		scanner_insert_muls(s)
+	}
 
-	return len(s.errors) == 0
+	ok = len(s.errors) == 0
+	return ok
+}
+
+scanner_init :: proc(s: ^Scanner, source: string, functions: []string = {}, scan_flags: bit_set[Scan_Flag] = {})
+{
+	s.source = source
+	s.functions = functions
+	s.scan_flags = scan_flags
+}
+
+scan :: proc (source: string, functions: []string = {}, scan_flags: bit_set[Scan_Flag] = {}) -> ([]Token, []Error_Report)
+{
+	scanner: Scanner
+	scanner_init(&scanner, source, functions, scan_flags)
+	scanner_scan_tokens(&scanner)
+
+	return scanner.tokens[:], scanner.errors[:]
 }

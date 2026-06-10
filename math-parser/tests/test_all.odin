@@ -22,7 +22,7 @@ eval :: proc(expr: math_parser.Expression) -> f64 {
 		case "tau":
 			return math.TAU
 		}
-	case ^math_parser.BinaryOperation:
+	case ^math_parser.Binary:
 		switch expr.operation {
 		case .Addition:
 			return eval(expr.left) + eval(expr.right)
@@ -77,8 +77,8 @@ expr_to_str :: proc(expr: math_parser.Expression) -> string {
 		return expr.num
 	case ^math_parser.Variable:
 		return expr.name
-	case ^math_parser.BinaryOperation:
-		ops := [math_parser.BinaryOperationType]u8 {
+	case ^math_parser.Binary:
+		ops := [math_parser.BinaryType]u8 {
 			.Addition       = '+',
 			.Subtraction    = '-',
 			.Multiplication = '*',
@@ -101,7 +101,9 @@ expr_to_str :: proc(expr: math_parser.Expression) -> string {
 		fmt.sbprint(builder, expr.name)
 		fmt.sbprint(builder, "(")
 		fmt.sbprint(builder, expr_to_str(expr.arguments[0]))
-		for i in expr.arguments[1:] do fmt.sbprint(builder, ",", expr_to_str(i))
+		for i in expr.arguments[1:] {
+			fmt.sbprint(builder, ",", expr_to_str(i))
+		}
 		fmt.sbprint(builder, ")")
 
 		return strings.to_string(builder^)
@@ -112,34 +114,11 @@ expr_to_str :: proc(expr: math_parser.Expression) -> string {
 	return ""
 }
 
-parse :: proc(
-	source: string,
-	functions: []string = {},
-) -> (
-	math_parser.Expression,
-	math_parser.ParseError,
-) {
-	scanner := new(math_parser.Scanner)
-	scanner.functions = functions
-	scanner.source = source
-	defer {
-		math_parser.scanner_destroy(scanner)
-		free(scanner)
-	}
-
-	parser := new(math_parser.Parser)
-	parser.tokens = scanner.tokens[:]
-	defer free(parser)
-
-	math_parser.scanner_scan_tokens(scanner)
-	return math_parser.parser_parse(parser)
-}
-
 @(test)
 prescendence :: proc(t: ^testing.T) {
 	EXPRSTR :: "1 + 2 * 3 ^ 4"
 
-	expr, _ := parse(EXPRSTR)
+	expr, _ := math_parser.parse(EXPRSTR)
 	defer math_parser.expression_free(expr)
 
 	evaluation := eval(expr)
@@ -159,7 +138,7 @@ prescendence :: proc(t: ^testing.T) {
 parentheses :: proc(t: ^testing.T) {
 	EXPRSTR :: "(((10*(100)*((((20+4)*(2*2*9+3-3)))))/100)^2)^2"
 
-	expr, _ := parse(EXPRSTR)
+	expr, _ := math_parser.parse(EXPRSTR)
 	defer math_parser.expression_free(expr)
 
 	evaluation := eval(expr)
@@ -179,7 +158,7 @@ parentheses :: proc(t: ^testing.T) {
 functions :: proc(t: ^testing.T) {
 	EXPRSTR :: "exp(2) * exp(ln(e) - 3) + cos(pi/4) * sin(pi/4)"
 
-	expr, _ := parse(EXPRSTR, {"exp", "ln", "sin", "cos"})
+	expr, _ := math_parser.parse(EXPRSTR, []string{"exp", "ln", "sin", "cos"})
 	defer math_parser.expression_free(expr)
 
 	evaluation := eval(expr)
@@ -197,29 +176,20 @@ functions :: proc(t: ^testing.T) {
 
 @(test)
 errors :: proc(t: ^testing.T) {
-	scanner := new(math_parser.Scanner)
-	scanner.source = "exp(2) * exp(ln(e) - 3) + cos(pi/4) * sin(pi/4)"
-	scanner.functions = {"sin", "cos", "tan", "ln", "exp"}
-	defer math_parser.scanner_destroy(scanner)
-	defer free(scanner)
+	EXPRSTR :: "exp(2) * exp(ln(e) - 3) + cos(pi/4) * sin(pi/4)"
 
-	parser := new(math_parser.Parser)
-	parser.tokens = scanner.tokens[:]
-	defer free(parser)
-
-	math_parser.scanner_scan_tokens(scanner)
-	expr, _ := math_parser.expression(parser)
+	expr, _ := math_parser.parse(EXPRSTR, []string{"exp", "ln", "sin", "cos"})
 	defer math_parser.expression_free(expr)
 
 	evaluation := eval(expr)
 	ACTUAL_ANSWER :: 1.5
 
-	log.info("Input:\t", scanner.source)
+	log.info("Input:\t", EXPRSTR)
 	log.info("Interpretation:\t", expr_to_str(expr))
-	log.info("Evaluated", scanner.source, "-- got", evaluation)
+	log.info("Evaluated", EXPRSTR, "-- got", evaluation)
 	testing.expect(
 		t,
 		evaluation == ACTUAL_ANSWER,
-		fmt.tprint(scanner.source, "failed to equal", ACTUAL_ANSWER),
+		fmt.tprint(EXPRSTR, "failed to equal", ACTUAL_ANSWER),
 	)
 }
