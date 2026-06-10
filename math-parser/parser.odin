@@ -1,5 +1,3 @@
-// BUG: memory leak when a syntax error occurs
-
 package math_parser
 
 import "core:mem"
