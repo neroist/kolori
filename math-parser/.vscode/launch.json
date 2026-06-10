@@ -7,7 +7,7 @@
         {
             "name": "Debug",
             "type": "lldb",
-            "preLaunchTask": "build",
+            "preLaunchTask": "build_debug",
             "request": "launch",
             "program": "${workspaceRoot}/math-parser",
             "args": ["x"],

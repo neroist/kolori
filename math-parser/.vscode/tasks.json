@@ -4,7 +4,7 @@
     "args": [],
     "tasks": [
         {
-            "label": "build",
+            "label": "build_debug",
             "type": "shell",
             "command": "odin build . -debug -o:none -no-bounds-check",
             "group": "build"
