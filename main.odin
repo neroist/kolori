@@ -13,7 +13,7 @@ import "core:log"
 import "core:fmt"
 import "core:mem"
 
-// three coloring modes:
+// four coloring modes:
 //  1. predefined coloring functions for H, S, and L
 //  2. user-provided coloring functions (HSL)
 //  3. image (texture)
