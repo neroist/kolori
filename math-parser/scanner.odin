@@ -1,7 +1,5 @@
 package math_parser
 
-import "core:mem"
-
 TokenType :: enum {
 	// single-character tokens
 	LEFT_PAREN,

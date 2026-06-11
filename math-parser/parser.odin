@@ -1,7 +1,5 @@
 package math_parser
 
-import "core:log"
-
 // Parses a math expression given a slice of tokens from the user
 Parser :: struct {
 	tokens:    []Token,
@@ -283,9 +281,6 @@ parameter_list :: proc(p: ^Parser) -> (list: [dynamic]Expression, report: Maybe(
 }
 
 expression_free :: proc(expr: Expression, allocator := context.allocator) {
-	@static num_free: int
-	defer num_free += 1
-	log.debugf("free #%i: %w", num_free, expr)
 	context.allocator = allocator
 	switch expr in expr {
 	case ^Real:
