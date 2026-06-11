@@ -15,6 +15,7 @@ generation, etc.)
 - [ ] Support drawing of level curves (of phase and modulus)
 - [ ] Support drawing of grid
 - [ ] Support adjustment of HSV gamma correction
+- [ ] Function input pre-evaluation and optimization
 - [ ] Display where in the complex plane the mouse cursor is at
 - [ ] Pinch motion for zoom in/out for touchscreen devices
 - [ ] Web builds
