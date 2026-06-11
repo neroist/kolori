@@ -133,13 +133,13 @@ setup_app :: proc(using app: ^App_Context)
 setup_sdl :: proc(using app: ^App_Context) 
 {
 	if !sdl.Init({.VIDEO}) {
-		log.error("[sdl.Init]", sdl.GetError())
+		log.fatal("[sdl.Init]", sdl.GetError())
 		sdl.Quit()
 	}
 
 	window = sdl.CreateWindow("Kolori", 800, 600, {.OPENGL, .RESIZABLE})
 	if window == nil {
-		log.error("[sdl.CreateWindow]", sdl.GetError())
+		log.fatal("[sdl.CreateWindow]", sdl.GetError())
 		sdl.Quit()
 	}
 	sdl.SetHint(sdl.HINT_TOUCH_MOUSE_EVENTS, "true")
@@ -152,7 +152,7 @@ setup_sdl :: proc(using app: ^App_Context)
 
 	gl_ctx = sdl.GL_CreateContext(window)
 	if gl_ctx == nil {
-		log.error("[sdl.GL_CreateContext]", sdl.GetError())
+		log.fatal("[sdl.GL_CreateContext]", sdl.GetError())
 		sdl.Quit()
 	}
 }
@@ -245,7 +245,7 @@ setup_gl :: proc(using app: ^App_Context)
 	)
 
 	if !ok {
-		log.error("[gl.load_shaders_source]", gl.get_last_error_message())
+		log.fatal("[gl.load_shaders_source]", gl.get_last_error_message())
 		sdl.Quit()
 	}
 
@@ -458,7 +458,7 @@ draw_ui :: proc(using app: ^App_Context)
 		)
 
 		if !ok {
-			log.error("[gl.load_shaders_source]", gl.get_last_error_message())
+		log.fatal("[gl.load_shaders_source]", gl.get_last_error_message())
 			sdl.Quit()
 		}
 
