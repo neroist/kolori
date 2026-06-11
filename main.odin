@@ -277,7 +277,7 @@ handle_event :: proc(using app: ^App_Context, event: ^sdl.Event)
 		gl.Viewport(0, 0, width, height)
 		gl.Uniform2i(uniforms["resolution"], width, height)
 	case .KEY_DOWN:
-		if io.WantCaptureMouse {
+		if io.WantCaptureKeyboard {
 			break
 		}
 
@@ -450,41 +450,41 @@ draw_ui :: proc(using app: ^App_Context)
 }
 
 reload_shaders :: proc(using app: ^App_Context)
-	{
-		ok: bool
-		program, ok = gl.load_shaders_source(
-			vertex_shader,
-			strings.concatenate(
+{
+	ok: bool
+	program, ok = gl.load_shaders_source(
+		vertex_shader,
+		strings.concatenate(
 			{fragment_shader, "\n\n", translate(function)},
-				context.temp_allocator,
-			),
-		)
+			context.temp_allocator,
+		),
+	)
 
-		if !ok {
+	if !ok {
 		log.fatal("[gl.load_shaders_source]", gl.get_last_error_message())
-			sdl.Quit()
-		}
+		sdl.Quit()
+	}
 
-		gl.UseProgram(program)
+	gl.UseProgram(program)
 
-		uniforms = {
-			"zoom"            = gl.GetUniformLocation(program, "zoom"),
-			"resolution"      = gl.GetUniformLocation(program, "resolution"),
-			"shift"           = gl.GetUniformLocation(program, "shift"),
-			"coloring_method" = gl.GetUniformLocation(
-				program,
-				"coloring_method",
-			),
-			"texture"         = gl.GetUniformLocation(program, "texture"),
-		}
+	uniforms = {
+		"zoom"            = gl.GetUniformLocation(program, "zoom"),
+		"resolution"      = gl.GetUniformLocation(program, "resolution"),
+		"shift"           = gl.GetUniformLocation(program, "shift"),
+		"coloring_method" = gl.GetUniformLocation(
+			program,
+			"coloring_method",
+		),
+		"texture"         = gl.GetUniformLocation(program, "texture"),
+	}
 
-		width, height: i32
-		sdl.GetWindowSize(window, &width, &height)
-		gl.Viewport(0, 0, width, height)
-		gl.Uniform2i(uniforms["resolution"], width, height)
-		gl.Uniform2f(uniforms["shift"], shift.x, shift.y)
-		gl.Uniform1f(uniforms["zoom"], zoom)
+	width, height: i32
+	sdl.GetWindowSize(window, &width, &height)
+	gl.Viewport(0, 0, width, height)
+	gl.Uniform2i(uniforms["resolution"], width, height)
+	gl.Uniform2f(uniforms["shift"], shift.x, shift.y)
+	gl.Uniform1f(uniforms["zoom"], zoom)
 
-		render_graph(app)
-		sdl.GL_SwapWindow(window)
+	render_graph(app)
+	sdl.GL_SwapWindow(window)
 }
