@@ -1,4 +1,4 @@
-# Keep SDL3 binaries for ease of building on Windows
+# Keep SDL3 binaries for ease of running on Windows
 !SDL3.lib
 !SDL3.dll
 
