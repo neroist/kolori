@@ -4,8 +4,12 @@
 - (windows) screen flashes black and white for a period when turning fullscreen
 - (feature) zoom in towards mouse cursur current position
 - (feature) "p" to pause animation, some key to reset animation
-- (feature) gamma, digamma, beta, zeta functions; sum and product functions
+- (feature) gamma, digamma, beta, zeta functions; ceil, floor, frac functions; sum and product functions
+- (feature) discrete color wheel coloring mode
 - (feature) arbitrary precision rendering
+  see: "Domain Coloring of Complex Functions" by Poelke and Polthier
+- (showcase) heart functions images/gifs
+  see: "Heart of Domain Coloring" by Ulrich Reitebuch1 et. al.
 - ldd (Linux):
         linux-vdso.so.1
         libc++.so.1
