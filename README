@@ -8,9 +8,9 @@ To do:
 - [x] Panning
 - [x] Ability to switch function at runtime
 - [x] Ability to take screenshots
+- [x] Ability for animations with "t" variable 
 - [ ] Ability to switch coloring method (HSV color space, HSLuv, palette
 generation, etc.)
-- [ ] Ability for animations with `t` variable
 - [ ] Support drawing of level curves (of phase and modulus)
 - [ ] Support drawing of grid
 - [ ] Support adjustment of HSV gamma correction
@@ -25,9 +25,9 @@ See the `gallery/` directory for a gallery of generated images.
 ## How to use?
 
 ### Controls
-- Use your mouse cursor to pan. If you are on a touchscreen device you may also
-simply use your finger.
-- Scroll to zoom in/out.
+- Use your mouse cursor/WASD/arrow keys to pan. If you are on a touchscreen
+device you may also simply use your finger.
+- Scroll or "+"/"-" to zoom in/out.
 - `h` to hide the "Settings" window.
 - `r` to reload shaders.
 - `ESC` to reset zoom and pan.
@@ -36,8 +36,13 @@ simply use your finger.
 with filename `kolori_screenshotDD-MM-YYYY_HHMMSS.png`.
 
 ### Function input
-Input a valid mathematical expression into the "Function" text input using the
-variable "z".
+Input a valid mathematical expression into the "Function" input box using the
+variable "z". Only the "+", "-", "*", "/", and "^" operators are supported 
+currently. Unary plus is not supported. A list of supported functions is found
+at the top of `translator.odin`. 
+
+For animations, you may also use the scalar variable "t" (stands for "time").
+- Example: "z ^ e^(t*i)" to rotate the plane
 
 ## How to build?
 
