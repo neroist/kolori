@@ -516,6 +516,10 @@ vec2 c_add(vec2 self, vec2 other) {
 		return self + other;
 }
 
+vec2 c_sub(vec2 self, vec2 other) {
+		return self - other;
+}
+
 vec2 c_div(vec2 self, vec2 other) {
 		float norm = length(other);
 		return vec2(self.x * other.x + self.y * other.y,
