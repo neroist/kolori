@@ -41,8 +41,9 @@ with filename `kolori_screenshotDD-MM-YYYY_HHMMSS.png`.
 ### Function input
 Input a valid mathematical expression into the "Function" input box using the
 variable "z". Only the "+", "-", "*", "/", and "^" operators are supported 
-currently. Unary plus is not supported. A list of supported functions is found
-at the top of `translator.odin`. 
+currently. We plan to implement the "%" operator in the future. Implicit
+multiplication is also allowed. A list of supported functions is found at
+the top of `translator.odin`. 
 
 For animations, you may also use the scalar variable "t" (stands for "time").
 - Example: "z ^ e^(t*i)" to rotate the plane.
