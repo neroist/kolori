@@ -175,12 +175,12 @@ translate :: proc {
 }
 
 @(test)
-test :: proc (t: ^testing.T)
+test_translator :: proc (t: ^testing.T)
 {
 	inp_to_outp := map[string]string{
 		"z\x00" =         "vec2 f(vec2 z) { return z; }",
 		"z+1\x00" =       "vec2 f(vec2 z) { return c_add(z, vec2(1, 0)); }",
-		"z^(t - 1)\x00" = "vec2 f(vec2 z) { return c_pow(z, c_sub(t, vec2(1, 0))); }"
+		"z^(t - 1)\x00" = "vec2 f(vec2 z) { return c_pow(z, c_sub(vec2(time, 0), vec2(1, 0))); }"
 	}
 
 	for inp, outp in inp_to_outp {
