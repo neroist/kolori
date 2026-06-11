@@ -19,6 +19,9 @@ generation, etc.)
 - [ ] Web builds
 - [ ] Migration from OpenGL to WebGPU/SDL3_gpu
 
+## Gallery
+See the `gallery/` directory for a gallery of generated images.
+
 ## How to use?
 
 ### Controls
@@ -26,6 +29,8 @@ generation, etc.)
 simply use your finger.
 - Scroll to zoom in/out.
 - `h` to hide the "Settings" window.
+- `r` to reload shaders.
+- `ESC` to reset zoom and pan.
 - `F11` to toggle fullscreen.
 - `F12` to take a screenshot. It will be saved in the curent woking directory
 with filename `kolori_screenshotDD-MM-YYYY_HHMMSS.png`.
