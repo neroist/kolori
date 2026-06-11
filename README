@@ -33,6 +33,7 @@ device you may also simply use your finger.
 - `h` to hide the "Settings" window.
 - `r` to reload shaders.
 - `c` to toggle cursor visibility.
+- `p` to pause animations. Animations will unpause when switching functions.
 - `ESC` to reset zoom and pan.
 - `F11` to toggle fullscreen.
 - `F12` to take a screenshot. It will be saved in the curent woking directory

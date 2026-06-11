@@ -38,8 +38,9 @@ App_Context :: struct {
 	show_ui:  bool,
 	function: []u8,
 	err_msg:  string,
-	last_time: u64,
-	time_speed: f32
+	time: f32,
+	time_speed: f32,
+	animation_paused: bool
 }
 
 Coloring_Method :: enum u32 {
@@ -108,20 +109,24 @@ main :: proc()
 		gl.DeleteProgram(program)
 	}
 
-	last_time = sdl.GetTicks()
+	last_time := sdl.GetTicks()
 	render_loop: for {
 		event: sdl.Event
 		for sdl.PollEvent(&event) {
 			imgui_impl_sdl3.ProcessEvent(&event)
-
+			
 			if event.type == .QUIT {
 				break render_loop
 			}
-
+			
 			handle_event(&app, &event)
 		}
 
-		gl.Uniform1f(uniforms.time, (f32)(sdl.GetTicks() - last_time) / 1e3 * time_speed)
+		if !animation_paused {
+			time += (f32)(sdl.GetTicks() - last_time)
+			gl.Uniform1f(uniforms.time, time * 1e-3 * time_speed)
+		}
+		last_time = sdl.GetTicks()
 
 		render_graph(&app)
 		draw_ui(&app)
@@ -311,6 +316,8 @@ handle_event :: proc(using app: ^App_Context, event: ^sdl.Event)
 					log.error("[sdl.ShowCursor] Failed to show cursor")
 				}
 			}
+		case sdl.K_P:
+			animation_paused = !animation_paused
 		case sdl.K_H: show_ui = !show_ui
 		case sdl.K_Z, sdl.K_MINUS: zoom *= zoom_speed
 		case sdl.K_X, sdl.K_EQUALS: zoom /= zoom_speed
@@ -441,7 +448,8 @@ draw_ui :: proc(using app: ^App_Context)
 				err_msg = strings.clone(result)
 				log.error(err_msg)
 			} else {
-				last_time = sdl.GetTicks()
+				time = 0
+				animation_paused = false
 				reload_shaders(app)
 			}
 		}
@@ -497,6 +505,7 @@ reload_shaders :: proc(using app: ^App_Context)
 	gl.Uniform2i(uniforms.resolution, width, height)
 	gl.Uniform2f(uniforms.shift, shift.x, shift.y)
 	gl.Uniform1f(uniforms.zoom, zoom)
+	gl.Uniform1f(uniforms.time, time)
 
 	render_graph(app)
 	sdl.GL_SwapWindow(window)
