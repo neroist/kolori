@@ -1,0 +1,74 @@
+## What is this?
+Kolori ("to color" in Esperanto) is a program that allows you to create
+beautiful graphs from mathematical functions. Currently, we only have the very
+basic operations implemented (zoom, panning, function changing).
+
+To do:
+- [x] Zooming in/out
+- [x] Panning
+- [x] Ability to switch function at runtime
+- [ ] Ability to switch coloring method (HSV color space, HSLuv, palette
+generation, etc.)
+- [ ] Ability for animations with `t` variable
+- [ ] Display where in the complex plane the mouse cursor is at
+- [ ] Pinch motion for zoom in/out for touchscreen devices
+- [ ] Web builds
+- [ ] Migration from OpenGL to WebGL/SDL3_gpu
+
+## Controls
+- Use your mouse cursor to pan. If you are on a touchscreen device you may also
+simply use your finger.
+- Scroll to zoom in/out.
+- `h` to hide the "Settings" window.
+
+## How to build?
+
+### Prerequisites
+This project is made in the Odin programming language. As such, you will need
+to install the Odin compiler to build. Instructions for installation are held
+here: <https://odin-lang.org/docs/install/>
+
+We also use Python to build the ImGui binaries. If you haven't already,
+install Python from here: <https://www.python.org/downloads/>
+
+### Steps
+The first three steps you will only need to perform once. After that, simply 
+execute
+
+```sh
+$ odin build .
+```
+
+to build the entire project.
+
+1. Clone the git repository and its submodules:
+
+```sh
+$ git clone --recursive https://github.com/neroist/kolori.git
+```
+
+2. Modify the Python build script at `odin-imgui/build.py` as such:
+
+```diff
+- wanted_backends = ["vulkan", "sdl2", "sdl3", "sdlrenderer3", "sdlgpu3", "opengl3", "glfw",
+-				     "dx11", "dx12", "osx", "metal", "null", "wgpu", "webgl"]
++ wanted_backends = ["sdl3", "opengl3"]
+```
+
+You may also change the default compiler from `cl` (on Windows) or 
+`clang` (everywhere else) to another compiler if need be. We leave
+such modifications to you. However, in the case that you need to 
+compile with `gcc` instead of `clang`, it is sufficient to do a
+simple search-and-replace operation on the entire file.
+
+3. Run the build script
+
+```sh
+$ python build.py
+```
+
+4. Build the project
+
+```sh
+$ odin build .
+```
