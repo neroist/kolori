@@ -2,6 +2,8 @@
 
 package kolori
 
+// todo(functions) add sum and product functions?
+
 import mp "math-parser"
 import "core:strings"
 import "core:testing"
@@ -20,6 +22,7 @@ Error_Report :: struct {
 	msg: string
 }
 
+// functions supported by kolori
 @(rodata)
 funcs := []string {
 	"real",
@@ -42,19 +45,33 @@ funcs := []string {
 	"sin",
 	"cos",
 	"tan",
+	"csc",
+	"sec",
+	"cot",
 	"asin",
 	"acos",
 	"atan",
+	"acsc",
+	"asec",
+	"acot",
 	"sinh",
 	"cosh",
 	"tanh",
+	"csch",
+	"sech",
+	"coth",
 	"asinh",
 	"acosh",
 	"atanh",
+	"acsch",
+	"asech",
+	"acoth",
+	"gamma"
 }
 
+// functions that require two arguments
 @(rodata)
-binary_funcs := []string{"logbase"}
+binary_funcs := []string{"mod", "logbase"}
 
 expr_to_glsl :: proc(expr: mp.Expression) -> (str: string, report: Maybe(Error_Report))
 {

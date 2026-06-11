@@ -440,6 +440,12 @@ vec2 transform_coordinates(vec4 FragCoord)
 // based on https://github.com/rust-num/num-complex/blob/master/src/lib.rs
 // Copyright 2013 The Rust Project Developers. MIT license
 // Ported to GLSL by Andrei Kashcha (github.com/anvaka), available under MIT license as well.
+// (+ modifications)
+
+vec2 c_inv(vec2 c) {
+	float norm = length(c);
+	return vec2(c.x, -c.y) / norm*norm;
+}
 
 float arg(vec2 c) {
 	return atan(c.y, c.x);
@@ -550,6 +556,18 @@ vec2 c_tan(vec2 c) {
 	return vec2(sin(c2.x), sinh(c2.y))/(cos(c2.x) + cosh(c2.y));
 }
 
+vec2 c_csc(vec2 c) {
+	return c_inv(c_sin(c));
+}
+
+vec2 c_sec(vec2 c) {
+	return c_inv(c_cos(c));
+}
+
+vec2 c_cot(vec2 c) {
+	return c_inv(c_tan(c));
+}
+
 vec2 c_atan(vec2 c) {
 	// formula: arctan(z) = (ln(1+iz) - ln(1-iz))/(2i)
 	vec2 i = C_I;
@@ -584,6 +602,18 @@ vec2 c_acos(vec2 c) {
 	));
 }
 
+vec2 c_acot(vec2 c) {
+	return c_atan(c_inv(c));
+}
+
+vec2 c_acsc(vec2 c) {
+	return c_asin(c_inv(c));
+}
+
+vec2 c_asec(vec2 c) {
+	return c_acos(c_inv(c));
+}
+
 vec2 c_sinh(vec2 c) {
 	return vec2(sinh(c.x) * cos(c.y), cosh(c.x) * sin(c.y));
 }
@@ -595,6 +625,18 @@ vec2 c_cosh(vec2 c) {
 vec2 c_tanh(vec2 c) {
 	vec2 c2 = 2. * c;
 	return vec2(sinh(c2.x), sin(c2.y))/(cosh(c2.x) + cos(c2.y));
+}
+
+vec2 c_csch(vec2 c) {
+	return c_inv(c_sinh(c));
+}
+
+vec2 c_sech(vec2 c) {
+	return c_inv(c_cosh(c));
+}
+
+vec2 c_coth(vec2 c) {
+	return c_inv(c_tanh(c));
 }
 
 vec2 c_asinh(vec2 c) {
@@ -625,9 +667,22 @@ vec2 c_atanh(vec2 c) {
 	return c_div(c_ln(one + c) - c_ln(one - c), two);
 }
 
+
+vec2 c_acsch(vec2 c) {
+	return c_sinh(c_inv(c));
+}
+
+vec2 c_asech(vec2 c) {
+	return c_cosh(c_inv(c));
+}
+
+vec2 c_acoth(vec2 c) {
+	return c_tanh(c_inv(c));
+}
+
 // Attempts to identify the gaussian integer whose product with `modulus`
 // is closest to `c`
-vec2 c_rem(vec2 c, vec2 modulus) {
+vec2 c_mod(vec2 c, vec2 modulus) {
 	vec2 c0 = c_div(c, modulus);
 	// This is the gaussian integer corresponding to the true ratio
 	// rounded towards zero.
@@ -635,9 +690,9 @@ vec2 c_rem(vec2 c, vec2 modulus) {
 	return c - c_mul(modulus, c1);
 }
 
-vec2 c_inv(vec2 c) {
-	float norm = length(c);
-	return vec2(c.x, -c.y) / (norm * norm);
+vec2 c_gamma(vec2 c) {
+	// stirling's approximation
+	return c_mul(c_sqrt(c_mul(C_TAU, c)), c_pow(c_div(c, C_E), c));
 }
 
 // vec2 f(vec2 z) {

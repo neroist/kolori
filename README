@@ -9,7 +9,7 @@ To do:
 - [x] Ability to switch function at runtime
 - [x] Ability to take screenshots
 - [x] Ability for animations with "t" variable 
-- [ ] Ability to switch coloring method (HSV color space, HSLuv, palette
+- [ ] Ability to switch coloring scheme (HSV color space, HSLuv, palette
 generation, etc.)
 - [ ] Ability to configure keyboard bindings
 - [ ] Support drawing of level curves (of phase and modulus)
