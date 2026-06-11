@@ -290,14 +290,26 @@ handle_event :: proc(using app: ^App_Context, event: ^sdl.Event)
 			is_fullscreen := .FULLSCREEN in sdl.GetWindowFlags(window)
 			sdl.SetWindowFullscreen(window, !is_fullscreen)
 			sdl.SyncWindow(window)
-		case sdl.K_R:
-			reload_shaders(app)
 		case sdl.K_ESCAPE:
 			zoom = 1
 			shift = {0, 0}
+		case sdl.K_R:
+			reload_shaders(app)
+		case sdl.K_C:
+			if sdl.CursorVisible() {
+				ok := sdl.HideCursor()
+				if !ok {
+					log.error("[sdl.HideCursor] Failed to hide cursor")
+				}
+			} else {
+				ok := sdl.ShowCursor()
+				if !ok {
+					log.error("[sdl.ShowCursor] Failed to show cursor")
+				}
+			}
 		case sdl.K_H: show_ui = !show_ui
-		case sdl.K_X, sdl.K_MINUS: zoom *= zoom_speed
-		case sdl.K_C, sdl.K_EQUALS: zoom /= zoom_speed
+		case sdl.K_Z, sdl.K_MINUS: zoom *= zoom_speed
+		case sdl.K_X, sdl.K_EQUALS: zoom /= zoom_speed
 		case sdl.K_W, sdl.K_UP: direction = [2]f32{0, 1}
 		case sdl.K_A, sdl.K_LEFT: direction = [2]f32{-1, 0}
 		case sdl.K_S, sdl.K_DOWN: direction = [2]f32{0, -1}
@@ -315,8 +327,20 @@ handle_event :: proc(using app: ^App_Context, event: ^sdl.Event)
 		if event.wheel.y < 0 {
 			zoom *= zoom_speed
 		} else if event.wheel.y > 0 {
+			// width, height: i32
+			// sdl.GetWindowSize(window, &width, &height)
+
+			// resolution := [2]f32{(f32)(width), (f32)(height)}
+
+			// mouse_pos := [2]f32{event.wheel.mouse_x, event.wheel.mouse_y} 
+			// pan_velocity := (mouse_pos - resolution * 0.5) * {1, -1}
+			// pan_velocity = pan_velocity / resolution / zoom
+			// shift += pan_velocity
+
+			// gl.Uniform2f(uniforms["shift"], shift.x, shift.y)
 			zoom /= zoom_speed
 		}
+
 
 		gl.Uniform1f(uniforms["zoom"], zoom)
 	case .MOUSE_MOTION:
