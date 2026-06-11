@@ -22,7 +22,6 @@ import "core:mem"
 
 App_Context :: struct {
 	window:   ^sdl.Window,
-	renderer: ^sdl.Renderer,
 	gl_ctx:   sdl.GLContext,
 	vao:      u32,
 	program:  u32,
@@ -284,8 +283,8 @@ handle_event :: proc(using app: ^App_Context, event: ^sdl.Event)
 			sdl.FlipSurface(surface, .VERTICAL)
 			defer sdl.DestroySurface(surface)
 
-			buf := make([]u8, 17, context.temp_allocator)
-			filename := fmt.tprintf("kolori_screenshot%s.png", now_to_string(buf))
+			buf: [17]u8
+			filename := fmt.tprintf("kolori_screenshot%s.png", now_to_string(buf[:]))
 			ok := sdl.SavePNG(surface, (cstring)(raw_data(filename)))
 			if ok {
 				log.info("Saved screenshot to", filename)

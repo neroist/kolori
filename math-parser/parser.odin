@@ -57,7 +57,7 @@ parse_string :: proc (source: string, functions: []string = {}, scan_flags: bit_
 		return nil, reports
 	}
 
-	expr, report := parse_tokens(tokens, allocator)
+	expr, report := parse_tokens(tokens)
 	if report != nil {
 		reports := make([]Error_Report, 1)
 		reports[0] = report.?
