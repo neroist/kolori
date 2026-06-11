@@ -1,5 +1,7 @@
 package math_parser
 
+import "core:mem"
+
 TokenType :: enum {
 	// single-character tokens
 	LEFT_PAREN,
@@ -32,6 +34,7 @@ Token :: struct {
 Scanner :: struct {
 	tokens:     [dynamic]Token,
 	errors:     [dynamic]Error_Report,
+	allocator:  mem.Allocator,
 	// list of function names. all other identifiers are regarded as variables
 	functions:  []string,
 	source:     string,
@@ -231,17 +234,20 @@ scanner_scan_tokens :: proc(s: ^Scanner) -> (ok: bool) {
 	return ok
 }
 
-scanner_init :: proc(s: ^Scanner, source: string, functions: []string = {}, scan_flags: bit_set[Scan_Flag] = {})
+scanner_init :: proc(s: ^Scanner, source: string, functions: []string = {}, scan_flags: bit_set[Scan_Flag] = {}, allocator := context.allocator)
 {
-	s.source = source
+	s.tokens = make([dynamic]Token, allocator)
+	s.errors = make([dynamic]Error_Report, allocator)
+	s.allocator = allocator
 	s.functions = functions
+	s.source = source
 	s.scan_flags = scan_flags
 }
 
-scan :: proc (source: string, functions: []string = {}, scan_flags: bit_set[Scan_Flag] = {}) -> ([]Token, []Error_Report)
+scan :: proc (source: string, functions: []string = {}, scan_flags: bit_set[Scan_Flag] = {}, allocator := context.allocator) -> ([]Token, []Error_Report)
 {
 	scanner: Scanner
-	scanner_init(&scanner, source, functions, scan_flags)
+	scanner_init(&scanner, source, functions, scan_flags, allocator)
 	scanner_scan_tokens(&scanner)
 
 	return scanner.tokens[:], scanner.errors[:]

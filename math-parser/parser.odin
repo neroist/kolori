@@ -1,7 +1,6 @@
 package math_parser
 
 import "core:mem"
-import "core:fmt"
 
 Parser :: struct {
 	tokens:    []Token,
@@ -9,7 +8,7 @@ Parser :: struct {
 	current:   uint,
 }
 
-// AST types
+// AST types.
 // could we also do a union of bare structs, but instead use
 // `^Expression` instead of `Expression`?
 Expression :: union {
@@ -47,9 +46,9 @@ BinaryType :: enum {
 	Exponentiation,
 }
 
-parse_string :: proc (source: string, functions: []string = {}, scan_flags: bit_set[Scan_Flag] = {}, allocator: mem.Allocator = context.allocator) -> (Expression, []Error_Report)
+parse_string :: proc (source: string, functions: []string = {}, scan_flags: bit_set[Scan_Flag] = {}, allocator := context.allocator) -> (Expression, []Error_Report)
 {
-	tokens, errs := scan(source, functions, scan_flags)
+	tokens, errs := scan(source, functions, scan_flags, allocator)
 	if len(errs) != 0 {
 		return nil, errs
 	}
@@ -57,7 +56,7 @@ parse_string :: proc (source: string, functions: []string = {}, scan_flags: bit_
 	return parse_tokens(tokens, allocator)
 }
 
-parse_tokens :: proc (tokens: []Token, allocator: mem.Allocator = context.allocator) -> (Expression, []Error_Report)
+parse_tokens :: proc (tokens: []Token, allocator := context.allocator) -> (Expression, []Error_Report)
 {
 	parser: Parser 
 	parser_init(&parser, tokens, allocator)
@@ -65,7 +64,7 @@ parse_tokens :: proc (tokens: []Token, allocator: mem.Allocator = context.alloca
 
 	expr, err := parser_parse(&parser)
 	if err != nil {
-		errs := make([]Error_Report, 1, context.temp_allocator)
+		errs := make([]Error_Report, 1, allocator)
 		errs[0] = err.?
 		return expr, errs
 	}
@@ -78,7 +77,7 @@ parse :: proc {
 	parse_tokens
 }
 
-parser_init :: proc (p: ^Parser, tokens: []Token, allocator: mem.Allocator = context.allocator)
+parser_init :: proc (p: ^Parser, tokens: []Token, allocator := context.allocator)
 {
 	p.tokens = tokens
 	p.allocator = allocator
@@ -281,29 +280,26 @@ parameter_list :: proc(p: ^Parser) -> (list: [dynamic]Expression, err: Maybe(Err
 	return list, err
 }
 
-expression_free :: proc(expr: Expression) {
-	when ODIN_DEBUG {
-		fmt.println("[expression_free] freed:", expr)
-	}
-
+expression_free :: proc(expr: Expression, allocator := context.allocator) {
+	context.allocator = allocator
 	switch expr in expr {
 	case ^Real:
 		free(expr)
 	case ^Variable:
 		free(expr)
 	case ^Binary:
-		free(expr)
 		expression_free(expr.left)
 		expression_free(expr.right)
+		free(expr)
 	case ^Unary:
-		free(expr)
 		expression_free(expr.inner)
-	case ^FunctionCall:
 		free(expr)
+	case ^FunctionCall:
 		for i in expr.arguments {
 			expression_free(i)
 		}
 		delete(expr.arguments)
+		free(expr)
 	}
 }
 
