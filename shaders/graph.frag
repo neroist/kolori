@@ -8,6 +8,7 @@ precision highp usampler2D;
 in vec2 pos;
 out vec4 FragColor;
 
+uniform float time;
 uniform float zoom;
 uniform ivec2 resolution;
 uniform vec2 shift;
