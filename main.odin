@@ -280,7 +280,12 @@ handle_event :: proc(using app: ^App_Context, event: ^sdl.Event)
 
 			buf := make([]u8, 17, context.temp_allocator)
 			filename := fmt.tprintf("kolori_screenshot%s.png", now_to_string(buf))
-			sdl.SavePNG(surface, (cstring)(raw_data(filename)))
+			ok := sdl.SavePNG(surface, (cstring)(raw_data(filename)))
+			if ok {
+				log.info("Saved screenshot to", filename)
+			} else{
+				log.error("[sdl.SavePNG] Failed to save screenshot")
+			}
 		case sdl.K_F11:
 			is_fullscreen := .FULLSCREEN in sdl.GetWindowFlags(window)
 			sdl.SetWindowFullscreen(window, !is_fullscreen)
