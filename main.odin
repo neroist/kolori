@@ -305,6 +305,11 @@ handle_event :: proc(using app: ^App_Context, event: ^sdl.Event)
 			is_fullscreen := .FULLSCREEN in sdl.GetWindowFlags(window)
 			sdl.SetWindowFullscreen(window, !is_fullscreen)
 			sdl.SyncWindow(window)
+		case sdl.K_R:
+			reload_shaders(app)
+		case sdl.K_ESCAPE:
+			zoom = 1
+			shift = {0, 0}
 		case sdl.K_H: show_ui = !show_ui
 		case sdl.K_X, sdl.K_MINUS: zoom *= zoom_speed
 		case sdl.K_C, sdl.K_EQUALS: zoom /= zoom_speed
@@ -423,7 +428,7 @@ draw_ui :: proc(using app: ^App_Context)
 				err_msg = strings.clone(result)
 				log.error(err_msg)
 			} else {
-				change_function(app, result)
+				reload_shaders(app)
 			}
 		}
 
@@ -442,17 +447,15 @@ draw_ui :: proc(using app: ^App_Context)
 
 	imgui.Render()
 	imgui_impl_opengl3.RenderDrawData(imgui.GetDrawData())
+}
 
-	change_function :: proc(using app: ^App_Context, expr: string) 
+reload_shaders :: proc(using app: ^App_Context)
 	{
-		gl.UseProgram(0)
-		gl.DeleteProgram(program)
-
 		ok: bool
 		program, ok = gl.load_shaders_source(
 			vertex_shader,
 			strings.concatenate(
-				{fragment_shader, "\n\n", expr},
+			{fragment_shader, "\n\n", translate(function)},
 				context.temp_allocator,
 			),
 		)
@@ -484,5 +487,4 @@ draw_ui :: proc(using app: ^App_Context)
 
 		render_graph(app)
 		sdl.GL_SwapWindow(window)
-	}
 }
