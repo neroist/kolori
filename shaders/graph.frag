@@ -638,5 +638,5 @@ vec2 c_inv(vec2 c) {
 void main()
 {
 	vec2 z = transform_coordinates(gl_FragCoord);
-	FragColor = color_hsluv(f(z));
+	FragColor = color_hsv(f(z));
 }
