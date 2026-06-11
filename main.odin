@@ -479,7 +479,7 @@ reload_shaders :: proc(using app: ^App_Context)
 	}
 
 	width, height: i32
-	sdl.GetWindowSize(window, &width, &height)
+	sdl.GetWindowSizeInPixels(window, &width, &height)
 	gl.Viewport(0, 0, width, height)
 	gl.Uniform2i(uniforms["resolution"], width, height)
 	gl.Uniform2f(uniforms["shift"], shift.x, shift.y)
