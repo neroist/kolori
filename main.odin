@@ -9,6 +9,7 @@ import imgui "odin-imgui"
 import gl "vendor:OpenGL"
 import sdl "vendor:sdl3"
 import "core:strings"
+import "core:time"
 import "core:log"
 import "core:fmt"
 import "core:mem"
@@ -194,7 +195,7 @@ setup_gl :: proc(using app: ^App_Context)
 	gl.load_up_to(GL_MAJOR_VERSION, GL_MINOR_VERSION, sdl.gl_set_proc_address)
 
 	width, height: i32
-	sdl.GetWindowSize(window, &width, &height)
+	sdl.GetWindowSizeInPixels(window, &width, &height)
 	gl.Viewport(0, 0, width, height)
 
 	vertices := [?]f32 {
@@ -272,7 +273,7 @@ handle_event :: proc(using app: ^App_Context, event: ^sdl.Event)
 
 	case .WINDOW_RESIZED:
 		width, height: i32
-		sdl.GetWindowSize(window, &width, &height)
+		sdl.GetWindowSizeInPixels(window, &width, &height)
 		gl.Viewport(0, 0, width, height)
 		gl.Uniform2i(uniforms["resolution"], width, height)
 	case .KEY_DOWN:
@@ -281,12 +282,25 @@ handle_event :: proc(using app: ^App_Context, event: ^sdl.Event)
 		}
 
 		width, height: i32
-		sdl.GetWindowSize(window, &width, &height)
+		sdl.GetWindowSizeInPixels(window, &width, &height)
 
 		scale := [2]f32{(f32)(width), (f32)(height)}
 		direction: [2]f32
 
 		switch event.key.key {
+		case sdl.K_F12:
+			pixels := make([]u8, width * height * 3, context.temp_allocator)
+			gl.ReadBuffer(gl.BACK)
+			gl.PixelStorei(gl.PACK_ALIGNMENT, 1)
+			gl.ReadPixels(0, 0, width, height, gl.RGB, gl.UNSIGNED_BYTE, raw_data(pixels))
+			
+			surface := sdl.CreateSurfaceFrom(width, height, .RGB24, raw_data(pixels), width * 3)
+			sdl.FlipSurface(surface, .VERTICAL)
+			defer sdl.DestroySurface(surface)
+
+			buf := make([]u8, 17, context.temp_allocator)
+			filename := fmt.tprintf("kolori_screenshot%s.png", now_to_string(buf))
+			sdl.SavePNG(surface, (cstring)(raw_data(filename)))
 		case sdl.K_F11:
 			is_fullscreen := .FULLSCREEN in sdl.GetWindowFlags(window)
 			sdl.SetWindowFullscreen(window, !is_fullscreen)
@@ -322,7 +336,7 @@ handle_event :: proc(using app: ^App_Context, event: ^sdl.Event)
 
 		if .LEFT in event.motion.state {
 			width, height: i32
-			sdl.GetWindowSize(window, &width, &height)
+			sdl.GetWindowSizeInPixels(window, &width, &height)
 
 			motion := [2]f32{event.motion.xrel, event.motion.yrel}
 			scale := [2]f32{(f32)(-width), (f32)(height)}
@@ -330,6 +344,39 @@ handle_event :: proc(using app: ^App_Context, event: ^sdl.Event)
 
 			gl.Uniform2f(uniforms["shift"], shift.x, shift.y)
 		}
+	}
+
+	now_to_string :: proc(buf: []u8) -> string
+	{
+		// dd-mm-yyyy
+		y, _month, d := time.date(time.now())
+		month := (u8)(_month)
+
+		buf[9] = '0' + (u8)(y % 10); y /= 10
+		buf[8] = '0' + (u8)(y % 10); y /= 10
+		buf[7] = '0' + (u8)(y % 10); y /= 10
+		buf[6] = '0' + (u8)(y)
+		buf[5] = '-'
+		buf[4] = '0' + (u8)(month % 10); month /= 10
+		buf[3] = '0' + (u8)(month % 10)
+		buf[2] = '-'
+		buf[1] = '0' + (u8)(d % 10); d /= 10
+		buf[0] = '0' + (u8)(d % 10)
+
+		// sep
+		buf[10] = '_'
+
+		// hhmmss
+		h, minute, s := time.clock(time.now())
+
+		buf[16] = '0' + (u8)(s % 10); s /= 10
+		buf[15] = '0' + (u8)(s)
+		buf[14] = '0' + (u8)(minute % 10); minute /= 10
+		buf[13] = '0' + (u8)(minute)
+		buf[12] = '0' + (u8)(h % 10); h /= 10
+		buf[11] = '0' + (u8)(h)
+
+		return (string)(buf[:16])
 	}
 }
 
@@ -362,8 +409,8 @@ draw_ui :: proc(using app: ^App_Context)
 	// imgui.ShowDemoWindow()
 	// imgui.ShowUserGuide()
 
-	{imgui.Begin("Settings")
-
+	imgui.Begin("Settings")
+	{
 		if imgui.InputText(
 			"Function",
 			(cstring)(raw_data(function)),
@@ -390,7 +437,8 @@ draw_ui :: proc(using app: ^App_Context)
 			imgui.EndPopup()
 		}
 
-	};imgui.End()
+	}
+	imgui.End()
 
 	imgui.Render()
 	imgui_impl_opengl3.RenderDrawData(imgui.GetDrawData())
