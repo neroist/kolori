@@ -1,4 +1,11 @@
-- libc++ required to build (just on Linux?)
+- (linux) libc++ required to build 
+- (windows) SDL3.dll needs to be next to executable
+- (windows) small freeze-up when taking a screenshot
+- (windows) screen flashes black and white for a period when turning fullscreen
+- (feature) zoom in towards mouse cursur current position
+- (feature) "p" to pause animation, some key to reset animation
+- (feature) gamma, digamma, beta, zeta functions; sum and product functions
+- (feature) arbitrary precision rendering
 - ldd (Linux):
         linux-vdso.so.1
         libc++.so.1
