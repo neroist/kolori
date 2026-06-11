@@ -695,6 +695,22 @@ vec2 c_gamma(vec2 c) {
 	return c_mul(c_sqrt(c_mul(C_TAU, c)), c_pow(c_div(c, C_E), c));
 }
 
+vec2 c_re(vec2 c) {
+	return vec2(c.x, 0);
+}
+
+vec2 c_real(vec2 c) {
+	return vec2(c.x, 0);
+}
+
+vec2 c_im(vec2 c) {
+	return vec2(c.y, 0);
+}
+
+vec2 c_imag(vec2 c) {
+	return vec2(c.y, 0);
+}
+
 // vec2 f(vec2 z) {
 //     // return c_exp(c_mul(c_ln(z), vec2(1, 1)));
 //     return c_sin(c_mul(z, z));
