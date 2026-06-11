@@ -26,7 +26,14 @@ App_Context :: struct {
 	gl_ctx:   sdl.GLContext,
 	vao:      u32,
 	program:  u32,
-	uniforms: map[string]i32,
+	uniforms: struct {
+		zoom: i32,
+		time: i32,
+		resolution: i32,
+		shift: i32,
+		coloring_method: i32,
+		texture: i32
+	},
 	io:       ^imgui.IO,
 	zoom:     f32,
 	shift:    [2]f32,
@@ -34,7 +41,7 @@ App_Context :: struct {
 	function: []u8,
 	err_msg:  string,
 	last_time: u64,
-	time_speed: f32,
+	time_speed: f32
 }
 
 Coloring_Method :: enum u32 {
@@ -100,7 +107,6 @@ main :: proc()
 
 	setup_gl(&app)
 	defer {
-		delete(uniforms)
 		gl.DeleteProgram(program)
 	}
 
@@ -117,7 +123,7 @@ main :: proc()
 			handle_event(&app, &event)
 		}
 
-		gl.Uniform1f(uniforms["time"], (f32)(sdl.GetTicks() - last_time) / 1e3 * time_speed)
+		gl.Uniform1f(uniforms.time, (f32)(sdl.GetTicks() - last_time) / 1e3 * time_speed)
 
 		render_graph(&app)
 		draw_ui(&app)
@@ -255,7 +261,7 @@ handle_event :: proc(using app: ^App_Context, event: ^sdl.Event)
 		width, height: i32
 		sdl.GetWindowSizeInPixels(window, &width, &height)
 		gl.Viewport(0, 0, width, height)
-		gl.Uniform2i(uniforms["resolution"], width, height)
+		gl.Uniform2i(uniforms.resolution, width, height)
 	case .KEY_DOWN:
 		if io.WantCaptureKeyboard {
 			break
@@ -317,8 +323,8 @@ handle_event :: proc(using app: ^App_Context, event: ^sdl.Event)
 		}
 
 		shift += (pan_speed * direction / scale) * (zoom * 2)
-		gl.Uniform2f(uniforms["shift"], shift.x, shift.y)
-		gl.Uniform1f(uniforms["zoom"], zoom)
+		gl.Uniform2f(uniforms.shift, shift.x, shift.y)
+		gl.Uniform1f(uniforms.zoom, zoom)
 	case .MOUSE_WHEEL:
 		if io.WantCaptureMouse {
 			break
@@ -342,7 +348,7 @@ handle_event :: proc(using app: ^App_Context, event: ^sdl.Event)
 		}
 
 
-		gl.Uniform1f(uniforms["zoom"], zoom)
+		gl.Uniform1f(uniforms.zoom, zoom)
 	case .MOUSE_MOTION:
 		if io.WantCaptureMouse {
 			break
@@ -356,7 +362,7 @@ handle_event :: proc(using app: ^App_Context, event: ^sdl.Event)
 			scale := [2]f32{(f32)(-width), (f32)(height)}
 			shift += (motion / scale) * zoom
 
-			gl.Uniform2f(uniforms["shift"], shift.x, shift.y)
+			gl.Uniform2f(uniforms.shift, shift.x, shift.y)
 		}
 	}
 
@@ -479,20 +485,20 @@ reload_shaders :: proc(using app: ^App_Context)
 	gl.UseProgram(program)
 
 	uniforms = {
-		"zoom"            = gl.GetUniformLocation(program, "zoom"),
-		"time"            = gl.GetUniformLocation(program, "time"),
-		"resolution"      = gl.GetUniformLocation(program, "resolution"),
-		"shift"           = gl.GetUniformLocation(program, "shift"),
-		"coloring_method" = gl.GetUniformLocation(program, "coloring_method"),
-		"texture"         = gl.GetUniformLocation(program, "texture"),
+		zoom            = gl.GetUniformLocation(program, "zoom"),
+		time            = gl.GetUniformLocation(program, "time"),
+		resolution      = gl.GetUniformLocation(program, "resolution"),
+		shift           = gl.GetUniformLocation(program, "shift"),
+		coloring_method = gl.GetUniformLocation(program, "coloring_method"),
+		texture         = gl.GetUniformLocation(program, "texture"),
 	}
 
 	width, height: i32
 	sdl.GetWindowSizeInPixels(window, &width, &height)
 	gl.Viewport(0, 0, width, height)
-	gl.Uniform2i(uniforms["resolution"], width, height)
-	gl.Uniform2f(uniforms["shift"], shift.x, shift.y)
-	gl.Uniform1f(uniforms["zoom"], zoom)
+	gl.Uniform2i(uniforms.resolution, width, height)
+	gl.Uniform2f(uniforms.shift, shift.x, shift.y)
+	gl.Uniform1f(uniforms.zoom, zoom)
 
 	render_graph(app)
 	sdl.GL_SwapWindow(window)
