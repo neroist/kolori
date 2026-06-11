@@ -33,6 +33,7 @@ App_Context :: struct {
 	show_ui:  bool,
 	function: []u8,
 	err_msg:  string,
+	last_time: u64
 }
 
 Coloring_Method :: enum u32 {
@@ -102,6 +103,7 @@ main :: proc()
 		gl.DeleteProgram(program)
 	}
 
+	last_time = sdl.GetTicks()
 	render_loop: for {
 		event: sdl.Event
 		for sdl.PollEvent(&event) {
@@ -113,6 +115,8 @@ main :: proc()
 
 			handle_event(&app, &event)
 		}
+
+		gl.Uniform1f(uniforms["time"], (f32)(sdl.GetTicks() - last_time) / 1e4)
 
 		render_graph(&app)
 		draw_ui(&app)
@@ -235,33 +239,7 @@ setup_gl :: proc(using app: ^App_Context)
 
 	gl.EnableVertexAttribArray(0)
 
-	ok: bool
-	program, ok = gl.load_shaders_source(
-		vertex_shader,
-		strings.concatenate(
-			{fragment_shader, "\n\n", translate(function)},
-			context.temp_allocator,
-		),
-	)
-
-	if !ok {
-		log.fatal("[gl.load_shaders_source]", gl.get_last_error_message())
-		sdl.Quit()
-	}
-
-	gl.UseProgram(program)
-
-	uniforms = {
-		"zoom"            = gl.GetUniformLocation(program, "zoom"),
-		"resolution"      = gl.GetUniformLocation(program, "resolution"),
-		"shift"           = gl.GetUniformLocation(program, "shift"),
-		"coloring_method" = gl.GetUniformLocation(program, "coloring_method"),
-		"texture"         = gl.GetUniformLocation(program, "texture"),
-	}
-
-	gl.Uniform1i(uniforms["texture"], 0)
-	gl.Uniform1f(uniforms["zoom"], 1)
-	gl.Uniform2i(uniforms["resolution"], width, height)
+	reload_shaders(app)
 }
 
 handle_event :: proc(using app: ^App_Context, event: ^sdl.Event) 
@@ -428,6 +406,7 @@ draw_ui :: proc(using app: ^App_Context)
 				err_msg = strings.clone(result)
 				log.error(err_msg)
 			} else {
+				last_time = sdl.GetTicks()
 				reload_shaders(app)
 			}
 		}
@@ -469,12 +448,10 @@ reload_shaders :: proc(using app: ^App_Context)
 
 	uniforms = {
 		"zoom"            = gl.GetUniformLocation(program, "zoom"),
+		"time"            = gl.GetUniformLocation(program, "time"),
 		"resolution"      = gl.GetUniformLocation(program, "resolution"),
 		"shift"           = gl.GetUniformLocation(program, "shift"),
-		"coloring_method" = gl.GetUniformLocation(
-			program,
-			"coloring_method",
-		),
+		"coloring_method" = gl.GetUniformLocation(program, "coloring_method"),
 		"texture"         = gl.GetUniformLocation(program, "texture"),
 	}
 
