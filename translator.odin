@@ -1,7 +1,10 @@
+#+feature dynamic-literals
+
 package kolori
 
 import mp "math-parser"
 import "core:strings"
+import "core:testing"
 import "core:slice"
 import "core:fmt"
 import "core:log"
@@ -58,7 +61,8 @@ funcs := []string {
 @(rodata)
 binary_funcs := []string{"logbase"}
 
-expr_to_glsl :: proc(expr: mp.Expression) -> (str: string, err: Maybe(Error_Report)) {
+expr_to_glsl :: proc(expr: mp.Expression) -> (str: string, report: Maybe(Error_Report))
+{
 	func_names := [mp.BinaryType]string {
 		.Addition       = "c_add",
 		.Subtraction    = "c_sub",
@@ -69,13 +73,13 @@ expr_to_glsl :: proc(expr: mp.Expression) -> (str: string, err: Maybe(Error_Repo
 
 	switch expr in expr {
 	case ^mp.Real:
-		return fmt.tprintf("(vec2(%s,0))", expr.num), nil
+		return fmt.tprintf("vec2(%s, 0)", expr.num), nil
 	case ^mp.Variable:
 		switch expr.name {
 		case "z":
 			return "z", nil
 		case "t":
-			return "(vec2(time,0))", nil
+			return "vec2(time, 0)", nil
 		case "i":
 			return "I", nil
 		case "e":
@@ -87,12 +91,12 @@ expr_to_glsl :: proc(expr: mp.Expression) -> (str: string, err: Maybe(Error_Repo
 		case "phi":
 			return "PHI", nil
 		case:
-			err = Error_Report{
+			report = Error_Report{
 				error = .UnknownVariable,
 				msg = fmt.tprintf("Unknown variable \"%s\"", expr.name)
 			}
 
-			return "", err
+			return "", report
 		}
 	case ^mp.Binary:
 		return fmt.tprintf(
@@ -104,12 +108,12 @@ expr_to_glsl :: proc(expr: mp.Expression) -> (str: string, err: Maybe(Error_Repo
 	case ^mp.FunctionCall:
 		expected_arity := slice.contains(binary_funcs, expr.name) ? 2 : 1
 		if len(expr.arguments) != expected_arity {
-			err = Error_Report{
+			report = Error_Report{
 				error = .WrongArity,
 				msg = fmt.tprintf("Wrong arity for function \"%s\"", expr.name)
 			}
 
-			return "", err
+			return "", report
 		}
 
 		builder: strings.Builder
@@ -132,16 +136,25 @@ expr_to_glsl :: proc(expr: mp.Expression) -> (str: string, err: Maybe(Error_Repo
 	return
 }
 
-translate_string :: proc(source: string) -> (string, bool) #optional_ok {
-	expr, errors := mp.parse(source, funcs, {.Source_Nil_Terminated, .Implicit_Multiplication})
-	defer mp.expression_free(expr)
-	for err in errors {
-		return err.msg, false
+translate_string :: proc(source: string) -> (string, bool) #optional_ok
+{
+	expr, reports := mp.parse(source, funcs, {.Source_Nil_Terminated, .Implicit_Multiplication}, context.temp_allocator)
+	defer mp.expression_free(expr, context.temp_allocator)
+
+	if len(reports) > 0 {
+		err_msg_builder: strings.Builder
+		strings.builder_init(&err_msg_builder)
+		
+		for report in reports {
+			fmt.sbprintln(&err_msg_builder, report.msg)
+		}
+
+		return strings.to_string(err_msg_builder), false
 	}
 	
-	glsl, err := expr_to_glsl(expr)
-	if err != nil {
-		return err.?.msg, false
+	glsl, report := expr_to_glsl(expr)
+	if report != nil {
+		return report.?.msg, false
 	} 
 
 	result := fmt.tprintf("vec2 f(vec2 z) {{ return %s; }}", glsl)
@@ -150,11 +163,27 @@ translate_string :: proc(source: string) -> (string, bool) #optional_ok {
 	return result, true
 }
 
-translate_slice :: proc(source: []u8) -> (string, bool) #optional_ok {
+
+translate_slice :: proc(source: []u8) -> (string, bool) #optional_ok
+{
 	return translate_string((string)(source))
 }
 
 translate :: proc {
 	translate_string,
 	translate_slice
+}
+
+@(test)
+test :: proc (t: ^testing.T)
+{
+	inp_to_outp := map[string]string{
+		"z\x00" =         "vec2 f(vec2 z) { return z; }",
+		"z+1\x00" =       "vec2 f(vec2 z) { return c_add(z, vec2(1, 0)); }",
+		"z^(t - 1)\x00" = "vec2 f(vec2 z) { return c_pow(z, c_sub(t, vec2(1, 0))); }"
+	}
+
+	for inp, outp in inp_to_outp {
+		testing.expect(t, translate(inp) == outp)
+	}
 }

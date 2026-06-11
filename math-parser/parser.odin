@@ -1,17 +1,17 @@
 package math_parser
 
-import "core:mem"
+import "core:log"
 
+// Parses a math expression given a slice of tokens from the user
 Parser :: struct {
 	tokens:    []Token,
-	allocator: mem.Allocator,
 	current:   uint,
 }
 
 // AST types.
-// could we also do a union of bare structs, but instead use
+// could we instead do a union of bare structs, but and use
 // `^Expression` instead of `Expression`?
-Expression :: union {
+Expression :: union #shared_nil {
 	^Real,
 	^Variable,
 	^Binary,
@@ -25,6 +25,8 @@ Real :: struct {
 Variable :: struct {
 	name: string,
 }
+// maybe use arrays/slices to avoid needing to use pointers so much?
+// would also make printing expressions nicer...
 Binary :: struct {
 	left:      Expression,
 	right:     Expression,
@@ -48,28 +50,34 @@ BinaryType :: enum {
 
 parse_string :: proc (source: string, functions: []string = {}, scan_flags: bit_set[Scan_Flag] = {}, allocator := context.allocator) -> (Expression, []Error_Report)
 {
-	tokens, errs := scan(source, functions, scan_flags, allocator)
-	if len(errs) != 0 {
-		return nil, errs
+	context.allocator = allocator
+
+	tokens, reports := scan(source, functions, scan_flags)
+	defer delete(tokens)
+
+	if len(reports) != 0 {
+		return nil, reports
 	}
 
-	return parse_tokens(tokens, allocator)
+	expr, report := parse_tokens(tokens, allocator)
+	if report != nil {
+		reports := make([]Error_Report, 1)
+		reports[0] = report.?
+		return nil, reports
+	}
+
+	delete(reports)
+	return expr, {}
 }
 
-parse_tokens :: proc (tokens: []Token, allocator := context.allocator) -> (Expression, []Error_Report)
+parse_tokens :: proc (tokens: []Token, allocator := context.allocator) -> (Expression, Maybe(Error_Report))
 {
+	context.allocator = allocator
+
 	parser: Parser 
-	parser_init(&parser, tokens, allocator)
-	defer parser_destroy(&parser)
-
-	expr, err := parser_parse(&parser)
-	if err != nil {
-		errs := make([]Error_Report, 1, allocator)
-		errs[0] = err.?
-		return expr, errs
-	}
-
-	return expr, {}
+	parser_init(&parser, tokens)
+	
+	return parser_parse(&parser)
 }
 
 parse :: proc {
@@ -77,15 +85,9 @@ parse :: proc {
 	parse_tokens
 }
 
-parser_init :: proc (p: ^Parser, tokens: []Token, allocator := context.allocator)
+parser_init :: proc (p: ^Parser, tokens: []Token)
 {
 	p.tokens = tokens
-	p.allocator = allocator
-}
-
-parser_destroy :: proc (p: ^Parser)
-{
-	delete(p.tokens)
 }
 
 /*
@@ -108,9 +110,9 @@ expression :: proc(p: ^Parser) -> (Expression, Maybe(Error_Report)) {
 	return addition(p)
 }
 
-addition :: proc(p: ^Parser) -> (expr: Expression, err: Maybe(Error_Report)) {
+addition :: proc(p: ^Parser) -> (expr: Expression, report: Maybe(Error_Report)) {
 	expr = multiplication(p) or_return
-	defer if err != nil {
+	defer if report != nil {
 		expression_free(expr)
 		expr = nil
 	}
@@ -118,7 +120,7 @@ addition :: proc(p: ^Parser) -> (expr: Expression, err: Maybe(Error_Report)) {
 	for parser_match(p, {.PLUS, .MINUS}) {
 		operator := parser_previous(p)
 		right := multiplication(p) or_return
-		bin_op := new(Binary, p.allocator)
+		bin_op := new(Binary)
 		bin_op^ = Binary {
 			operation = operator.type == .PLUS ? .Addition : .Subtraction,
 			right     = right,
@@ -131,9 +133,9 @@ addition :: proc(p: ^Parser) -> (expr: Expression, err: Maybe(Error_Report)) {
 	return expr, nil
 }
 
-multiplication :: proc(p: ^Parser) -> (expr: Expression, err: Maybe(Error_Report)) {
+multiplication :: proc(p: ^Parser) -> (expr: Expression, report: Maybe(Error_Report)) {
 	expr = power(p) or_return
-	defer if err != nil {
+	defer if report != nil {
 		expression_free(expr)
 		expr = nil
 	}
@@ -141,7 +143,7 @@ multiplication :: proc(p: ^Parser) -> (expr: Expression, err: Maybe(Error_Report
 	for parser_match(p, {.ASTERISK, .SLASH}) {
 		operator := parser_previous(p)
 		right := power(p) or_return
-		binop := new(Binary, p.allocator)
+		binop := new(Binary)
 		binop^ = Binary {
 			operation = operator.type == .ASTERISK ? .Multiplication : .Division,
 			right     = right,
@@ -154,16 +156,16 @@ multiplication :: proc(p: ^Parser) -> (expr: Expression, err: Maybe(Error_Report
 	return expr, nil
 }
 
-power :: proc(p: ^Parser) -> (expr: Expression, err: Maybe(Error_Report)) {
+power :: proc(p: ^Parser) -> (expr: Expression, report: Maybe(Error_Report)) {
 	expr = unary(p) or_return
-	defer if err != nil {
+	defer if report != nil {
 		expression_free(expr)
 		expr = nil
 	}
 
 	for parser_match(p, {.CARET}) {
 		right := unary(p) or_return
-		binop := new(Binary, p.allocator)
+		binop := new(Binary)
 		binop^ = Binary {
 			operation = .Exponentiation,
 			right     = right,
@@ -176,28 +178,28 @@ power :: proc(p: ^Parser) -> (expr: Expression, err: Maybe(Error_Report)) {
 	return expr, nil
 }
 
-unary :: proc(p: ^Parser) -> (expr: Expression, err: Maybe(Error_Report)) {
+unary :: proc(p: ^Parser) -> (expr: Expression, report: Maybe(Error_Report)) {
 	if parser_match(p, {.MINUS}) {
-		expr = new(Unary, p.allocator)
+		expr = new(Unary)
 		expr.(^Unary).inner = unary(p) or_return
 	} else {
-		expr, err = primary(p)
-		if err != nil {
+		expr, report = primary(p)
+		if report != nil {
 			expression_free(expr)
-			return nil, err
+			return nil, report
 		}
 	}
 
 	return expr, nil
 }
 
-primary :: proc(p: ^Parser) -> (expr: Expression, err: Maybe(Error_Report)) {
+primary :: proc(p: ^Parser) -> (expr: Expression, report: Maybe(Error_Report)) {
 	switch {
 	case parser_match(p, {.NUMBER}):
-		expr = new(Real, p.allocator)
+		expr = new(Real)
 		expr.(^Real).num = parser_previous(p).lexeme
 	case parser_match(p, {.VARIABLE}):
-		expr = new(Variable, p.allocator)
+		expr = new(Variable)
 		expr.(^Variable).name = parser_previous(p).lexeme
 	case parser_match(p, {.LEFT_PAREN}):
 		opening_paren := parser_previous(p)
@@ -205,7 +207,7 @@ primary :: proc(p: ^Parser) -> (expr: Expression, err: Maybe(Error_Report)) {
 
 		if !parser_match(p, {.RIGHT_PAREN}) {
 			token := parser_previous(p)
-			err = new_report(
+			report = new_report(
 				token,
 				.ExpectedRParen,
 				
@@ -214,28 +216,28 @@ primary :: proc(p: ^Parser) -> (expr: Expression, err: Maybe(Error_Report)) {
 			)
 			
 			expression_free(expr)
-			return nil, err
+			return nil, report
 		}
 	case parser_match(p, {.FUNCTION}):
-		expr, err = function_call(p)
+		expr, report = function_call(p)
 	case:
-		err = new_report(
+		report = new_report(
 			parser_previous(p),
 			parser_is_at_end(p) ? .UnexpectedEOF : .UnexpectedToken
 		)
 	}
 
-	return expr, err
+	return expr, report
 }
 
-function_call :: proc(p: ^Parser) -> (expr: Expression, err: Maybe(Error_Report)) {
-	func_call := new(FunctionCall, p.allocator)
+function_call :: proc(p: ^Parser) -> (expr: Expression, report: Maybe(Error_Report)) {
+	func_call := new(FunctionCall)
 	func_call.name = parser_previous(p).lexeme
 
 	if !parser_match(p, {.LEFT_PAREN}) {
 		expression_free(func_call)
 		token := parser_previous(p)
-		err = new_report(
+		report = new_report(
 			token,
 			.ExpectedLParen,
 
@@ -243,15 +245,15 @@ function_call :: proc(p: ^Parser) -> (expr: Expression, err: Maybe(Error_Report)
 			token.lexeme
 		)
 
-		return nil, err
+		return nil, report
 	}
 
-	func_call.arguments, err = parameter_list(p)
+	func_call.arguments, report = parameter_list(p)
 	
 	if !parser_match(p, {.RIGHT_PAREN}) {
 		expression_free(func_call)
 		token := parser_previous(p)
-		err = new_report(
+		report = new_report(
 			token,
 			.ExpectedRParen,
 
@@ -259,14 +261,14 @@ function_call :: proc(p: ^Parser) -> (expr: Expression, err: Maybe(Error_Report)
 			token.lexeme
 		)
 
-		return nil, err
+		return nil, report
 	}
 
-	return func_call, err
+	return func_call, report
 }
 
-parameter_list :: proc(p: ^Parser) -> (list: [dynamic]Expression, err: Maybe(Error_Report)) {
-	list = make([dynamic]Expression, p.allocator)
+parameter_list :: proc(p: ^Parser) -> (list: [dynamic]Expression, report: Maybe(Error_Report)) {
+	list = make([dynamic]Expression)
 	defer shrink(&list)
 
 	expr := expression(p) or_return
@@ -277,10 +279,13 @@ parameter_list :: proc(p: ^Parser) -> (list: [dynamic]Expression, err: Maybe(Err
 		append(&list, expression(p) or_return)
 	}
 
-	return list, err
+	return list, report
 }
 
 expression_free :: proc(expr: Expression, allocator := context.allocator) {
+	@static num_free: int
+	defer num_free += 1
+	log.debugf("free #%i: %w", num_free, expr)
 	context.allocator = allocator
 	switch expr in expr {
 	case ^Real:

@@ -1,5 +1,6 @@
-#+build ignore
 #+private(file)
+// #+build ignore
+
 
 package math_parser
 
@@ -18,7 +19,8 @@ ops := [BinaryType]u8 {
 	.Exponentiation = '^',
 }
 
-eval :: proc(expr: Expression) -> f64 {
+eval :: proc(expr: Expression) -> f64 
+{
 	switch expr in expr {
 	case ^Real:
 		num := strconv.parse_f64(expr.num) or_else unreachable()
@@ -58,7 +60,7 @@ eval :: proc(expr: Expression) -> f64 {
 		case "sec":
 			return math.pow(math.cos(eval(expr.arguments[0])), -1)
 		case "cot":
-			return math.tan((math.PI/2) - eval(expr.arguments[0]))
+			return math.tan((math.PI / 2) - eval(expr.arguments[0]))
 		case "asin":
 			return math.asin(eval(expr.arguments[0]))
 		case "acos":
@@ -81,7 +83,8 @@ eval :: proc(expr: Expression) -> f64 {
 	return 0
 }
 
-expr_to_str :: proc(expr: Expression) -> string {
+expr_to_str :: proc(expr: Expression) -> string 
+{
 	switch expr in expr {
 	case ^Real:
 		return expr.num
@@ -105,7 +108,7 @@ expr_to_str :: proc(expr: Expression) -> string {
 		for i in expr.arguments[1:] {
 			fmt.sbprint(&builder, ",", expr_to_str(i))
 		}
-		
+
 		fmt.sbprint(&builder, ")")
 
 		return strings.to_string(builder)
@@ -116,14 +119,18 @@ expr_to_str :: proc(expr: Expression) -> string {
 	}
 }
 
-main :: proc() {
+main :: proc() 
+{
 	track: mem.Tracking_Allocator
 	mem.tracking_allocator_init(&track, context.allocator)
 	context.allocator = mem.tracking_allocator(&track)
 
 	defer {
 		if len(track.allocation_map) > 0 {
-			fmt.eprintf("=== %v allocations not freed: ===\n", len(track.allocation_map))
+			fmt.eprintf(
+				"=== %v allocations not freed: ===\n",
+				len(track.allocation_map),
+			)
 			for _, entry in track.allocation_map {
 				fmt.eprintf("- %v bytes @ %v\n", entry.size, entry.location)
 			}
@@ -131,28 +138,13 @@ main :: proc() {
 		mem.tracking_allocator_destroy(&track)
 	}
 
-	scanner := new(Scanner)
-	scanner.source = "x^(y+1"
-	scanner.functions = {"sin", "cos", "tan"}
-	defer free(scanner)
-	defer scanner_destroy(scanner)
-	
-	parser := new(Parser)
-	scanner_scan_tokens(scanner)
-	parser.tokens = scanner.tokens[:]
-	parser.allocator = context.allocator
-	
-	defer free(parser)
-
-	expr, err := parser_parse(parser)
+	expr, report := parse("x^(y+1)")
 	defer expression_free(expr)
 
-	if err == nil {
-		fmt.println(scanner.source)
+	if report == nil {
 		fmt.println(expr_to_str(expr))
 		fmt.println(eval(expr))
 	} else {
-		fmt.println(err)
-		// fmt.println(scanner.tokens[parser.current])
+		fmt.println(report)
 	}
 }

@@ -8,7 +8,8 @@ import "core:strconv"
 import "core:strings"
 import "core:testing"
 
-eval :: proc(expr: math_parser.Expression) -> f64 {
+eval :: proc(expr: math_parser.Expression) -> f64 
+{
 	switch expr in expr {
 	case ^math_parser.Real:
 		num, _ := strconv.parse_f64(expr.num)
@@ -71,7 +72,8 @@ eval :: proc(expr: math_parser.Expression) -> f64 {
 	return 0
 }
 
-expr_to_str :: proc(expr: math_parser.Expression) -> string {
+expr_to_str :: proc(expr: math_parser.Expression) -> string 
+{
 	switch expr in expr {
 	case ^math_parser.Real:
 		return expr.num
@@ -115,7 +117,8 @@ expr_to_str :: proc(expr: math_parser.Expression) -> string {
 }
 
 @(test)
-prescendence :: proc(t: ^testing.T) {
+prescendence :: proc(t: ^testing.T) 
+{
 	EXPRSTR :: "1 + 2 * 3 ^ 4"
 
 	expr, _ := math_parser.parse(EXPRSTR)
@@ -135,7 +138,8 @@ prescendence :: proc(t: ^testing.T) {
 }
 
 @(test)
-parentheses :: proc(t: ^testing.T) {
+parentheses :: proc(t: ^testing.T) 
+{
 	EXPRSTR :: "(((10*(100)*((((20+4)*(2*2*9+3-3)))))/100)^2)^2"
 
 	expr, _ := math_parser.parse(EXPRSTR)
@@ -155,7 +159,8 @@ parentheses :: proc(t: ^testing.T) {
 }
 
 @(test)
-functions :: proc(t: ^testing.T) {
+functions :: proc(t: ^testing.T) 
+{
 	EXPRSTR :: "exp(2) * exp(ln(e) - 3) + cos(pi/4) * sin(pi/4)"
 
 	expr, _ := math_parser.parse(EXPRSTR, []string{"exp", "ln", "sin", "cos"})
@@ -175,7 +180,8 @@ functions :: proc(t: ^testing.T) {
 }
 
 @(test)
-errors :: proc(t: ^testing.T) {
+errors :: proc(t: ^testing.T) 
+{
 	EXPRSTR :: "exp(2) * exp(ln(e) - 3) + cos(pi/4) * sin(pi/4)"
 
 	expr, _ := math_parser.parse(EXPRSTR, []string{"exp", "ln", "sin", "cos"})

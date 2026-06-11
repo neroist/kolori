@@ -34,47 +34,52 @@ Token :: struct {
 Scanner :: struct {
 	tokens:     [dynamic]Token,
 	errors:     [dynamic]Error_Report,
-	allocator:  mem.Allocator,
 	// list of function names. all other identifiers are regarded as variables
 	functions:  []string,
 	source:     string,
 	scan_flags: bit_set[Scan_Flag],
 	start:      uint,
-	current:    uint
+	current:    uint,
 }
 
 Scan_Flag :: enum {
 	Source_Nil_Terminated,
-	Implicit_Multiplication
+	Implicit_Multiplication,
 }
 
-is_digit :: proc(c: u8) -> bool {
+is_digit :: proc(c: u8) -> bool 
+{
 	return (c >= '0') && (c <= '9')
 }
 
-is_alpha :: proc(c: u8) -> bool {
+is_alpha :: proc(c: u8) -> bool 
+{
 	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c == '_')
 }
 
-is_alphanumeric :: proc(c: u8) -> bool {
+is_alphanumeric :: proc(c: u8) -> bool 
+{
 	return is_digit(c) || is_alpha(c)
 }
 
-scanner_destroy :: proc(s: ^Scanner) {
+scanner_destroy :: proc(s: ^Scanner) 
+{
 	delete(s.errors)
 	delete(s.tokens)
 	s.errors = nil
 	s.tokens = nil
 }
 
-scanner_reset_state :: proc(s: ^Scanner) {
+scanner_reset_state :: proc(s: ^Scanner) 
+{
 	s.start = 0
 	s.current = 0
 	resize(&s.tokens, 0)
 	resize(&s.errors, 0)
 }
 
-scanner_is_function :: proc(s: ^Scanner, ident: string) -> bool {
+scanner_is_function :: proc(s: ^Scanner, ident: string) -> bool 
+{
 	for func in s.functions {
 		if ident == func {
 			return true
@@ -84,7 +89,8 @@ scanner_is_function :: proc(s: ^Scanner, ident: string) -> bool {
 	return false
 }
 
-scanner_is_at_end :: proc(s: ^Scanner) -> bool {
+scanner_is_at_end :: proc(s: ^Scanner) -> bool 
+{
 	if .Source_Nil_Terminated in s.scan_flags {
 		return s.source[s.current] == '\x00'
 	}
@@ -92,7 +98,8 @@ scanner_is_at_end :: proc(s: ^Scanner) -> bool {
 	return s.current >= len(s.source)
 }
 
-scanner_advance :: proc(s: ^Scanner) -> u8 {
+scanner_advance :: proc(s: ^Scanner) -> u8 
+{
 	if scanner_is_at_end(s) {
 		return 0
 	}
@@ -102,7 +109,8 @@ scanner_advance :: proc(s: ^Scanner) -> u8 {
 	return char
 }
 
-scanner_peek :: proc(s: ^Scanner) -> u8 {
+scanner_peek :: proc(s: ^Scanner) -> u8 
+{
 	if scanner_is_at_end(s) {
 		return 0
 	}
@@ -110,7 +118,8 @@ scanner_peek :: proc(s: ^Scanner) -> u8 {
 	return s.source[s.current]
 }
 
-scanner_peek_next :: proc(s: ^Scanner) -> u8 {
+scanner_peek_next :: proc(s: ^Scanner) -> u8 
+{
 	if s.current + 1 >= len(s.source) {
 		return 0
 	}
@@ -118,11 +127,13 @@ scanner_peek_next :: proc(s: ^Scanner) -> u8 {
 	return s.source[s.current + 1]
 }
 
-scanner_add_token :: proc(s: ^Scanner, type: TokenType) {
+scanner_add_token :: proc(s: ^Scanner, type: TokenType) 
+{
 	append(&s.tokens, Token{type, s.source[s.start:s.current], s.current})
 }
 
-scanner_scan_number :: proc(s: ^Scanner) {
+scanner_scan_number :: proc(s: ^Scanner) 
+{
 	for is_digit(scanner_peek(s)) {
 		scanner_advance(s)
 	}
@@ -138,7 +149,8 @@ scanner_scan_number :: proc(s: ^Scanner) {
 	scanner_add_token(s, .NUMBER)
 }
 
-scanner_scan_identifier :: proc(s: ^Scanner) {
+scanner_scan_identifier :: proc(s: ^Scanner) 
+{
 	for is_alphanumeric(scanner_peek(s)) {
 		scanner_advance(s)
 	}
@@ -150,7 +162,8 @@ scanner_scan_identifier :: proc(s: ^Scanner) {
 	}
 }
 
-scanner_scan_token :: proc(s: ^Scanner) {
+scanner_scan_token :: proc(s: ^Scanner) 
+{
 	c := scanner_advance(s)
 	switch c {
 	case '(':
@@ -165,8 +178,14 @@ scanner_scan_token :: proc(s: ^Scanner) {
 		//       number when the next character is a digit and the 
 		//       preceeding tokens do not imply that it may be used as
 		//       an operator instead
-		exclude: bit_set[TokenType] = {.RIGHT_PAREN, .FUNCTION, .VARIABLE, .NUMBER}
-		is_operator := len(s.tokens) == 0 || s.tokens[len(s.tokens) - 1].type in exclude
+		exclude: bit_set[TokenType] = {
+			.RIGHT_PAREN,
+			.FUNCTION,
+			.VARIABLE,
+			.NUMBER,
+		}
+		is_operator :=
+			len(s.tokens) == 0 || s.tokens[len(s.tokens) - 1].type in exclude
 		if is_digit(scanner_peek(s)) && !is_operator {
 			scanner_scan_number(s)
 			break
@@ -182,7 +201,7 @@ scanner_scan_token :: proc(s: ^Scanner) {
 	case '^':
 		scanner_add_token(s, .CARET)
 	case '\t', '\n', '\v', '\f', '\r', ' ':
-		/* */
+	/* */
 	case:
 		if is_digit(c) {
 			scanner_scan_number(s)
@@ -190,12 +209,16 @@ scanner_scan_token :: proc(s: ^Scanner) {
 			scanner_scan_identifier(s)
 		} else {
 			scanner_add_token(s, .ERROR)
-			append(&s.errors, new_report(s.tokens[len(s.tokens) - 1], .UnexpectedCharacter))
+			append(
+				&s.errors,
+				new_report(s.tokens[len(s.tokens) - 1], .UnexpectedCharacter),
+			)
 		}
 	}
 }
 
-scanner_insert_muls :: proc(s: ^Scanner) {
+scanner_insert_muls :: proc(s: ^Scanner) 
+{
 	start :: bit_set[TokenType]{.VARIABLE, .NUMBER, .RIGHT_PAREN}
 	end :: bit_set[TokenType]{.VARIABLE, .FUNCTION, .LEFT_PAREN}
 	for t, idx in s.tokens {
@@ -209,13 +232,18 @@ scanner_insert_muls :: proc(s: ^Scanner) {
 			inject_at(
 				&s.tokens,
 				idx + 1,
-				Token{type = .ASTERISK, lexeme = "*", column = (uint)(idx + 1)},
+				Token {
+					type = .ASTERISK,
+					lexeme = "*",
+					column = (uint)(idx + 1),
+				},
 			)
 		}
 	}
 }
 
-scanner_scan_tokens :: proc(s: ^Scanner) -> (ok: bool) {
+scanner_scan_tokens :: proc(s: ^Scanner) -> (ok: bool) 
+{
 	for !scanner_is_at_end(s) {
 		s.start = s.current
 		scanner_scan_token(s)
@@ -234,17 +262,30 @@ scanner_scan_tokens :: proc(s: ^Scanner) -> (ok: bool) {
 	return ok
 }
 
-scanner_init :: proc(s: ^Scanner, source: string, functions: []string = {}, scan_flags: bit_set[Scan_Flag] = {}, allocator := context.allocator)
+scanner_init :: proc(
+	s: ^Scanner,
+	source: string,
+	functions: []string = {},
+	scan_flags: bit_set[Scan_Flag] = {},
+	allocator := context.allocator,
+) 
 {
 	s.tokens = make([dynamic]Token, allocator)
 	s.errors = make([dynamic]Error_Report, allocator)
-	s.allocator = allocator
 	s.functions = functions
 	s.source = source
 	s.scan_flags = scan_flags
 }
 
-scan :: proc (source: string, functions: []string = {}, scan_flags: bit_set[Scan_Flag] = {}, allocator := context.allocator) -> ([]Token, []Error_Report)
+scan :: proc(
+	source: string,
+	functions: []string = {},
+	scan_flags: bit_set[Scan_Flag] = {},
+	allocator := context.allocator,
+) -> (
+	[]Token,
+	[]Error_Report,
+) 
 {
 	scanner: Scanner
 	scanner_init(&scanner, source, functions, scan_flags, allocator)
