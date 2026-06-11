@@ -7,13 +7,17 @@ To do:
 - [x] Zooming in/out
 - [x] Panning
 - [x] Ability to switch function at runtime
+- [x] Ability to take screenshots
 - [ ] Ability to switch coloring method (HSV color space, HSLuv, palette
 generation, etc.)
 - [ ] Ability for animations with `t` variable
+- [ ] Support drawing of level curves (of phase and modulus)
+- [ ] Support drawing of grid
+- [ ] Support adjustment of HSV gamma correction
 - [ ] Display where in the complex plane the mouse cursor is at
 - [ ] Pinch motion for zoom in/out for touchscreen devices
 - [ ] Web builds
-- [ ] Migration from OpenGL to WebGL/SDL3_gpu
+- [ ] Migration from OpenGL to WebGPU/SDL3_gpu
 
 ## How to use?
 
@@ -22,6 +26,9 @@ generation, etc.)
 simply use your finger.
 - Scroll to zoom in/out.
 - `h` to hide the "Settings" window.
+- `F11` to toggle fullscreen.
+- `F12` to take a screenshot. It will be saved in the curent woking directory
+with  filename `kolori_screenshotYYYY-MM-DD_HHMMSS.png`.
 
 ### Function input
 Input a valid mathematical expression into the "Function" text input using the
