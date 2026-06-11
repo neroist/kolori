@@ -33,7 +33,8 @@ App_Context :: struct {
 	show_ui:  bool,
 	function: []u8,
 	err_msg:  string,
-	last_time: u64
+	last_time: u64,
+	time_speed: f32,
 }
 
 Coloring_Method :: enum u32 {
@@ -116,7 +117,7 @@ main :: proc()
 			handle_event(&app, &event)
 		}
 
-		gl.Uniform1f(uniforms["time"], (f32)(sdl.GetTicks() - last_time) / 1e4)
+		gl.Uniform1f(uniforms["time"], (f32)(sdl.GetTicks() - last_time) / 1e3 * time_speed)
 
 		render_graph(&app)
 		draw_ui(&app)
@@ -130,6 +131,7 @@ setup_app :: proc(using app: ^App_Context)
 {
 	zoom = 1
 	show_ui = true
+	time_speed = 1
 	function = make([]u8, 1024)
 	fmt.bprint(function, "z")
 }
@@ -421,6 +423,7 @@ draw_ui :: proc(using app: ^App_Context)
 			imgui.EndPopup()
 		}
 
+		imgui.SliderFloat("Speed", &time_speed, 0.1, 10)
 	}
 	imgui.End()
 
