@@ -46,7 +46,7 @@ multiplication is also allowed. A list of supported functions is found at
 the top of `translator.odin`. 
 
 For animations, you may also use the scalar variable "t" (stands for "time").
-- Example: "z ^ e^(t*i)" to rotate the plane.
+- Example: "z * e^(t*i)" to rotate the plane.
 
 You may control how fast "t" increases using the "Speed" slider in the
 "Settings" window. The speed has units of "units per second"--a speed of 1
