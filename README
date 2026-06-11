@@ -15,11 +15,17 @@ generation, etc.)
 - [ ] Web builds
 - [ ] Migration from OpenGL to WebGL/SDL3_gpu
 
-## Controls
+## How to use?
+
+### Controls
 - Use your mouse cursor to pan. If you are on a touchscreen device you may also
 simply use your finger.
 - Scroll to zoom in/out.
 - `h` to hide the "Settings" window.
+
+### Function input
+Input a valid mathematical expression into the "Function" text input using the
+variable "z".
 
 ## How to build?
 
