@@ -11,6 +11,7 @@ To do:
 - [x] Ability for animations with "t" variable 
 - [ ] Ability to switch coloring method (HSV color space, HSLuv, palette
 generation, etc.)
+- [ ] Ability to configure keyboard bindings
 - [ ] Support drawing of level curves (of phase and modulus)
 - [ ] Support drawing of grid
 - [ ] Support adjustment of HSV gamma correction
@@ -30,6 +31,7 @@ device you may also simply use your finger.
 - Scroll or "+"/"-" to zoom in/out.
 - `h` to hide the "Settings" window.
 - `r` to reload shaders.
+- `c` to toggle cursor visibility.
 - `ESC` to reset zoom and pan.
 - `F11` to toggle fullscreen.
 - `F12` to take a screenshot. It will be saved in the curent woking directory
@@ -42,7 +44,12 @@ currently. Unary plus is not supported. A list of supported functions is found
 at the top of `translator.odin`. 
 
 For animations, you may also use the scalar variable "t" (stands for "time").
-- Example: "z ^ e^(t*i)" to rotate the plane
+- Example: "z ^ e^(t*i)" to rotate the plane.
+
+You may control how fast "t" increases using the "Speed" slider in the
+"Settings" window. The speed has units of "units per second"--a speed of 1
+means that "t" will inrease by 1 every second. While the slider is clampted
+to 0.1-10, you may input arbitrary values if you ctrl+click on the slider.
 
 ## How to build?
 
