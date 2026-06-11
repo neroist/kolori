@@ -27,20 +27,16 @@ funcs := []string {
 	"imag",
 	"im",
 	"abs",
+	// until the parser is extended for the "%" operator
 	"mod",
-	"modulus",
-	"norm",
 	"arg",
-	"phase",
 	"conj",
-	"proj", // "polar", "cis",
 	"exp",
-	"log",
 	"ln",
+	"log",
 	"log2",
 	"log10",
 	"logbase",
-	"pow",
 	"sqrt",
 	"cbrt",
 	"sin",
@@ -55,7 +51,6 @@ funcs := []string {
 	"asinh",
 	"acosh",
 	"atanh",
-	"logbase",
 }
 
 @(rodata)
@@ -81,15 +76,15 @@ expr_to_glsl :: proc(expr: mp.Expression) -> (str: string, report: Maybe(Error_R
 		case "t":
 			return "vec2(time, 0)", nil
 		case "i":
-			return "I", nil
+			return "C_I", nil
 		case "e":
-			return "E", nil
-		case "pi":
-			return "PI", nil
-		case "tau":
-			return "TAU", nil
-		case "phi":
-			return "PHI", nil
+			return "C_E", nil
+		case "pi", "π":
+			return "C_PI", nil
+		case "tau", "τ":
+			return "C_TAU", nil
+		case "phi", "φ", "ϕ":
+			return "C_PHI", nil
 		case:
 			report = Error_Report{
 				error = .UnknownVariable,

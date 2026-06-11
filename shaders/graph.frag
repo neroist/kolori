@@ -3,7 +3,6 @@
 precision highp float;
 precision highp int;
 precision highp sampler2D;
-precision highp usampler2D;
 
 in vec2 pos;
 out vec4 FragColor;
@@ -20,12 +19,15 @@ uniform sampler2D texture;
 #define USE_TEXTURE = 2
 #define USE_USER    = 4
 
-const vec2  I           = vec2(0, 1);
 const float PI          = 3.14159265358979323846f;
 const float TAU         = 6.28318530717958647692f;
-const float E           = 2.71828182845904523536f;
-const float PHI         = 1.61803398874989484820f;
 const float TWO_OVER_PI = 0.63661977236758134308f;
+
+const vec2 C_I   = vec2(0, 1);
+const vec2 C_PI  = vec2(3.14159265358979323846f, 0);
+const vec2 C_TAU = vec2(6.28318530717958647692f, 0);
+const vec2 C_E   = vec2(2.71828182845904523536f, 0);
+const vec2 C_PHI = vec2(1.61803398874989484820f, 0);
 
 vec2 f(vec2 z);
 
@@ -439,13 +441,6 @@ vec2 transform_coordinates(vec4 FragCoord)
 // Copyright 2013 The Rust Project Developers. MIT license
 // Ported to GLSL by Andrei Kashcha (github.com/anvaka), available under MIT license as well.
 
-
-// Returns a complex number z = 1 + i * 0.
-vec2 c_one() { return vec2(1., 0.); }
-
-// Returns a complex number z = 0 + i * 1.
-vec2 c_i() { return vec2(0., 1.); }
-
 float arg(vec2 c) {
 	return atan(c.y, c.x);
 }
@@ -480,10 +475,24 @@ vec2 c_ln(vec2 c) {
 	return vec2(log(polar.x), polar.y);
 }
 
+vec2 c_log(vec2 c) {
+	return c_ln(c);
+}
+
 // Returns the logarithm of `c` with respect to an arbitrary base.
-vec2 c_log(vec2 c, float base) {
+vec2 c_logbase(vec2 c, float base) {
 	vec2 polar = c_to_polar(c);
 	return vec2(log(polar.r), polar.y) / log(base);
+}
+
+// Returns the logarithm of `c` with respect to an arbitrary base.
+vec2 c_log2(vec2 c, float base) {
+	return c_logbase(c, 2);
+}
+
+// Returns the logarithm of `c` with respect to an arbitrary base.
+vec2 c_log10(vec2 c, float base) {
+	return c_logbase(c, 10);
 }
 
 // Computes the square root of complex number `c`.
@@ -543,8 +552,8 @@ vec2 c_tan(vec2 c) {
 
 vec2 c_atan(vec2 c) {
 	// formula: arctan(z) = (ln(1+iz) - ln(1-iz))/(2i)
-	vec2 i = c_i();
-	vec2 one = c_one();
+	vec2 i = C_I;
+	vec2 one = vec2(1., 0.);
 	vec2 two = one + one;
 	if (c == i) {
 		return vec2(0., 1./1e-10);
@@ -560,18 +569,18 @@ vec2 c_atan(vec2 c) {
 
 vec2 c_asin(vec2 c) {
  // formula: arcsin(z) = -i ln(sqrt(1-z^2) + iz)
-	vec2 i = c_i(); vec2 one = c_one();
+	vec2 i = C_I; vec2 one = vec2(1., 0.);
 	return c_mul(-i, c_ln(
-		c_sqrt(c_one() - c_mul(c, c)) + c_mul(i, c)
+		c_sqrt(vec2(1., 0.) - c_mul(c, c)) + c_mul(i, c)
 	));
 }
 
 vec2 c_acos(vec2 c) {
 	// formula: arccos(z) = -i ln(i sqrt(1-z^2) + z)
-	vec2 i = c_i();
+	vec2 i = C_I;
 
 	return c_mul(-i, c_ln(
-		c_mul(i, c_sqrt(c_one() - c_mul(c, c))) + c
+		c_mul(i, c_sqrt(vec2(1., 0.) - c_mul(c, c))) + c
 	));
 }
 
@@ -590,13 +599,13 @@ vec2 c_tanh(vec2 c) {
 
 vec2 c_asinh(vec2 c) {
 	// formula: arcsinh(z) = ln(z + sqrt(1+z^2))
-	vec2 one = c_one();
+	vec2 one = vec2(1., 0.);
 	return c_ln(c + c_sqrt(one + c_mul(c, c)));
 }
 
 vec2 c_acosh(vec2 c) {
 	// formula: arccosh(z) = 2 ln(sqrt((z+1)/2) + sqrt((z-1)/2))
-	vec2 one = c_one();
+	vec2 one = vec2(1., 0.);
 	vec2 two = one + one;
 	return c_mul(two,
 			c_ln(
@@ -606,7 +615,7 @@ vec2 c_acosh(vec2 c) {
 
 vec2 c_atanh(vec2 c) {
 	// formula: arctanh(z) = (ln(1+z) - ln(1-z))/2
-	vec2 one = c_one();
+	vec2 one = vec2(1., 0.);
 	vec2 two = one + one;
 	if (c == one) {
 			return vec2(1./1e-10, vec2(0.));
