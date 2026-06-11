@@ -28,7 +28,7 @@ simply use your finger.
 - `h` to hide the "Settings" window.
 - `F11` to toggle fullscreen.
 - `F12` to take a screenshot. It will be saved in the curent woking directory
-with  filename `kolori_screenshotDD-MM-YYYY_HHMMSS.png`.
+with filename `kolori_screenshotDD-MM-YYYY_HHMMSS.png`.
 
 ### Function input
 Input a valid mathematical expression into the "Function" text input using the
