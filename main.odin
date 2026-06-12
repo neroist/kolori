@@ -53,10 +53,10 @@ Coloring_Method :: enum u32 {
 
 GL_MAJOR_VERSION :: 3
 GL_MINOR_VERSION :: 3
-vertex_shader :: #load("shaders/graph.vert", string)
-fragment_shader :: #load("shaders/graph.frag", string)
-pan_speed := (f32)(15)
-zoom_speed := (f32)(1.1)
+VERTEX_SHADER :: #load("shaders/graph.vert", string)
+FRAGMENT_SHADER :: #load("shaders/graph.frag", string)
+PAN_SPEED :: (f32)(15)
+ZOOM_SPEED :: (f32)(1.1)
 
 main :: proc() 
 {
@@ -350,15 +350,15 @@ handle_event :: proc(using app: ^App_Context, event: ^sdl.Event)
 			}
 		case sdl.K_P: animation_paused = !animation_paused
 		case sdl.K_H: show_ui = !show_ui
-		case sdl.K_Z, sdl.K_MINUS: zoom *= zoom_speed
-		case sdl.K_X, sdl.K_EQUALS: zoom /= zoom_speed
+		case sdl.K_Z, sdl.K_MINUS: zoom *= ZOOM_SPEED
+		case sdl.K_X, sdl.K_EQUALS: zoom /= ZOOM_SPEED
 		case sdl.K_W, sdl.K_UP: direction = [2]f32{0, 1}
 		case sdl.K_A, sdl.K_LEFT: direction = [2]f32{-1, 0}
 		case sdl.K_S, sdl.K_DOWN: direction = [2]f32{0, -1}
 		case sdl.K_D, sdl.K_RIGHT: direction = [2]f32{1, 0}
 		}
 
-		shift += (pan_speed * direction / scale) * (zoom * 2)
+		shift += (PAN_SPEED * direction / scale) * (zoom * 2)
 		gl.Uniform2f(uniforms.shift, shift.x, shift.y)
 		gl.Uniform1f(uniforms.zoom, zoom)
 	case .MOUSE_WHEEL:
@@ -367,7 +367,7 @@ handle_event :: proc(using app: ^App_Context, event: ^sdl.Event)
 		}
 
 		if event.wheel.y < 0 {
-			zoom *= zoom_speed
+			zoom *= ZOOM_SPEED
 		} else if event.wheel.y > 0 {
 			// width, height: i32
 			// sdl.GetWindowSize(window, &width, &height)
@@ -380,7 +380,7 @@ handle_event :: proc(using app: ^App_Context, event: ^sdl.Event)
 			// shift += pan_velocity
 
 			// gl.Uniform2f(uniforms["shift"], shift.x, shift.y)
-			zoom /= zoom_speed
+			zoom /= ZOOM_SPEED
 		}
 
 
@@ -510,9 +510,9 @@ reload_shaders :: proc(using app: ^App_Context)
 
 	ok: bool
 	program, ok = gl.load_shaders_source(
-		vertex_shader,
+		VERTEX_SHADER,
 		strings.concatenate(
-			{fragment_shader, "\n\n", translate(function)},
+			{FRAGMENT_SHADER, "\n\n", translate(function)},
 			context.temp_allocator,
 		),
 	)
