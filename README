@@ -3,25 +3,7 @@ Kolori ("to color" in Esperanto) is a program that allows you to create
 beautiful graphs from mathematical functions. Currently, we only have the very
 basic operations implemented (zoom, panning, function changing).
 
-To do:
-- [x] Zooming in/out
-- [x] Panning
-- [x] Ability to switch function at runtime
-- [x] Ability to take screenshots
-- [x] Ability for animations with "t" variable 
-- [ ] Ability to switch coloring scheme (HSL color space, HSLuv, palette
-generation, etc.)
-- [ ] Ability to configure keyboard bindings
-- [ ] Support drawing of level curves (of phase and modulus)
-- [ ] Support drawing of grid
-- [ ] Support adjustment of HSL gamma correction
-- [ ] Function input pre-evaluation and optimization
-- [ ] Display where in the complex plane the mouse cursor is at
-- [ ] Pinch motion for zoom in/out for touchscreen devices
-- [ ] Web builds
-- [ ] Migration from OpenGL to WebGPU/SDL3_gpu
-
-## Gallery
+### Gallery
 See the `gallery/` directory for a gallery of generated images.
 
 ## How to use?
