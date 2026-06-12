@@ -233,32 +233,30 @@ function_call :: proc(p: ^Parser) -> (expr: Expression, report: Maybe(Error_Repo
 	func_call.name = parser_previous(p).lexeme
 
 	if !parser_match(p, {.LEFT_PAREN}) {
-		expression_free(func_call)
-		token := parser_previous(p)
 		report = new_report(
-			token,
+			parser_previous(p),
 			.ExpectedLParen,
-
+			
 			"Forgot to add opening parenthesis \"(\" when calling function \"%s\".",
-			token.lexeme
+			func_call.name
 		)
-
+		
+		expression_free(func_call)
 		return nil, report
 	}
 
 	func_call.arguments, report = parameter_list(p)
 	
 	if !parser_match(p, {.RIGHT_PAREN}) {
-		expression_free(func_call)
-		token := parser_previous(p)
 		report = new_report(
-			token,
+			parser_previous(p),
 			.ExpectedRParen,
-
+			
 			"Forgot to add closing parenthesis \")\" when calling function \"%s\".",
-			token.lexeme
+			func_call.name
 		)
-
+		
+		expression_free(func_call)
 		return nil, report
 	}
 

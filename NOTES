@@ -4,7 +4,7 @@
 - (windows) screen flashes black and white for a period when turning fullscreen
 - (feature) zoom in towards mouse cursur current position
 - (feature) "p" to pause animation, some key to reset animation
-- (feature) gamma, digamma, beta, zeta functions; ceil, floor, frac functions; sum and product functions
+- (feature) gamma, digamma, zeta functions; ceil, floor, frac functions; sum and product functions
 - (feature) discrete color wheel coloring mode
 - (feature) arbitrary precision rendering
   see: "Domain Coloring of Complex Functions" by Poelke and Polthier
