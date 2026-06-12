@@ -1,7 +1,6 @@
 ## What is this?
-Kolori ("to color" in Esperanto) is a program that allows you to create
-beautiful graphs from mathematical functions. Currently, we only have the very
-basic operations implemented (zoom, panning, function changing).
+Kolori ("to color" in Esperanto) is an application that allows you to create
+beautiful images from mathematical functions. 
 
 ### Gallery
 See the `gallery/` directory for a gallery of generated images.
