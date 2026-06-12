@@ -11,17 +11,6 @@ import "core:slice"
 import "core:fmt"
 import "core:log"
 
-Translation_Error :: enum {
-	None,
-	UnknownVariable,
-	WrongArity,
-}
-
-Error_Report :: struct {
-	error: Translation_Error,
-	msg: string
-}
-
 // functions supported by kolori
 @(rodata)
 funcs := []string {
@@ -73,8 +62,10 @@ funcs := []string {
 @(rodata)
 binary_funcs := []string{"mod", "logbase"}
 
-expr_to_glsl :: proc(expr: mp.Expression) -> (str: string, report: Maybe(Error_Report))
+expr_to_glsl :: proc(expr: mp.Expression) -> (result: string, ok: bool = true)
 {
+	@(static)
+	@(rodata)
 	func_names := [mp.BinaryType]string {
 		.Addition       = "c_add",
 		.Subtraction    = "c_sub",
@@ -85,47 +76,39 @@ expr_to_glsl :: proc(expr: mp.Expression) -> (str: string, report: Maybe(Error_R
 
 	switch expr in expr {
 	case ^mp.Real:
-		return fmt.tprintf("vec2(%s, 0)", expr.num), nil
+		result = fmt.tprintf("vec2(%s, 0)", expr.num)
 	case ^mp.Variable:
 		switch expr.name {
 		case "z":
-			return "z", nil
+			result = "z"
 		case "t":
-			return "vec2(time, 0)", nil
+			result = "vec2(time, 0)"
 		case "i":
-			return "C_I", nil
+			result = "C_I"
 		case "e":
-			return "C_E", nil
+			result = "C_E"
 		case "pi", "π":
-			return "C_PI", nil
+			result = "C_PI"
 		case "tau", "τ":
-			return "C_TAU", nil
+			result = "C_TAU"
 		case "phi", "φ", "ϕ":
-			return "C_PHI", nil
+			result = "C_PHI"
 		case:
-			report = Error_Report{
-				error = .UnknownVariable,
-				msg = fmt.tprintf("Unknown variable \"%s\"", expr.name)
-			}
-
-			return "", report
+			ok = false
+			result = fmt.tprintf("Unknown variable \"%s\"", expr.name)
 		}
 	case ^mp.Binary:
-		return fmt.tprintf(
+		result = fmt.tprintf(
 			"%s(%s, %s)",
 			func_names[expr.operation],
 			expr_to_glsl(expr.left) or_return,
 			expr_to_glsl(expr.right) or_return,
-		), nil
+		)
 	case ^mp.FunctionCall:
 		expected_arity := slice.contains(binary_funcs, expr.name) ? 2 : 1
 		if len(expr.arguments) != expected_arity {
-			report = Error_Report{
-				error = .WrongArity,
-				msg = fmt.tprintf("Wrong arity for function \"%s\"", expr.name)
-			}
-
-			return "", report
+			ok = false
+			result = fmt.tprintf("Wrong arity for function \"%s\"", expr.name)
 		}
 
 		builder: strings.Builder
@@ -140,12 +123,76 @@ expr_to_glsl :: proc(expr: mp.Expression) -> (str: string, report: Maybe(Error_R
 		}
 		fmt.sbprint(&builder, ")")
 
-		return strings.to_string(builder), nil
+		result = strings.to_string(builder)
 	case ^mp.Unary:
-		return fmt.tprintf("-%s", expr_to_glsl(expr.inner) or_return), nil
+		result = fmt.tprintf("-%s", expr_to_glsl(expr.inner) or_return)
 	}
 
-	return
+	return result, ok
+}
+
+validate_expr :: proc(expr: mp.Expression) -> (Maybe(string))
+{
+	switch expr in expr {
+	case ^mp.Variable:
+		switch expr.name {
+		case "z", "t", "i", "e", "pi", "π", "tau", "τ", "phi", "φ", "ϕ":
+			/* */
+		case:
+			return fmt.aprintf("Unknown variable \"%s\"", expr.name)
+		}
+	case ^mp.Binary:
+		if validate_expr(expr.left) == nil {
+			return validate_expr(expr.right)
+		}
+	case ^mp.FunctionCall:
+		expected_arity := slice.contains(binary_funcs, expr.name) ? 2 : 1
+		if len(expr.arguments) != expected_arity {
+			return fmt.aprintf("Wrong arity for function \"%s\"", expr.name)
+		}
+
+		for i in expr.arguments {
+			if err := validate_expr(i); err == nil {
+				return err
+			}
+		}
+	case ^mp.Unary:
+		return validate_expr(expr.inner)
+	case ^mp.Real:
+		return nil
+	}
+
+	return nil
+}
+
+validate_string :: proc(source: string) -> (Maybe(string))
+{
+	expr, reports := mp.parse(source, funcs, {.Source_Nil_Terminated, .Implicit_Multiplication}, context.temp_allocator)
+	defer mp.expression_free(expr, context.temp_allocator)
+
+	if len(reports) > 0 {
+		err_msg_builder: strings.Builder
+		strings.builder_init(&err_msg_builder, context.temp_allocator)
+		
+		for report in reports {
+			fmt.sbprintln(&err_msg_builder, report.msg)
+		}
+
+		return strings.to_string(err_msg_builder)
+	}
+	
+	return validate_expr(expr)
+}
+
+validate_slice :: proc(source: []u8) -> (Maybe(string))
+{
+	return validate_string((string)(source))
+}
+
+validate :: proc {
+	validate_string,
+	validate_slice,
+	validate_expr
 }
 
 translate_string :: proc(source: string) -> (string, bool) #optional_ok
@@ -155,7 +202,7 @@ translate_string :: proc(source: string) -> (string, bool) #optional_ok
 
 	if len(reports) > 0 {
 		err_msg_builder: strings.Builder
-		strings.builder_init(&err_msg_builder)
+		strings.builder_init(&err_msg_builder, context.temp_allocator)
 		
 		for report in reports {
 			fmt.sbprintln(&err_msg_builder, report.msg)
@@ -164,17 +211,16 @@ translate_string :: proc(source: string) -> (string, bool) #optional_ok
 		return strings.to_string(err_msg_builder), false
 	}
 	
-	glsl, report := expr_to_glsl(expr)
-	if report != nil {
-		return report.?.msg, false
+	result, ok := expr_to_glsl(expr)
+	if !ok {
+		return result, false
 	} 
 
-	result := fmt.tprintf("vec2 f(vec2 z) {{ return %s; }}", glsl)
+	result = fmt.tprintf("vec2 f(vec2 z) {{ return %s; }}", result)
 	log.debug("generated glsl:", result)
 
 	return result, true
 }
-
 
 translate_slice :: proc(source: []u8) -> (string, bool) #optional_ok
 {
