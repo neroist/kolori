@@ -493,6 +493,9 @@ draw_ui :: proc(using app: ^App_Context)
 
 reload_shaders :: proc(using app: ^App_Context)
 {
+	gl.UseProgram(0)
+	gl.DeleteProgram(program)
+
 	ok: bool
 	program, ok = gl.load_shaders_source(
 		vertex_shader,
