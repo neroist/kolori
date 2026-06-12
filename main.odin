@@ -33,6 +33,7 @@ App_Context :: struct {
 		texture: i32
 	},
 	io:       ^imgui.IO,
+	math_font: ^imgui.Font,
 	zoom:     f32,
 	shift:    [2]f32,
 	show_ui:  bool,
@@ -142,10 +143,9 @@ setup_app :: proc(using app: ^App_Context)
 	zoom = 1
 	show_ui = true
 	time_speed = 1
-	animation_paused = true
 	err_msg = strings.clone_to_cstring("")
 	function = (cstring)(make([^]u8, 1024))
-	([^]u8)(function)[0] = 'z'
+ 	([^]u8)(function)[0] = 'z'
 }
 
 setup_sdl :: proc(using app: ^App_Context) 
@@ -186,8 +186,18 @@ setup_imgui :: proc(using app: ^App_Context)
 	imgui_impl_sdl3.InitForOpenGL(window, gl_ctx)
 	imgui_impl_opengl3.Init("#version 330 core")
 	imgui.StyleColorsDark()
-	imgui.GetStyle().WindowRounding = 5
-	imgui.GetStyle().FrameRounding = 5
+
+	imgui.FontAtlas_AddFontFromFileTTF(io.Fonts, "DMSans.ttf", 18)
+	math_font = imgui.FontAtlas_AddFontFromFileTTF(io.Fonts, "DMSans.ttf", 18)
+
+	style := imgui.GetStyle()
+    style.WindowRounding    = 8
+    style.ChildRounding     = 8
+    style.PopupRounding     = 6
+    style.FrameRounding     = 6
+    style.ScrollbarRounding = 6
+    style.GrabRounding      = 6
+    style.TabRounding       = 6
 }
 
 setup_gl :: proc(using app: ^App_Context) 
@@ -442,7 +452,9 @@ draw_ui :: proc(using app: ^App_Context)
 	imgui.SetNextWindowBgAlpha(0.35)
 
 	imgui.Begin("Plotter")
-		imgui.Text("f(z) = ")
+		imgui.PushFontFloat(math_font, 22.5)
+		imgui.Text("f(z) =")
+		imgui.PopFont()
 		imgui.SameLine()
 		
 		if imgui.InputText(
