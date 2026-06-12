@@ -113,7 +113,6 @@ expr_to_glsl :: proc(expr: mp.Expression) -> (result: string, ok: bool = true)
 
 		builder: strings.Builder
 		strings.builder_init(&builder, context.temp_allocator)
-		defer strings.builder_destroy(&builder)
 
 		fmt.sbprintf(&builder, "c_%s", expr.name)
 		fmt.sbprint(&builder, "(")
@@ -139,7 +138,7 @@ validate_expr :: proc(expr: mp.Expression) -> (Maybe(string))
 		case "z", "t", "i", "e", "pi", "π", "tau", "τ", "phi", "φ", "ϕ":
 			/* */
 		case:
-			return fmt.aprintf("Unknown variable \"%s\"", expr.name)
+			return fmt.tprintf("Unknown variable \"%s\"", expr.name)
 		}
 	case ^mp.Binary:
 		if validate_expr(expr.left) == nil {
@@ -148,7 +147,7 @@ validate_expr :: proc(expr: mp.Expression) -> (Maybe(string))
 	case ^mp.FunctionCall:
 		expected_arity := slice.contains(binary_funcs, expr.name) ? 2 : 1
 		if len(expr.arguments) != expected_arity {
-			return fmt.aprintf("Wrong arity for function \"%s\"", expr.name)
+			return fmt.tprintf("Wrong arity for function \"%s\"", expr.name)
 		}
 
 		for i in expr.arguments {
@@ -165,10 +164,13 @@ validate_expr :: proc(expr: mp.Expression) -> (Maybe(string))
 	return nil
 }
 
-validate_string :: proc(source: string) -> (Maybe(string))
+validate_cstring :: proc(source: cstring) -> (Maybe(string))
 {
-	expr, reports := mp.parse(source, funcs, {.Source_Nil_Terminated, .Implicit_Multiplication}, context.temp_allocator)
-	defer mp.expression_free(expr, context.temp_allocator)
+	// issue in the odin compiler:
+	//
+	// `cast` is needed here else we get a "Missing type in compound literal"
+	// error for the bitset
+	expr, reports := mp.parse(cast(string)(source), funcs, {.Implicit_Multiplication}, context.temp_allocator)
 
 	if len(reports) > 0 {
 		err_msg_builder: strings.Builder
@@ -184,21 +186,14 @@ validate_string :: proc(source: string) -> (Maybe(string))
 	return validate_expr(expr)
 }
 
-validate_slice :: proc(source: []u8) -> (Maybe(string))
-{
-	return validate_string((string)(source))
-}
-
 validate :: proc {
-	validate_string,
-	validate_slice,
+	validate_cstring,
 	validate_expr
 }
 
-translate_string :: proc(source: string) -> (string, bool) #optional_ok
+translate :: proc(source: cstring) -> (string, bool) #optional_ok
 {
-	expr, reports := mp.parse(source, funcs, {.Source_Nil_Terminated, .Implicit_Multiplication}, context.temp_allocator)
-	defer mp.expression_free(expr, context.temp_allocator)
+	expr, reports := mp.parse(cast(string)(source), funcs, {.Implicit_Multiplication}, context.temp_allocator)
 
 	if len(reports) > 0 {
 		err_msg_builder: strings.Builder
@@ -222,23 +217,13 @@ translate_string :: proc(source: string) -> (string, bool) #optional_ok
 	return result, true
 }
 
-translate_slice :: proc(source: []u8) -> (string, bool) #optional_ok
-{
-	return translate_string((string)(source))
-}
-
-translate :: proc {
-	translate_string,
-	translate_slice
-}
-
 @(test)
 test_translator :: proc (t: ^testing.T)
 {
-	inp_to_outp := map[string]string{
-		"z\x00" =         "vec2 f(vec2 z) { return z; }",
-		"z+1\x00" =       "vec2 f(vec2 z) { return c_add(z, vec2(1, 0)); }",
-		"z^(t - 1)\x00" = "vec2 f(vec2 z) { return c_pow(z, c_sub(vec2(time, 0), vec2(1, 0))); }"
+	inp_to_outp := map[cstring]string{
+		"z" =         "vec2 f(vec2 z) { return z; }",
+		"z+1" =       "vec2 f(vec2 z) { return c_add(z, vec2(1, 0)); }",
+		"z^(t - 1)" = "vec2 f(vec2 z) { return c_pow(z, c_sub(vec2(time, 0), vec2(1, 0))); }"
 	}
 
 	for inp, outp in inp_to_outp {

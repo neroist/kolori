@@ -36,8 +36,8 @@ App_Context :: struct {
 	zoom:     f32,
 	shift:    [2]f32,
 	show_ui:  bool,
-	function: []u8,
-	err_msg:  string,
+	function: cstring,
+	err_msg:  cstring,
 	time: f32,
 	time_speed: f32,
 	animation_paused: bool
@@ -88,6 +88,7 @@ main :: proc()
 	setup_app(&app)
 	defer {
 		delete(function)
+		delete(err_msg)
 	}
 
 	setup_sdl(&app)
@@ -141,8 +142,10 @@ setup_app :: proc(using app: ^App_Context)
 	zoom = 1
 	show_ui = true
 	time_speed = 1
-	function = make([]u8, 1024)
-	fmt.bprint(function, "z")
+	animation_paused = true
+	err_msg = strings.clone_to_cstring("")
+	function = (cstring)(make([^]u8, 1024))
+	([^]u8)(function)[0] = 'z'
 }
 
 setup_sdl :: proc(using app: ^App_Context) 
@@ -183,6 +186,8 @@ setup_imgui :: proc(using app: ^App_Context)
 	imgui_impl_sdl3.InitForOpenGL(window, gl_ctx)
 	imgui_impl_opengl3.Init("#version 330 core")
 	imgui.StyleColorsDark()
+	imgui.GetStyle().WindowRounding = 5
+	imgui.GetStyle().FrameRounding = 5
 }
 
 setup_gl :: proc(using app: ^App_Context) 
@@ -434,38 +439,40 @@ draw_ui :: proc(using app: ^App_Context)
 	// imgui.ShowDemoWindow()
 	// imgui.ShowUserGuide()
 
-	imgui.Begin("Settings")
-	{
+	imgui.SetNextWindowBgAlpha(0.35)
+
+	imgui.Begin("Plotter")
+		imgui.Text("f(z) = ")
+		imgui.SameLine()
+		
 		if imgui.InputText(
-			"Function",
-			(cstring)(raw_data(function)),
-			1024,
-			{.EnterReturnsTrue},
-		) {
-			result, ok := translate(function)
-			if !ok {
-				imgui.OpenPopup("Error")
-				err_msg = strings.clone(result)
-				log.error(err_msg)
-			} else {
+			"##",
+			function,
+			1024
+		) && len(function) > 0 {
+			delete(err_msg)
+			err, failure := validate(function).?
+
+			err_msg = strings.clone_to_cstring(failure ? err : "")
+
+			if !failure {
 				time = 0
 				animation_paused = false
 				reload_shaders(app)
 			}
 		}
+		imgui.PushStyleColorImVec4(.Text, [4]f32{255, 0, 0, 255})
+		imgui.TextWrapped(err_msg)
+		imgui.PopStyleColor()
 
-		if imgui.BeginPopupModal("Error") {
-			imgui.Text((cstring)(raw_data(err_msg)))
-			if imgui.Button("Close") {
-				delete(err_msg)
-				imgui.CloseCurrentPopup()
+		if imgui.CollapsingHeader("Animation Settings") {
+			imgui.SliderFloat("Anim. speed", &time_speed, 0.1, 10)
+			imgui.Checkbox("Pause Anim.", &animation_paused)
+			if imgui.Button("Reset Anim.") {
+				time = 0
+				animation_paused = false
 			}
-
-			imgui.EndPopup()
 		}
-
-		imgui.SliderFloat("Speed", &time_speed, 0.1, 10)
-	}
 	imgui.End()
 
 	imgui.Render()
@@ -506,7 +513,4 @@ reload_shaders :: proc(using app: ^App_Context)
 	gl.Uniform2f(uniforms.shift, shift.x, shift.y)
 	gl.Uniform1f(uniforms.zoom, zoom)
 	gl.Uniform1f(uniforms.time, time)
-
-	render_graph(app)
-	sdl.GL_SwapWindow(window)
 }

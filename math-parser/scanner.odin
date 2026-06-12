@@ -41,7 +41,6 @@ Scanner :: struct {
 }
 
 Scan_Flag :: enum {
-	Source_Nil_Terminated,
 	Implicit_Multiplication,
 }
 
@@ -89,10 +88,6 @@ scanner_is_function :: proc(s: ^Scanner, ident: string) -> bool
 
 scanner_is_at_end :: proc(s: ^Scanner) -> bool 
 {
-	if .Source_Nil_Terminated in s.scan_flags {
-		return s.source[s.current] == '\x00'
-	}
-
 	return s.current >= len(s.source)
 }
 
