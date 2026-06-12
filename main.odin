@@ -450,8 +450,8 @@ draw_ui :: proc(using app: ^App_Context)
 	// imgui.ShowUserGuide()
 
 	imgui.SetNextWindowBgAlpha(0.35)
-
-	imgui.Begin("Plotter")
+	
+	imgui.Begin("Plotter", flags={.AlwaysAutoResize})
 		imgui.PushFontFloat(math_font, 22.5)
 		imgui.Text("f(z) =")
 		imgui.PopFont()
@@ -477,7 +477,7 @@ draw_ui :: proc(using app: ^App_Context)
 		imgui.TextWrapped(err_msg)
 		imgui.PopStyleColor()
 
-		if imgui.CollapsingHeader("Animation Settings") {
+		if imgui.CollapsingHeader("Animation Settings", {.DefaultOpen}) {
 			imgui.SliderFloat("Anim. speed", &time_speed, 0.1, 10)
 			imgui.Checkbox("Pause Anim.", &animation_paused)
 			if imgui.Button("Reset Anim.") {
