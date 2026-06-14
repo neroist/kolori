@@ -143,7 +143,7 @@ draw_ui :: proc(using app: ^App_Context)
                     { "All Files",  "*" },
                 }
 
-                // not asan friendly!
+                // not (windows) asan friendly!
                 sdl.ShowOpenFileDialog(
                     dialog_file_callback,
                     app,

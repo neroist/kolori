@@ -9,7 +9,8 @@
   see: "Domain Coloring of Complex Functions" by Poelke and Polthier
 - (showcase) heart functions images/gifs
   see: "Heart of Domain Coloring" by Ulrich Reitebuch1 et. al.
-- (linux) libc++ required to build 
+- (linux) libc++ required to build
+- (windows) sdl.ShowOpenFileDialog triggers ASAN. runs fine when ASAN is disabled, however.
 - (windows) SDL3.dll needs to be next to executable
 - (windows) small freeze-up when taking a screenshot
 - (windows) screen flashes black and white for a period when turning fullscreen
