@@ -1,6 +1,5 @@
 #+private(file)
-// #+build ignore
-
+#+build ignore
 
 package math_parser
 

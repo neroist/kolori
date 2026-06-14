@@ -1,7 +1,3 @@
-- (linux) libc++ required to build 
-- (windows) SDL3.dll needs to be next to executable
-- (windows) small freeze-up when taking a screenshot
-- (windows) screen flashes black and white for a period when turning fullscreen
 - (feature) zoom in towards mouse cursor current position
 - (feature) "p" to pause animation, some key to reset animation
 - (feature) gamma, digamma, zeta functions; ceil, floor, frac functions; sum and product functions
@@ -9,9 +5,14 @@
 - (feature) keybinds + supported functions/variables section in ui
 - (feature) ability to take screenshots of arbitrary size/quality
 - (feature) arbitrary precision rendering
+- (feature) allow for definition and use of arbitrary functions and variables
   see: "Domain Coloring of Complex Functions" by Poelke and Polthier
 - (showcase) heart functions images/gifs
   see: "Heart of Domain Coloring" by Ulrich Reitebuch1 et. al.
+- (linux) libc++ required to build 
+- (windows) SDL3.dll needs to be next to executable
+- (windows) small freeze-up when taking a screenshot
+- (windows) screen flashes black and white for a period when turning fullscreen
 - ldd (Linux):
         linux-vdso.so.1
         libc++.so.1

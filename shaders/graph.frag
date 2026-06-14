@@ -1,23 +1,19 @@
 #version 330 core
-
 precision highp float;
 precision highp int;
 precision highp sampler2D;
 
 in vec2 pos;
+in vec2 tex_coord;
 out vec4 FragColor;
 
 uniform float time;
 uniform float zoom;
 uniform ivec2 resolution;
 uniform vec2 shift;
-uniform int coloring_method;
-uniform sampler2D texture;
-
-#define USE_DEFAULT = 0
-#define USE_PALETTE = 1
-#define USE_TEXTURE = 2
-#define USE_USER    = 4
+uniform sampler2D tex;
+uniform vec3 abcd[4];
+uniform float gamma_correction;
 
 const float PI          = 3.14159265358979323846f;
 const float TAU         = 6.28318530717958647692f;
@@ -28,8 +24,6 @@ const vec2 C_PI  = vec2(3.14159265358979323846f, 0);
 const vec2 C_TAU = vec2(6.28318530717958647692f, 0);
 const vec2 C_E   = vec2(2.71828182845904523536f, 0);
 const vec2 C_PHI = vec2(1.61803398874989484820f, 0);
-
-vec2 f(vec2 z);
 
 float hue2rgb(float f1, float f2, float hue)
 {
@@ -399,36 +393,6 @@ vec4   luvToRgb(float x, float y, float z, float a) {return   luvToRgb( vec4(x,y
 END HSLUV-GLSL
 */
 
-vec4 color_hsv(vec2 z)
-{
-	// gamma correction
-	const float a = 0.65f;
-
-	float hue = atan(z.y,z.x)/TAU;
-	float lightness = TWO_OVER_PI * atan(pow(length(z),a));
-
-	return hsl2rgb(hue, 1.0f, lightness);
-}
-
-vec4 color_hsluv(vec2 z)
-{
-	float hue = degrees(atan(z.y,z.x));
-	float lightness = TWO_OVER_PI * atan(length(z)) * 50;
-	// float lightness = 2 / (1 + exp(-length(z))) * 50;
-	return hsluvToRgb(hue, 50.0f, lightness, 1);
-}
-
-// From https://iquilezles.org/articles/palettes/
-vec3 palette(float t, vec3 a, vec3 b, vec3 c, vec3 d)
-{
-		return a + b*cos(2. * PI *(c*t+d) );
-}
-
-vec4 color_palette(vec2 z)
-{
-		return vec4(palette(z.y, vec3(0.50,.52,0.53), vec3(.46,.32,.35), vec3(.82,.84,.65), vec3(0.53,0.23,0.22)), 1);
-}
-
 vec2 transform_coordinates(vec4 FragCoord)
 {
 		vec2 pos = FragCoord.xy;
@@ -690,6 +654,22 @@ vec2 c_mod(vec2 c, vec2 modulus) {
 	return c - c_mul(modulus, c1);
 }
 
+vec2 c_floor(vec2 c) {
+	return floor(c);
+}
+
+vec2 c_ceil(vec2 c) {
+	return ceil(c);
+}
+
+vec2 c_frac(vec2 c) {
+	return c - trunc(c);
+}
+
+vec2 c_trunc(vec2 c) {
+	return trunc(c);
+}
+
 vec2 c_gamma(vec2 c) {
 	// stirling's approximation
 	return c_mul(c_sqrt(c_mul(C_TAU, c)), c_pow(c_div(c, C_E), c));
@@ -715,13 +695,52 @@ vec2 c_abs(vec2 c) {
 	return vec2(length(c), 0);
 }
 
-// vec2 f(vec2 z) {
-//     // return c_exp(c_mul(c_ln(z), vec2(1, 1)));
-//     return c_sin(c_mul(z, z));
-// }
+vec4 color_hsv(vec2 z)
+{
+	// gamma correction
+	// const float a = 0.65f;
+	float a = gamma_correction;
+
+	float hue = atan(z.y,z.x)/TAU;
+	float lightness = TWO_OVER_PI * atan(pow(length(z),a));
+
+	return hsl2rgb(hue, 1.0f, lightness);
+}
+
+vec4 color_hsluv(vec2 z)
+{
+	float hue = degrees(atan(z.y,z.x));
+	float lightness = TWO_OVER_PI * atan(length(z)) * 50;
+	// float lightness = 2 / (1 + exp(-length(z))) * 50;
+	return hsluvToRgb(hue, 50.0f, lightness, 1);
+}
+
+vec4 color_texture(vec2 z)
+{
+	return vec4(texture(tex, z).xyz, 1);
+}
+
+// From https://iquilezles.org/articles/palettes/
+vec4 color_palette(float t, vec3 a, vec3 b, vec3 c, vec3 d)
+{
+		return vec4(a + b*cos(TAU * (c*t+d)), 1);
+}
+
+vec2 f(vec2 z);
+vec2 g(vec2 z);
+vec2 h(vec2 z);
 
 void main()
 {
 	vec2 z = transform_coordinates(gl_FragCoord);
-	FragColor = color_hsv(f(z));
+
+	#if defined(USE_TEXTURE)
+		FragColor = color_texture(f(z));
+	#elif defined(USE_PALETTE)
+		// maybe compose f with a function g:C->R?
+		FragColor = color_palette(f(z).x, abcd[0], abcd[1], abcd[2], abcd[3]);
+	#else
+		#define USE_DEFAULT
+		FragColor = color_hsv(f(z));
+	#endif
 }

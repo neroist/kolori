@@ -76,7 +76,7 @@ new_report_custom_message :: proc (token: Token, error: Error, format: string, a
     report: Error_Report
     report.token = token
     report.error = error
-    report.msg = fmt.tprintf(format, args)
+    report.msg = fmt.tprintf(format, ..args)
 
     return report
 }

@@ -55,17 +55,21 @@ funcs := []string {
 	"acsch",
 	"asech",
 	"acoth",
-	"gamma"
+	"gamma",
+	"floor",
+	"ceil",
+	"frac",
+	"trunc"
 }
 
 // functions that require two arguments
 @(rodata)
 binary_funcs := []string{"mod", "logbase"}
 
-expr_to_glsl :: proc(expr: mp.Expression) -> (result: string, ok: bool = true)
+@(private="file")
+translate_expr :: proc(expr: mp.Expression) -> string
 {
-	@(static)
-	@(rodata)
+	@(static, rodata)
 	func_names := [mp.BinaryType]string {
 		.Addition       = "c_add",
 		.Subtraction    = "c_sub",
@@ -76,95 +80,101 @@ expr_to_glsl :: proc(expr: mp.Expression) -> (result: string, ok: bool = true)
 
 	switch expr in expr {
 	case ^mp.Real:
-		result = fmt.tprintf("vec2(%s, 0)", expr.num)
+		return fmt.tprintf("vec2(%s, 0)", expr.num)
 	case ^mp.Variable:
 		switch expr.name {
 		case "z":
-			result = "z"
+			return "z"
 		case "t":
-			result = "vec2(time, 0)"
+			return "vec2(time, 0)"
 		case "i":
-			result = "C_I"
+			return "C_I"
 		case "e":
-			result = "C_E"
+			return "C_E"
 		case "pi", "π":
-			result = "C_PI"
+			return "C_PI"
 		case "tau", "τ":
-			result = "C_TAU"
+			return "C_TAU"
 		case "phi", "φ", "ϕ":
-			result = "C_PHI"
+			return "C_PHI"
 		case:
-			ok = false
-			result = fmt.tprintf("Unknown variable \"%s\"", expr.name)
+			// this function is only called after using `validate()`.
+			// this should ensure that there are no errors, thus we 
+			// should never be able to reach this case block 
+			unreachable()
 		}
 	case ^mp.Binary:
-		result = fmt.tprintf(
+		return fmt.tprintf(
 			"%s(%s, %s)",
 			func_names[expr.operation],
-			expr_to_glsl(expr.left) or_return,
-			expr_to_glsl(expr.right) or_return,
+			translate_expr(expr.left),
+			translate_expr(expr.right),
 		)
 	case ^mp.FunctionCall:
-		expected_arity := slice.contains(binary_funcs, expr.name) ? 2 : 1
-		if len(expr.arguments) != expected_arity {
-			ok = false
-			result = fmt.tprintf("Wrong arity for function \"%s\"", expr.name)
-		}
-
 		builder: strings.Builder
 		strings.builder_init(&builder, context.temp_allocator)
 
-		fmt.sbprintf(&builder, "c_%s", expr.name)
-		fmt.sbprint(&builder, "(")
-		fmt.sbprint(&builder, expr_to_glsl(expr.arguments[0]) or_return)
+		strings.write_string(&builder, "c_")
+		strings.write_string(&builder, expr.name)
+		strings.write_string(&builder, "(")
+		strings.write_string(&builder, translate_expr(expr.arguments[0]))
 		for i in expr.arguments[1:] {
-			fmt.sbprint(&builder, ",", expr_to_glsl(i) or_return)
+			strings.write_string(&builder, ", ")
+			strings.write_string(&builder, translate_expr(i))
 		}
-		fmt.sbprint(&builder, ")")
+		strings.write_string(&builder, ")")
 
-		result = strings.to_string(builder)
+		return strings.to_string(builder)
 	case ^mp.Unary:
-		result = fmt.tprintf("-%s", expr_to_glsl(expr.inner) or_return)
+		return fmt.tprintf("-%s", translate_expr(expr.inner))
 	}
 
-	return result, ok
+	unreachable()
 }
 
-validate_expr :: proc(expr: mp.Expression) -> (Maybe(string))
+validate_expr :: proc(expr: mp.Expression) -> (Maybe(cstring))
 {
 	switch expr in expr {
 	case ^mp.Variable:
 		switch expr.name {
 		case "z", "t", "i", "e", "pi", "π", "tau", "τ", "phi", "φ", "ϕ":
-			/* */
+			return nil
 		case:
-			return fmt.tprintf("Unknown variable \"%s\"", expr.name)
+			// in case of an error, we will need to persist these error
+			// messages to display in the ui. so, we don't use the temporary
+			// allocator here. instead, we free them whenever we don't need
+			// them anymore 
+			return fmt.caprintf("Unknown variable \"%s\"", expr.name)
 		}
 	case ^mp.Binary:
-		if validate_expr(expr.left) == nil {
+		if err := validate_expr(expr.left); err != nil {
+			return err
+		} else {
 			return validate_expr(expr.right)
 		}
 	case ^mp.FunctionCall:
 		expected_arity := slice.contains(binary_funcs, expr.name) ? 2 : 1
 		if len(expr.arguments) != expected_arity {
-			return fmt.tprintf("Wrong arity for function \"%s\"", expr.name)
+			return fmt.caprintf("Wrong arity for function \"%s\"", expr.name)
 		}
 
 		for i in expr.arguments {
-			if err := validate_expr(i); err == nil {
+			if err := validate_expr(i); err != nil {
 				return err
 			}
 		}
+
+		return nil
 	case ^mp.Unary:
 		return validate_expr(expr.inner)
 	case ^mp.Real:
 		return nil
 	}
 
-	return nil
+	unreachable()
 }
 
-validate_cstring :: proc(source: cstring) -> (Maybe(string))
+validate :: proc(source: cstring) -> (Maybe(cstring))
 {
 	// issue in the odin compiler:
 	//
@@ -173,54 +183,30 @@ validate_cstring :: proc(source: cstring) -> (Maybe(string))
 	expr, reports := mp.parse(cast(string)(source), funcs, {.Implicit_Multiplication}, context.temp_allocator)
 
 	if len(reports) > 0 {
-		err_msg_builder: strings.Builder
-		strings.builder_init(&err_msg_builder, context.temp_allocator)
-		
-		for report in reports {
-			fmt.sbprintln(&err_msg_builder, report.msg)
-		}
-
-		return strings.to_string(err_msg_builder)
+		return strings.clone_to_cstring(reports[0].msg)
 	}
 	
 	return validate_expr(expr)
 }
 
-validate :: proc {
-	validate_cstring,
-	validate_expr
-}
-
-translate :: proc(source: cstring) -> (string, bool) #optional_ok
+translate :: proc(source: cstring, func_name := "f") -> cstring
 {
-	expr, reports := mp.parse(cast(string)(source), funcs, {.Implicit_Multiplication}, context.temp_allocator)
-
-	if len(reports) > 0 {
-		err_msg_builder: strings.Builder
-		strings.builder_init(&err_msg_builder, context.temp_allocator)
-		
-		for report in reports {
-			fmt.sbprintln(&err_msg_builder, report.msg)
-		}
-
-		return strings.to_string(err_msg_builder), false
-	}
+	expr := mp.parse(
+		cast(string)(source),
+		funcs,
+		{.Implicit_Multiplication},
+		context.temp_allocator
+	) or_else unreachable()
 	
-	result, ok := expr_to_glsl(expr)
-	if !ok {
-		return result, false
-	} 
-
-	result = fmt.tprintf("vec2 f(vec2 z) {{ return %s; }}", result)
-	log.debug("generated glsl:", result)
-
-	return result, true
+	glsl := fmt.ctprintf("vec2 %s(vec2 z) {{ return %s; }}", func_name, translate_expr(expr))
+	log.debug("generated glsl:", glsl)
+	return glsl
 }
 
 @(test)
 test_translator :: proc (t: ^testing.T)
 {
-	inp_to_outp := map[cstring]string{
+	inp_to_outp := map[cstring]cstring{
 		"z" =         "vec2 f(vec2 z) { return z; }",
 		"z+1" =       "vec2 f(vec2 z) { return c_add(z, vec2(1, 0)); }",
 		"z^(t - 1)" = "vec2 f(vec2 z) { return c_pow(z, c_sub(vec2(time, 0), vec2(1, 0))); }"

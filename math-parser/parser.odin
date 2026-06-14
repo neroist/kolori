@@ -204,9 +204,8 @@ primary :: proc(p: ^Parser) -> (expr: Expression, report: Maybe(Error_Report)) {
 		expr = expression(p) or_return
 
 		if !parser_match(p, {.RIGHT_PAREN}) {
-			token := parser_previous(p)
 			report = new_report(
-				token,
+				p.tokens[max(0, p.current)],
 				.ExpectedRParen,
 				
 				"Opening parenthesis \"(\" at location %i not closed.",
@@ -220,7 +219,7 @@ primary :: proc(p: ^Parser) -> (expr: Expression, report: Maybe(Error_Report)) {
 		expr, report = function_call(p)
 	case:
 		report = new_report(
-			parser_previous(p),
+			p.tokens[max(0, p.current)],
 			parser_is_at_end(p) ? .UnexpectedEOF : .UnexpectedToken
 		)
 	}
@@ -234,7 +233,7 @@ function_call :: proc(p: ^Parser) -> (expr: Expression, report: Maybe(Error_Repo
 
 	if !parser_match(p, {.LEFT_PAREN}) {
 		report = new_report(
-			parser_previous(p),
+			p.tokens[max(0, p.current)],
 			.ExpectedLParen,
 			
 			"Forgot to add opening parenthesis \"(\" when calling function \"%s\".",
@@ -245,11 +244,20 @@ function_call :: proc(p: ^Parser) -> (expr: Expression, report: Maybe(Error_Repo
 		return nil, report
 	}
 
-	func_call.arguments, report = parameter_list(p)
-	
+	// function_name()
+	if parser_match(p, {.RIGHT_PAREN}) {
+		report = new_report(
+			p.tokens[max(0, p.current)],
+			.UnexpectedToken,
+			"Closing parenthesis \")\" was unexpected here. Nullary functions are not allowed." 
+		)
+	}
+
+	func_call.arguments = parameter_list(p) or_return
+
 	if !parser_match(p, {.RIGHT_PAREN}) {
 		report = new_report(
-			parser_previous(p),
+			p.tokens[max(0, p.current)],
 			.ExpectedRParen,
 			
 			"Forgot to add closing parenthesis \")\" when calling function \"%s\".",
@@ -267,10 +275,7 @@ parameter_list :: proc(p: ^Parser) -> (list: [dynamic]Expression, report: Maybe(
 	list = make([dynamic]Expression)
 	defer shrink(&list)
 
-	expr := expression(p) or_return
-
-	append(&list, expr)
-
+	append(&list, expression(p) or_return)
 	for parser_match(p, {.COMMA}) {
 		append(&list, expression(p) or_return)
 	}
@@ -301,9 +306,26 @@ expression_free :: proc(expr: Expression, allocator := context.allocator) {
 	}
 }
 
-parser_parse :: proc(p: ^Parser) -> (Expression, Maybe(Error_Report)) {
+parser_parse :: proc(p: ^Parser) -> (expr: Expression, report: Maybe(Error_Report)) {
 	assert(len(p.tokens) > 0)
-	return expression(p)
+
+	expr = expression(p) or_return
+
+	if !parser_is_at_end(p) {
+		token := p.tokens[max(0, p.current - 1)]
+		report = new_report(
+			token,
+			.UnexpectedEOF,
+			"Unexpected trailing input after the \"%s\" token at position %i.",
+			token.lexeme,
+			token.column
+		)
+
+		expression_free(expr)
+		return nil, report
+	}
+
+	return expr, nil
 }
 
 parser_reset_state :: proc(p: ^Parser) {

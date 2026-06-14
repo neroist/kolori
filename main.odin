@@ -24,43 +24,68 @@ App_Context :: struct {
 	gl_ctx:           sdl.GLContext,
 	vao:              u32,
 	program:          u32,
-	uniforms:         struct {
-		zoom:            i32,
-		time:            i32,
-		resolution:      i32,
-		shift:           i32,
-		coloring_method: i32,
-		texture:         i32,
-	},
+	vertex_shader_id: u32,
+	texture:          u32,
+	coloring_method:  Coloring_Method,
+	uniforms:         Uniforms,
 	io:               ^imgui.IO,
 	math_font:        ^imgui.Font,
-	zoom:             f32,
-	shift:            [2]f32,
-	show_ui:          bool,
 	function:         cstring,
 	err_msg:          cstring,
-	time:             f32,
 	time_speed:       f32,
 	animation_paused: bool,
+	show_ui:          bool,
+	tex:              u32,
+	zoom:             f32,
+	time:             f32,
+	/* */
+	shift:            [2]f32,
+	/* */
+	abcd:			  [4][3]f32,
+	gamma_correction: f32,
 }
 
-Coloring_Method :: enum u32 {
-	Use_Default = 0,
-	Use_Palette = 1,
-	Use_Texture = 2,
-	Use_User    = 3,
+// use uniform buffer object and a single "set_uniforms" proc?
+// Uniform :: struct($T: typeid) {
+// 	location: i32,
+// 	value: T
+// }
+// Uniforms :: struct {
+// 	zoom:             Uniform(f32),
+// 	time:             Uniform(f32),
+// 	resolution:       Uniform([2]f32),
+// 	shift:            Uniform([2]f32),
+// 	abcd:             Uniform([4][3]f32),
+// 	gamma_correction: Uniform(f32),
+// }
+
+Uniforms :: struct {
+	zoom:             i32,
+	time:             i32,
+	resolution:       i32,
+	shift:            i32,
+	abcd:             i32,
+	gamma_correction: i32,
+}
+
+Coloring_Method :: enum i32 {
+	Use_Default,
+	Use_Texture,
+	Use_Palette,
+	// Use_User,
 }
 
 GL_MAJOR_VERSION :: 3
 GL_MINOR_VERSION :: 3
-VERTEX_SHADER :: #load("shaders/graph.vert", string)
-FRAGMENT_SHADER :: #load("shaders/graph.frag", string)
+@(rodata) VERTEX_SHADER := #load("shaders/graph.vert", string)
+@(rodata) FRAGMENT_SHADER := #load("shaders/graph.frag", cstring)
 PAN_SPEED :: (f32)(15)
 ZOOM_SPEED :: (f32)(1.1)
 
 main :: proc() 
 {
 	context.logger = log.create_console_logger()
+	context.logger.lowest_level = ODIN_DEBUG ? .Debug : .Info
 
 	when ODIN_DEBUG {
 		track: mem.Tracking_Allocator
@@ -99,16 +124,17 @@ main :: proc()
 		sdl.Quit()
 	}
 
+	setup_gl(&app)
+	defer {
+		gl.DeleteShader(vertex_shader_id)
+		gl.DeleteProgram(program)
+	}
+
 	setup_imgui(&app)
 	defer {
 		imgui_impl_opengl3.Shutdown()
 		imgui_impl_sdl3.Shutdown()
 		imgui.DestroyContext()
-	}
-
-	setup_gl(&app)
-	defer {
-		gl.DeleteProgram(program)
 	}
 
 	last_time := sdl.GetTicks()
@@ -143,6 +169,8 @@ setup_app :: proc(using app: ^App_Context)
 	zoom = 1
 	show_ui = true
 	time_speed = 1
+	gamma_correction = 0.65
+	coloring_method = .Use_Texture
 	err_msg = strings.clone_to_cstring("")
 	function = (cstring)(make([^]u8, 1024))
 	([^]u8)(function)[0] = 'z'
@@ -155,53 +183,27 @@ setup_sdl :: proc(using app: ^App_Context)
 		sdl.Quit()
 	}
 
-	window = sdl.CreateWindow("Kolori", 800, 600, {.OPENGL, .RESIZABLE})
+	window = sdl.CreateWindow("Kolori", 800, 600, {.OPENGL, .RESIZABLE, .HIGH_PIXEL_DENSITY})
 	if window == nil {
 		log.fatal("[sdl.CreateWindow]", sdl.GetError())
 		sdl.Quit()
 	}
-	sdl.SetHint(sdl.HINT_TOUCH_MOUSE_EVENTS, "true")
 	sdl.SetWindowPosition(
 		window,
 		sdl.WINDOWPOS_CENTERED,
 		sdl.WINDOWPOS_CENTERED,
 	)
 	sdl.ShowWindow(window)
+}
 
+setup_gl :: proc(using app: ^App_Context) 
+{
 	gl_ctx = sdl.GL_CreateContext(window)
 	if gl_ctx == nil {
 		log.fatal("[sdl.GL_CreateContext]", sdl.GetError())
 		sdl.Quit()
 	}
-}
 
-setup_imgui :: proc(using app: ^App_Context) 
-{
-	imgui.CHECKVERSION()
-	imgui.CreateContext()
-
-	io = imgui.GetIO()
-	io.ConfigFlags += {.NavEnableKeyboard, .DockingEnable}
-
-	imgui_impl_sdl3.InitForOpenGL(window, gl_ctx)
-	imgui_impl_opengl3.Init("#version 330 core")
-	imgui.StyleColorsDark()
-
-	imgui.FontAtlas_AddFontFromFileTTF(io.Fonts, "DMSans.ttf", 18)
-	math_font = imgui.FontAtlas_AddFontFromFileTTF(io.Fonts, "DMSans.ttf", 18)
-
-	style := imgui.GetStyle()
-	style.WindowRounding = 8
-	style.ChildRounding = 8
-	style.PopupRounding = 6
-	style.FrameRounding = 6
-	style.ScrollbarRounding = 6
-	style.GrabRounding = 6
-	style.TabRounding = 6
-}
-
-setup_gl :: proc(using app: ^App_Context) 
-{
 	context_flags: sdl.GLContextFlag
 	when ODIN_DEBUG {context_flags |= sdl.GL_CONTEXT_DEBUG_FLAG}
 	when ODIN_OS == .Darwin {context_flags |= sdl.GL_CONTEXT_FORWARD_COMPATIBLE_FLAG}
@@ -243,6 +245,9 @@ setup_gl :: proc(using app: ^App_Context)
 	gl.GenVertexArrays(1, &vao)
 	gl.BindVertexArray(vao)
 
+	gl.GenTextures(1, &texture)
+	gl.BindTexture(gl.TEXTURE_2D, texture)
+
 	vbo: u32
 	gl.GenBuffers(1, &vbo)
 	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
@@ -265,7 +270,14 @@ setup_gl :: proc(using app: ^App_Context)
 
 	gl.EnableVertexAttribArray(0)
 
+	ok: bool
+	vertex_shader_id, ok = gl.compile_shader_from_source(VERTEX_SHADER, .VERTEX_SHADER)
+	if !ok {
+		log.fatal("Could not compile vertex shader")
+	}
+
 	reload_shaders(app)
+	gl.Uniform1i(gl.GetUniformLocation(program, "tex"), 0)
 }
 
 handle_event :: proc(using app: ^App_Context, event: ^sdl.Event) 
@@ -394,8 +406,8 @@ handle_event :: proc(using app: ^App_Context, event: ^sdl.Event)
 			width, height: i32
 			sdl.GetWindowSizeInPixels(window, &width, &height)
 
-			motion := [2]f32{event.motion.xrel, event.motion.yrel}
-			scale := [2]f32{(f32)(-width), (f32)(height)}
+			motion := [2]f32{-event.motion.xrel, event.motion.yrel}
+			scale := [2]f32{(f32)(width), (f32)(height)}
 			shift += (motion / scale) * zoom
 
 			gl.Uniform2f(uniforms.shift, shift.x, shift.y)
@@ -404,8 +416,10 @@ handle_event :: proc(using app: ^App_Context, event: ^sdl.Event)
 
 	now_to_string :: proc(buf: []u8) -> string 
 	{
+		now := time.now()
+
 		// dd-mm-yyyy
-		y, _month, d := time.date(time.now())
+		y, _month, d := time.date(now)
 		month := (u8)(_month)
 
 		buf[9] = '0' + (u8)(y % 10);y /= 10
@@ -423,7 +437,7 @@ handle_event :: proc(using app: ^App_Context, event: ^sdl.Event)
 		buf[10] = '_'
 
 		// hhmmss
-		h, minute, s := time.clock(time.now())
+		h, minute, s := time.clock(now)
 
 		buf[16] = '0' + (u8)(s % 10);s /= 10
 		buf[15] = '0' + (u8)(s)
@@ -452,85 +466,81 @@ render_graph :: proc(using app: ^App_Context)
 	)
 }
 
-draw_ui :: proc(using app: ^App_Context) 
-{
-	if !show_ui {
-		return
-	}
-
-	imgui_impl_opengl3.NewFrame()
-	imgui_impl_sdl3.NewFrame()
-	imgui.NewFrame()
-
-	// imgui.ShowDemoWindow()
-	// imgui.ShowUserGuide()
-
-	imgui.SetNextWindowBgAlpha(0.35)
-
-	imgui.Begin("Plotter", flags = {.AlwaysAutoResize})
-	imgui.PushFontFloat(math_font, 22.5)
-	imgui.Text("f(z) =")
-	imgui.PopFont()
-	imgui.SameLine()
-
-	if imgui.InputText("##", function, 1024) && len(function) > 0 {
-		delete(err_msg)
-		err, failure := validate(function).?
-
-		err_msg = strings.clone_to_cstring(failure ? err : "")
-
-		if !failure {
-			time = 0
-			animation_paused = false
-			reload_shaders(app)
-		}
-	}
-	imgui.PushStyleColorImVec4(.Text, [4]f32{255, 0, 0, 255})
-	imgui.TextWrapped(err_msg)
-	imgui.PopStyleColor()
-
-	if imgui.CollapsingHeader("Animation Settings", {.DefaultOpen}) {
-		imgui.SliderFloat("Anim. speed", &time_speed, 0.1, 10)
-		imgui.Checkbox("Pause Anim.", &animation_paused)
-		if imgui.Button("Reset Anim.") {
-			time = 0
-			animation_paused = false
-		}
-	}
-	imgui.End()
-
-	imgui.Render()
-	imgui_impl_opengl3.RenderDrawData(imgui.GetDrawData())
-}
-
 reload_shaders :: proc(using app: ^App_Context) 
 {
+	compile_fragment_shader :: proc (sources: []cstring) -> (id: u32, ok: bool)
+	{
+		lengths := make([dynamic]i32, 0, len(sources))
+		defer delete(lengths)
+		for i in sources {
+			append(&lengths, (i32)(len(i)))
+		}
+		
+		id = gl.CreateShader(gl.FRAGMENT_SHADER)
+		gl.ShaderSource(
+			id,
+			(i32)(len(sources)),
+			raw_data(sources),
+			raw_data(lengths)
+		)
+		gl.CompileShader(id)
+
+		success: i32
+		info_log: [512]u8
+		gl.GetShaderiv(id, gl.COMPILE_STATUS, &success)
+		if success == 0 {
+			gl.GetShaderInfoLog(id, len(info_log), nil, ([^]u8)(&info_log))
+			log.errorf("Failed to compile fragment shader: %s", info_log)
+			return 0, false
+		}
+
+		return id, true
+	}
+
 	gl.UseProgram(0)
 	gl.DeleteProgram(program)
 
-	ok: bool
-	program, ok = gl.load_shaders_source(
-		VERTEX_SHADER,
-		strings.concatenate(
-			{FRAGMENT_SHADER, "\n\n", translate(function)},
-			context.temp_allocator,
-		),
-	)
+	@(static, rodata)
+	coloring_method_headers := [Coloring_Method]cstring{
+		.Use_Default = "#define USE_DEFAULT\n",
+		.Use_Palette = "#define USE_PALETTE\n",
+		.Use_Texture = "#define USE_TEXTURE\n"
+	}
+
+	// we all <3 pointer arithmetic!
+	frag_ptr := transmute(uintptr)(FRAGMENT_SHADER)
+	frag_wanted_part := transmute(cstring)(frag_ptr + 17)
+
+	fragment_shader_id, ok := compile_fragment_shader({
+		"#version 330 core\n",
+		coloring_method_headers[coloring_method],
+		frag_wanted_part,
+		translate(function)
+	})
+	defer gl.DeleteShader(fragment_shader_id)
+	if !ok {
+		sdl.Quit()
+	}
+
+	program, ok = gl.create_and_link_program({vertex_shader_id, fragment_shader_id})
 
 	if !ok {
-		log.fatal("[gl.load_shaders_source]", gl.get_last_error_message())
+		log.error(
+			"[gl.load_shaders_source] Failed to compile shader progam. Error msg:",
+			gl.get_last_error_message()
+		)
 		sdl.Quit()
 	}
 
 	gl.UseProgram(program)
 
 	uniforms = {
-		zoom            = gl.GetUniformLocation(program, "zoom"),
-		time            = gl.GetUniformLocation(program, "time"),
-		resolution      = gl.GetUniformLocation(program, "resolution"),
-		shift           = gl.GetUniformLocation(program, "shift"),
-		coloring_method = gl.GetUniformLocation(program, "coloring_method"),
-		texture         = gl.GetUniformLocation(program, "texture"),
+		zoom             = gl.GetUniformLocation(program, "zoom"),
+		time             = gl.GetUniformLocation(program, "time"),
+		resolution       = gl.GetUniformLocation(program, "resolution"),
+		shift            = gl.GetUniformLocation(program, "shift"),
+		abcd             = gl.GetUniformLocation(program, "abcd"),
+		gamma_correction = gl.GetUniformLocation(program, "gamma_correction")
 	}
 
 	width, height: i32
@@ -540,4 +550,6 @@ reload_shaders :: proc(using app: ^App_Context)
 	gl.Uniform2f(uniforms.shift, shift.x, shift.y)
 	gl.Uniform1f(uniforms.zoom, zoom)
 	gl.Uniform1f(uniforms.time, time)
+	gl.Uniform1f(uniforms.gamma_correction, gamma_correction)
+	gl.Uniform3fv(uniforms.abcd, 4, ([^]f32)(&abcd[0]))
 }
