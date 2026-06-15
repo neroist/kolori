@@ -300,7 +300,7 @@ handle_event :: proc(using app: ^App_Context, event: ^sdl.Event)
 		width, height: i32
 		sdl.GetWindowSizeInPixels(window, &width, &height)
 
-		scale := [2]f32{(f32)(width), (f32)(height)}
+		scale := (f32)(min(width, height))
 		direction: [2]f32
 
 		switch event.key.key {
@@ -407,7 +407,7 @@ handle_event :: proc(using app: ^App_Context, event: ^sdl.Event)
 			sdl.GetWindowSizeInPixels(window, &width, &height)
 
 			motion := [2]f32{-event.motion.xrel, event.motion.yrel}
-			scale := [2]f32{(f32)(width), (f32)(height)}
+			scale := (f32)(min(width, height))
 			shift += (motion / scale) * zoom
 
 			gl.Uniform2f(uniforms.shift, shift.x, shift.y)
