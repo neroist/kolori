@@ -8,6 +8,7 @@ TokenType :: enum {
 	COMMA,
 	ASTERISK,
 	SLASH,
+	PERCENT,
 	PLUS,
 	MINUS,
 
@@ -187,6 +188,8 @@ scanner_scan_token :: proc(s: ^Scanner)
 		scanner_add_token(s, .MINUS)
 	case '+':
 		scanner_add_token(s, .PLUS)
+	case '%':
+		scanner_add_token(s, .PERCENT)
 	case '/':
 		scanner_add_token(s, .SLASH)
 	case '*':

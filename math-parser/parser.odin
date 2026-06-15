@@ -44,6 +44,16 @@ BinaryType :: enum {
 	Multiplication,
 	Division,
 	Exponentiation,
+	Modulo
+}
+
+@(private, rodata)
+op_tbl := #partial [TokenType]BinaryType {
+	.PLUS = .Addition,
+	.MINUS = .Subtraction,
+	.SLASH = .Division,
+	.ASTERISK = .Multiplication,
+	.PERCENT = .Modulo,
 }
 
 parse_string :: proc (source: string, functions: []string = {}, scan_flags: bit_set[Scan_Flag] = {}, allocator := context.allocator) -> (Expression, []Error_Report)
@@ -120,7 +130,7 @@ addition :: proc(p: ^Parser) -> (expr: Expression, report: Maybe(Error_Report)) 
 		right := multiplication(p) or_return
 		bin_op := new(Binary)
 		bin_op^ = Binary {
-			operation = operator.type == .PLUS ? .Addition : .Subtraction,
+			operation = op_tbl[operator.type],
 			right     = right,
 			left      = expr,
 		}
@@ -138,12 +148,12 @@ multiplication :: proc(p: ^Parser) -> (expr: Expression, report: Maybe(Error_Rep
 		expr = nil
 	}
 
-	for parser_match(p, {.ASTERISK, .SLASH}) {
+	for parser_match(p, {.ASTERISK, .SLASH, .PERCENT}) {
 		operator := parser_previous(p)
 		right := power(p) or_return
 		binop := new(Binary)
 		binop^ = Binary {
-			operation = operator.type == .ASTERISK ? .Multiplication : .Division,
+			operation = op_tbl[operator.type],
 			right     = right,
 			left      = expr,
 		}
@@ -249,8 +259,12 @@ function_call :: proc(p: ^Parser) -> (expr: Expression, report: Maybe(Error_Repo
 		report = new_report(
 			p.tokens[max(0, p.current)],
 			.UnexpectedToken,
-			"Closing parenthesis \")\" was unexpected here. Nullary functions are not allowed." 
+			"Illegal closing parenthesis \")\" when calling function \"%s\". Nullary functions are not supported.",
+			func_call.name
 		)
+
+		expression_free(func_call)
+		return nil, report
 	}
 
 	func_call.arguments = parameter_list(p) or_return

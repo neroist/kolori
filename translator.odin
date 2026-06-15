@@ -76,6 +76,7 @@ translate_expr :: proc(expr: mp.Expression) -> string
 		.Multiplication = "c_mul",
 		.Division       = "c_div",
 		.Exponentiation = "c_pow",
+		.Modulo         = "c_mod",
 	}
 
 	switch expr in expr {
@@ -149,9 +150,9 @@ validate_expr :: proc(expr: mp.Expression) -> (Maybe(cstring))
 	case ^mp.Binary:
 		if err := validate_expr(expr.left); err != nil {
 			return err
-		} else {
-			return validate_expr(expr.right)
-		}
+		} 
+
+		return validate_expr(expr.right)
 	case ^mp.FunctionCall:
 		expected_arity := slice.contains(binary_funcs, expr.name) ? 2 : 1
 		if len(expr.arguments) != expected_arity {

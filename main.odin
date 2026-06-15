@@ -86,6 +86,7 @@ main :: proc()
 {
 	context.logger = log.create_console_logger()
 	context.logger.lowest_level = ODIN_DEBUG ? .Debug : .Info
+	defer log.destroy_console_logger(context.logger)
 
 	when ODIN_DEBUG {
 		track: mem.Tracking_Allocator
