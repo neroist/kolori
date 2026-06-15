@@ -616,9 +616,9 @@ vec2 c_atanh(vec2 c) {
 	vec2 one = vec2(1., 0.);
 	vec2 two = one + one;
 	if (c == one) {
-			return vec2(1./1e-10, vec2(0.));
+		return vec2(1./1e-10, vec2(0.));
 	} else if (c == -one) {
-			return vec2(-1./1e-10, vec2(0.));
+		return vec2(-1./1e-10, vec2(0.));
 	}
 	return c_div(c_ln(one + c) - c_ln(one - c), two);
 }
@@ -709,10 +709,10 @@ vec4 color_hsv(vec2 z)
 
 vec4 color_hsluv(vec2 z)
 {
+	float a = gamma_correction;
 	float hue = degrees(atan(z.y,z.x));
-	float lightness = TWO_OVER_PI * atan(length(z)) * 50;
-	// float lightness = 2 / (1 + exp(-length(z))) * 50;
-	return hsluvToRgb(hue, 50.0f, lightness, 1);
+	float lightness = TWO_OVER_PI * atan(pow(length(z),a)) * 33;
+	return hsluvToRgb(hue, 100.0f, lightness, 1);
 }
 
 vec4 color_texture(vec2 z)
@@ -723,7 +723,7 @@ vec4 color_texture(vec2 z)
 // From https://iquilezles.org/articles/palettes/
 vec4 color_palette(float t, vec3 a, vec3 b, vec3 c, vec3 d)
 {
-		return vec4(a + b*cos(TAU * (c*t+d)), 1);
+	return vec4(a + b*cos(TAU * (c*t+d)), 1);
 }
 
 vec2 f(vec2 z);
