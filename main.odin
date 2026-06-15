@@ -6,10 +6,9 @@ import "base:runtime"
 import "odin-imgui/imgui_impl_opengl3"
 import "odin-imgui/imgui_impl_sdl3"
 import imgui "odin-imgui"
-import gl "vendor:OpenGL"
+import opengl "vendor:OpenGL"
 import sdl "vendor:sdl3"
 import "core:strings"
-import "core:time"
 import "core:log"
 import "core:fmt"
 import "core:mem"
@@ -21,74 +20,12 @@ import "core:os"
 //  3. image (texture)
 //  4. palette (https://iquilezles.org/articles/palettes/)
 
-App_Context :: struct {
-	window:           ^sdl.Window,
-	gl_ctx:           sdl.GLContext,
-	vao:              u32,
-	program:          u32,
-	vertex_shader_id: u32,
-	texture:          u32,
-	coloring_method:  Coloring_Method,
-	uniforms:         Uniforms,
-	io:               ^imgui.IO,
-	math_font:        ^imgui.Font,
-	function:         cstring,
-	err_msg:          cstring,
-	time_speed:       f32,
-	animation_paused: bool,
-	show_ui:          bool,
-	zoom:             f32,
-	time:             f32,
-	/* */
-	shift:            [2]f32,
-	/* */
-	abcd:			  [4][3]f32,
-	gamma_correction: f32,
-	vsync: bool
+App_State :: struct {
+	using gl: GL_State,
+	using ui: Ui_State,
+	window:   ^sdl.Window,
+	running:  bool
 }
-
-// use uniform buffer object and a single "set_uniforms" proc?
-// Uniform :: struct($T: typeid) {
-// 	location: i32,
-// 	value: T
-// }
-// Uniforms :: struct {
-// 	zoom:             Uniform(f32),
-// 	time:             Uniform(f32),
-// 	resolution:       Uniform([2]f32),
-// 	shift:            Uniform([2]f32),
-// 	abcd:             Uniform([4][3]f32),
-// 	gamma_correction: Uniform(f32),
-// }
-
-Uniforms :: struct {
-	zoom:             i32,
-	time:             i32,
-	resolution:       i32,
-	shift:            i32,
-	abcd:             i32,
-	gamma_correction: i32,
-}
-
-Coloring_Method :: enum i32 {
-	Use_Default,
-	Use_Texture,
-	Use_Palette,
-	// Use_User,
-}
-
-when ODIN_DEBUG {
-	GL_MAJOR_VERSION :: 4
-	GL_MINOR_VERSION :: 3
-} else {
-	GL_MAJOR_VERSION :: 3
-	GL_MINOR_VERSION :: 3
-}
-
-@(rodata) VERTEX_SHADER := #load("shaders/graph.vert", string)
-@(rodata) FRAGMENT_SHADER := #load("shaders/graph.frag", cstring)
-PAN_SPEED :: (f32)(10)
-ZOOM_SPEED :: (f32)(1.1)
 
 main :: proc() 
 {
@@ -96,6 +33,7 @@ main :: proc()
 	context.logger.lowest_level = ODIN_DEBUG ? .Debug : .Info
 	defer log.destroy_console_logger(context.logger)
 
+	// Lets all love Odin <3
 	when ODIN_DEBUG {
 		track: mem.Tracking_Allocator
 		mem.tracking_allocator_init(&track, context.allocator)
@@ -119,7 +57,7 @@ main :: proc()
 		}
 	}
 
-	using app: App_Context
+	using app: App_State
 	setup_app(&app)
 	defer {
 		delete(function)
@@ -128,15 +66,15 @@ main :: proc()
 
 	setup_sdl(&app)
 	defer {
-		sdl.GL_DestroyContext(gl_ctx)
+		sdl.GL_DestroyContext(gl.ctx)
 		sdl.DestroyWindow(window)
 		sdl.Quit()
 	}
 
 	setup_gl(&app)
 	defer {
-		gl.DeleteShader(vertex_shader_id)
-		gl.DeleteProgram(program)
+		opengl.DeleteShader(vertex_shader_id)
+		opengl.DeleteProgram(program)
 	}
 
 	setup_imgui(&app)
@@ -147,24 +85,19 @@ main :: proc()
 	}
 
 	last_time := sdl.GetTicks()
-	render_loop: for {
-		event: sdl.Event
-		for sdl.PollEvent(&event) {
-			imgui_impl_sdl3.ProcessEvent(&event)
+	for app.running {
+		process_events(&app)
 
-			if event.type == .QUIT {
-				break render_loop
-			}
-
-			handle_event(&app, &event)
-		}
-
+		// advance time for animations
 		if !animation_paused {
-			time += (f32)(sdl.GetTicks() - last_time)
-			gl.Uniform1f(uniforms.time, time * 1e-3 * time_speed)
+			delta_time := (f32)(sdl.GetTicks() - last_time)
+			time += delta_time
+			opengl.Uniform1f(uniforms.time, time * 1e-3 * time_speed)
 		}
+
 		last_time = sdl.GetTicks()
 
+		// draw everything to window
 		render_graph(&app)
 		draw_ui(&app)
 
@@ -173,31 +106,43 @@ main :: proc()
 	}
 }
 
-setup_app :: proc(using app: ^App_Context) 
+setup_app :: proc(using app: ^App_State) 
 {
 	zoom = 1
 	show_ui = true
 	time_speed = 1
 	gamma_correction = 0.65
+	running = true
 	// coloring_method = .Use_Texture
 	err_msg = strings.clone_to_cstring("")
 	function = (cstring)(make([^]u8, 1024))
 	([^]u8)(function)[0] = 'z'
 }
 
-setup_sdl :: proc(using app: ^App_Context) 
+setup_sdl :: proc(using app: ^App_State) 
 {
+	_ = sdl.SetAppMetadata("Kolori", "0.1.0", "com.neroist.kolori")
+	_ = sdl.SetAppMetadataProperty(
+		sdl.PROP_APP_METADATA_URL_STRING,
+		"https://github.com/neroist/kolori"
+	)
+
 	if !sdl.Init({.VIDEO}) {
 		log.fatal("[sdl.Init]", sdl.GetError())
-		sdl.Quit()
+
+		app.running = false
+        return
 	}
 
 	window_flags := sdl.WindowFlags{.OPENGL, .RESIZABLE, .HIGH_PIXEL_DENSITY}
 	window = sdl.CreateWindow("Kolori", 800, 600, window_flags)
 	if window == nil {
 		log.fatal("[sdl.CreateWindow]", sdl.GetError())
-		sdl.Quit()
+
+		app.running = false
+        return
 	}
+
 	sdl.SetWindowPosition(
 		window,
 		sdl.WINDOWPOS_CENTERED,
@@ -206,7 +151,7 @@ setup_sdl :: proc(using app: ^App_Context)
 	sdl.ShowWindow(window)
 }
 
-exit :: proc(using app: ^App_Context)
+exit :: proc(using app: ^App_State)
 {
 	runtime._cleanup_runtime()
 	os.exit(1)

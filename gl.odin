@@ -2,30 +2,84 @@
 
 package kolori
 
-import gl "vendor:OpenGL"
+import opengl "vendor:OpenGL"
 import sdl "vendor:sdl3"
 import "base:runtime"
 import "core:log"
 import "core:fmt"
 
+GL_State :: struct {
+	abcd:			  [4][3]f32,
+	uniforms:         Uniforms,
+	shift:            [2]f32,
+	// resolution:       [2]f32,
+	ctx:              sdl.GLContext,
+	vao:              u32,
+	program:          u32,
+	vertex_shader_id: u32,
+	texture:          u32,
+	zoom:             f32,
+	time:             f32,
+	gamma_correction: f32,
+}
+
+// use uniform buffer object and a single "set_uniforms" proc?
+// Uniform :: struct($T: typeid) {
+// 	location: i32,
+// 	value: T
+// }
+// Uniforms :: struct {
+// 	zoom:             Uniform(f32),
+// 	time:             Uniform(f32),
+// 	resolution:       Uniform([2]f32),
+// 	shift:            Uniform([2]f32),
+// 	abcd:             Uniform([4][3]f32),
+// 	gamma_correction: Uniform(f32),
+// }
+
+Uniforms :: struct {
+	zoom:             i32,
+	time:             i32,
+	resolution:       i32,
+	shift:            i32,
+	abcd:             i32,
+	gamma_correction: i32,
+}
+
+when ODIN_DEBUG {
+    // for glDebugMessageCallback
+	GL_MAJOR_VERSION :: 4
+	GL_MINOR_VERSION :: 3
+} else {
+	GL_MAJOR_VERSION :: 3
+	GL_MINOR_VERSION :: 3
+}
+
+@(rodata)
+VERTEX_SHADER := #load("shaders/graph.vert", string)
+
+@(rodata)
+FRAGMENT_SHADER := #load("shaders/graph.frag", cstring)
+
 debug_proc :: proc "c" (source: u32, type: u32, id: u32, severity: u32, length: i32, message: cstring, user_param: rawptr)
 {
-	if severity != gl.DEBUG_SEVERITY_HIGH || severity != gl.DEBUG_SEVERITY_MEDIUM {
+	if severity != opengl.DEBUG_SEVERITY_HIGH || severity != opengl.DEBUG_SEVERITY_MEDIUM {
 		return
 	}
 
 	context = runtime.default_context()
-	app := (^App_Context)(user_param)
+	app := (^App_State)(user_param)
 
 	fmt.println("[OpenGL] debug message:", message)
 }
 
-setup_gl :: proc(using app: ^App_Context) 
+setup_gl :: proc(using app: ^App_State) 
 {
-	gl_ctx = sdl.GL_CreateContext(window)
-	if gl_ctx == nil {
+	ctx = sdl.GL_CreateContext(window)
+	if ctx == nil {
 		log.fatal("[sdl.GL_CreateContext]", sdl.GetError())
-		sdl.Quit()
+		app.running = false
+        return
 	}
 
 	context_flags: sdl.GLContextFlag
@@ -46,19 +100,19 @@ setup_gl :: proc(using app: ^App_Context)
 	sdl.GL_SetAttribute(.STENCIL_SIZE, 8)
 	sdl.GL_SetSwapInterval(0)
 
-	sdl.GL_MakeCurrent(window, gl_ctx)
+	sdl.GL_MakeCurrent(window, gl.ctx)
 
-	gl.load_up_to(GL_MAJOR_VERSION, GL_MINOR_VERSION, sdl.gl_set_proc_address)
+	opengl.load_up_to(GL_MAJOR_VERSION, GL_MINOR_VERSION, sdl.gl_set_proc_address)
 
 	when ODIN_DEBUG {
-		gl.DebugMessageCallback(debug_proc, app)
-		gl.Enable(gl.DEBUG_OUTPUT)
-		gl.Enable(gl.DEBUG_OUTPUT_SYNCHRONOUS)
+		opengl.DebugMessageCallback(debug_proc, app)
+		opengl.Enable(opengl.DEBUG_OUTPUT)
+		opengl.Enable(opengl.DEBUG_OUTPUT_SYNCHRONOUS)
 	}
 
 	width, height: i32
 	sdl.GetWindowSizeInPixels(window, &width, &height)
-	gl.Viewport(0, 0, width, height)
+	opengl.Viewport(0, 0, width, height)
 
 	vertices := [?]f32 {
 		// Coordinates 
@@ -72,61 +126,61 @@ setup_gl :: proc(using app: ^App_Context)
 		-1,
 	}
 
-	gl.GenVertexArrays(1, &vao)
-	gl.BindVertexArray(vao)
+	opengl.GenVertexArrays(1, &vao)
+	opengl.BindVertexArray(vao)
 
-	gl.GenTextures(1, &texture)
-	gl.BindTexture(gl.TEXTURE_2D, texture)
+	opengl.GenTextures(1, &texture)
+	opengl.BindTexture(opengl.TEXTURE_2D, texture)
 
 	vbo: u32
-	gl.GenBuffers(1, &vbo)
-	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
+	opengl.GenBuffers(1, &vbo)
+	opengl.BindBuffer(opengl.ARRAY_BUFFER, vbo)
 
-	gl.BufferData(
-		gl.ARRAY_BUFFER, // target
+	opengl.BufferData(
+		opengl.ARRAY_BUFFER, // target
 		size_of(vertices), // size of the buffer object's data store
 		&vertices, // data used for initialization
-		gl.STATIC_DRAW, // usage
+		opengl.STATIC_DRAW, // usage
 	)
 
-	gl.VertexAttribPointer(
+	opengl.VertexAttribPointer(
 		0, // index
 		2, // size
-		gl.FLOAT, // type
-		gl.FALSE, // normalized
+		opengl.FLOAT, // type
+		opengl.FALSE, // normalized
 		2 * size_of(f32), // stride
 		0, // offset
 	)
 
-	gl.EnableVertexAttribArray(0)
+	opengl.EnableVertexAttribArray(0)
 
 	ok: bool
-	vertex_shader_id, ok = gl.compile_shader_from_source(VERTEX_SHADER, .VERTEX_SHADER)
+	vertex_shader_id, ok = opengl.compile_shader_from_source(VERTEX_SHADER, .VERTEX_SHADER)
 	if !ok {
 		log.fatal("Could not compile vertex shader")
 	}
 
 	reload_shaders(app)
-	gl.Uniform1i(gl.GetUniformLocation(program, "tex"), 0)
+	opengl.Uniform1i(opengl.GetUniformLocation(program, "tex"), 0)
 }
 
-render_graph :: proc(using app: ^App_Context) 
+render_graph :: proc(using app: ^App_State) 
 {
-	gl.UseProgram(program)
-	gl.BindVertexArray(vao)
+	opengl.UseProgram(program)
+	opengl.BindVertexArray(vao)
 
 	// Draw commands.
-	gl.ClearColor(0.1, 0.1, 0.1, 1)
-	gl.Clear(gl.COLOR_BUFFER_BIT)
+	opengl.ClearColor(0.1, 0.1, 0.1, 1)
+	opengl.Clear(opengl.COLOR_BUFFER_BIT)
 
-	gl.DrawArrays(
-		gl.TRIANGLE_STRIP, // Draw triangles.
+	opengl.DrawArrays(
+		opengl.TRIANGLE_STRIP, // Draw triangles.
 		0, // Begin drawing at index 0.
 		4, // Use 4 indices.
 	)
 }
 
-reload_shaders :: proc(using app: ^App_Context) 
+reload_shaders :: proc(using app: ^App_State) 
 {
 	compile_fragment_shader :: proc (sources: []cstring) -> (id: u32, ok: bool)
 	{
@@ -135,29 +189,26 @@ reload_shaders :: proc(using app: ^App_Context)
 			append(&lengths, (i32)(len(i)))
 		}
 		
-		id = gl.CreateShader(gl.FRAGMENT_SHADER)
-		gl.ShaderSource(
+		id = opengl.CreateShader(opengl.FRAGMENT_SHADER)
+		opengl.ShaderSource(
 			id,
 			(i32)(len(sources)),
 			raw_data(sources),
 			raw_data(lengths)
 		)
-		gl.CompileShader(id)
+		opengl.CompileShader(id)
 
 		success: i32
-		info_log: [512]u8
-		gl.GetShaderiv(id, gl.COMPILE_STATUS, &success)
+		opengl.GetShaderiv(id, opengl.COMPILE_STATUS, &success)
 		if success == 0 {
-			gl.GetShaderInfoLog(id, len(info_log), nil, ([^]u8)(&info_log))
-			log.errorf("Failed to compile fragment shader: %s", info_log)
 			return 0, false
 		}
 
 		return id, true
 	}
 
-	gl.UseProgram(0)
-	gl.DeleteProgram(program)
+	opengl.UseProgram(0)
+	opengl.DeleteProgram(program)
 
 	@(static, rodata)
 	coloring_method_headers := [Coloring_Method]cstring{
@@ -176,39 +227,46 @@ reload_shaders :: proc(using app: ^App_Context)
 		frag_wanted_part,
 		translate(function)
 	})
-	defer gl.DeleteShader(fragment_shader_id)
+	defer opengl.DeleteShader(fragment_shader_id)
 	if !ok {
-		sdl.Quit()
+		info_log: [512]u8
+        opengl.GetShaderInfoLog(fragment_shader_id, len(info_log), nil, ([^]u8)(&info_log))
+        log.errorf("Failed to compile fragment shader: %s", info_log)
+
+		app.running = false
+        return
 	}
 
-	program, ok = gl.create_and_link_program({vertex_shader_id, fragment_shader_id})
+	program, ok = opengl.create_and_link_program({vertex_shader_id, fragment_shader_id})
 
 	if !ok {
 		log.error(
-			"[gl.load_shaders_source] Failed to compile shader progam. Error msg:",
-			gl.get_last_error_message()
+			"[opengl.load_shaders_source] Failed to compile shader progam. Error msg:",
+			opengl.get_last_error_message()
 		)
-		sdl.Quit()
+
+        app.running = false
+        return
 	}
 
-	gl.UseProgram(program)
+	opengl.UseProgram(program)
 
 	uniforms = {
-		zoom             = gl.GetUniformLocation(program, "zoom"),
-		time             = gl.GetUniformLocation(program, "time"),
-		resolution       = gl.GetUniformLocation(program, "resolution"),
-		shift            = gl.GetUniformLocation(program, "shift"),
-		abcd             = gl.GetUniformLocation(program, "abcd"),
-		gamma_correction = gl.GetUniformLocation(program, "gamma_correction")
+		zoom             = opengl.GetUniformLocation(program, "zoom"),
+		time             = opengl.GetUniformLocation(program, "time"),
+		resolution       = opengl.GetUniformLocation(program, "resolution"),
+		shift            = opengl.GetUniformLocation(program, "shift"),
+		abcd             = opengl.GetUniformLocation(program, "abcd"),
+		gamma_correction = opengl.GetUniformLocation(program, "gamma_correction")
 	}
 
 	width, height: i32
 	sdl.GetWindowSizeInPixels(window, &width, &height)
-	gl.Viewport(0, 0, width, height)
-	gl.Uniform2i(uniforms.resolution, width, height)
-	gl.Uniform2f(uniforms.shift, shift.x, shift.y)
-	gl.Uniform1f(uniforms.zoom, zoom)
-	gl.Uniform1f(uniforms.time, time)
-	gl.Uniform1f(uniforms.gamma_correction, gamma_correction)
-	gl.Uniform3fv(uniforms.abcd, 4, ([^]f32)(&abcd))
+	opengl.Viewport(0, 0, width, height)
+	opengl.Uniform2i(uniforms.resolution, width, height)
+	opengl.Uniform2f(uniforms.shift, shift.x, shift.y)
+	opengl.Uniform1f(uniforms.zoom, zoom)
+	opengl.Uniform1f(uniforms.time, time)
+	opengl.Uniform1f(uniforms.gamma_correction, gamma_correction)
+	opengl.Uniform3fv(uniforms.abcd, 4, ([^]f32)(&abcd))
 }

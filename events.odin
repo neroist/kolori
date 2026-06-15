@@ -2,16 +2,36 @@
 
 package kolori
 
+import "odin-imgui/imgui_impl_opengl3"
+import "odin-imgui/imgui_impl_sdl3"
 import imgui "odin-imgui"
-import gl "vendor:OpenGL"
+import opengl "vendor:OpenGL"
 import sdl "vendor:sdl3"
 import "core:time"
 import "core:log"
 import "core:fmt"
 
-handle_event :: proc(app: ^App_Context, event: ^sdl.Event) 
+PAN_SPEED :: (f32)(10)
+ZOOM_SPEED :: (f32)(1.1)
+
+process_events :: proc(app: ^App_State)
 {
-	gl.UseProgram(app.program)
+    event: sdl.Event
+    for sdl.PollEvent(&event) {
+        imgui_impl_sdl3.ProcessEvent(&event)
+
+        if event.type == .QUIT {
+            app.running = false
+        }
+
+        handle_event(app, &event)
+    }
+
+}
+
+handle_event :: proc(app: ^App_State, event: ^sdl.Event) 
+{
+	opengl.UseProgram(app.program)
 
 	#partial switch event.type {
 	// todo(touchscreens) support pinching motions for zoom in/out 
@@ -19,8 +39,8 @@ handle_event :: proc(app: ^App_Context, event: ^sdl.Event)
 	case .WINDOW_RESIZED:
 		width, height: i32
 		sdl.GetWindowSizeInPixels(app.window, &width, &height)
-		gl.Viewport(0, 0, width, height)
-		gl.Uniform2i(app.uniforms.resolution, width, height)
+		opengl.Viewport(0, 0, width, height)
+		opengl.Uniform2i(app.uniforms.resolution, width, height)
 	case .KEY_DOWN:
 		if app.io.WantCaptureKeyboard {
 			break
@@ -44,7 +64,7 @@ handle_event :: proc(app: ^App_Context, event: ^sdl.Event)
 	}
 }
 
-handle_key :: proc(app: ^App_Context, event: ^sdl.Event)
+handle_key :: proc(app: ^App_State, event: ^sdl.Event)
 {    
     shift_key := .LSHIFT in event.key.mod || .RSHIFT in event.key.mod
 
@@ -97,15 +117,15 @@ take_screenshot :: proc(width, height: i32)
 {
     surface := sdl.CreateSurface(width, height, .RGB24)
 
-    gl.ReadBuffer(gl.FRONT)
-    gl.PixelStorei(gl.PACK_ALIGNMENT, 1)
-    gl.ReadPixels(
+    opengl.ReadBuffer(opengl.FRONT)
+    opengl.PixelStorei(opengl.PACK_ALIGNMENT, 1)
+    opengl.ReadPixels(
         0,
         0,
         width,
         height,
-        gl.RGB,
-        gl.UNSIGNED_BYTE,
+        opengl.RGB,
+        opengl.UNSIGNED_BYTE,
         surface.pixels,
     )
 
@@ -124,13 +144,13 @@ take_screenshot :: proc(width, height: i32)
     }
 }
 
-zoom :: proc(app: ^App_Context, speed: f32)
+zoom :: proc(app: ^App_State, speed: f32)
 {
     app.zoom *= speed
-    gl.Uniform1f(app.uniforms.zoom, app.zoom)
+    opengl.Uniform1f(app.uniforms.zoom, app.zoom)
 }
 
-pan :: proc(app: ^App_Context, direction: [2]f32, speed: f32 = 1)
+pan :: proc(app: ^App_State, direction: [2]f32, speed: f32 = 1)
 {
     width, height: i32
     sdl.GetWindowSizeInPixels(app.window, &width, &height)
@@ -138,7 +158,7 @@ pan :: proc(app: ^App_Context, direction: [2]f32, speed: f32 = 1)
     scale := (f32)(min(width, height))
     app.shift += speed * direction / scale * app.zoom
 
-    gl.Uniform2f(app.uniforms.shift, app.shift.x, app.shift.y)
+    opengl.Uniform2f(app.uniforms.shift, app.shift.x, app.shift.y)
 }
 
 @(private="file")

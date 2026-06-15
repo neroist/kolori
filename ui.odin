@@ -2,30 +2,47 @@
 
 package kolori
 
-import "core:fmt"
-import "base:runtime"
 import "odin-imgui/imgui_impl_opengl3"
-// import sdl_image "vendor:sdl3/image"
-import "vendor:stb/image"
 import "odin-imgui/imgui_impl_sdl3"
+import opengl "vendor:OpenGL"
+import "vendor:stb/image"
 import imgui "odin-imgui"
-import gl "vendor:OpenGL"
 import sdl "vendor:sdl3"
+import "base:runtime"
+import "core:fmt"
 import "core:log"
-import "core:io"
 
 IMGUI_CONFIG_FLAGS :: imgui.ConfigFlags{
     .NavEnableKeyboard,
     .DockingEnable
 }
 
+Ui_State :: struct {
+	io:               ^imgui.IO,
+	math_font:        ^imgui.Font,
+	function:         cstring,
+	err_msg:          cstring,
+	coloring_method:  Coloring_Method,
+	time_speed:       f32,
+	animation_paused: bool,
+	show_ui:          bool,
+	vsync:            bool,
+}
+
+Coloring_Method :: enum i32 {
+	Use_Default,
+	Use_Texture,
+	Use_Palette,
+	// Use_User,
+}
+
 // @(deferred_none=deinit_imgui)
-setup_imgui :: proc(app: ^App_Context) 
+setup_imgui :: proc(app: ^App_State) 
 {
 	imgui.CHECKVERSION()
 	imgui.CreateContext()
 
-    imgui_impl_sdl3.InitForOpenGL(app.window, app.gl_ctx)
+    imgui_impl_sdl3.InitForOpenGL(app.window, app.gl.ctx)
 	imgui_impl_opengl3.Init("#version 330 core")
 
 	app.io = imgui.GetIO()
@@ -58,7 +75,7 @@ style_imgui :: proc()
 	style.TabRounding = 6
 }
 
-draw_ui :: proc(using app: ^App_Context) 
+draw_ui :: proc(using app: ^App_State) 
 {
 	if !show_ui {
 		return
@@ -72,7 +89,7 @@ draw_ui :: proc(using app: ^App_Context)
 	imgui.NewFrame()
 
 	// imgui.ShowDemoWindow()
-	// imgui.ShowUserGuide()
+	imgui.ShowUserGuide()
     // imgui.ShowMetricsWindow()
 
 	imgui.SetNextWindowBgAlpha(0.35)
@@ -144,7 +161,7 @@ draw_ui :: proc(using app: ^App_Context)
 		case .Use_Default:
 			// checkbox instead?
 			if imgui.SliderFloat("Gamma Correction", &gamma_correction, -1, 1) {
-				gl.Uniform1f(uniforms.gamma_correction, gamma_correction)
+				opengl.Uniform1f(uniforms.gamma_correction, gamma_correction)
 			}
         case .Use_Texture:
             if imgui.Button("Choose Image") {
@@ -182,7 +199,7 @@ dialog_file_callback :: proc "c" (userdata: rawptr, filelist: [^]cstring, filter
         return
     }
     
-    app := (^App_Context)(userdata)
+    app := (^App_State)(userdata)
 
     // image := sdl_image.Load(filelist[0])
     // defer sdl.DestroySurface(image)
@@ -199,27 +216,27 @@ dialog_file_callback :: proc "c" (userdata: rawptr, filelist: [^]cstring, filter
         return
     }
     // sdl.GL_MakeCurrent(app.window, app.gl_ctx)
-    // gl.load_up_to(3, 3, sdl.gl_set_proc_address)
-    // gl.BindBuffer(gl.PIXEL_UNPACK_BUFFER, 0)
-    // gl.BindTexture(gl.TEXTURE_2D, app.texture)
-    gl.DeleteTextures(1, &app.texture)
-    gl.TexImage2D(
-        gl.TEXTURE_2D,
+    // opengl.load_up_to(3, 3, sdl.gl_set_proc_address)
+    // opengl.BindBuffer(opengl.PIXEL_UNPACK_BUFFER, 0)
+    // opengl.BindTexture(opengl.TEXTURE_2D, app.texture)
+    opengl.DeleteTextures(1, &app.texture)
+    opengl.TexImage2D(
+        opengl.TEXTURE_2D,
         0,
-        channels == 4 ? gl.RGBA : gl.RGB,
-        // gl.RGB,
+        channels == 4 ? opengl.RGBA : opengl.RGB,
+        // opengl.RGB,
         width,
         height,
         0,
-        channels == 4 ? gl.RGBA : gl.RGB,
-        // gl.RGB,
-        gl.UNSIGNED_BYTE,
+        channels == 4 ? opengl.RGBA : opengl.RGB,
+        // opengl.RGB,
+        opengl.UNSIGNED_BYTE,
         image_data
     )
 
-    gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);	// set texture wrapping to GL_REPEAT (default wrapping method)
-    gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
-    gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
-    gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-	gl.GenerateMipmap(gl.TEXTURE_2D)
+    opengl.TexParameteri(opengl.TEXTURE_2D, opengl.TEXTURE_WRAP_S, opengl.REPEAT);	// set texture wrapping to GL_REPEAT (default wrapping method)
+    opengl.TexParameteri(opengl.TEXTURE_2D, opengl.TEXTURE_WRAP_T, opengl.REPEAT);
+    opengl.TexParameteri(opengl.TEXTURE_2D, opengl.TEXTURE_MIN_FILTER, opengl.LINEAR_MIPMAP_LINEAR);
+    opengl.TexParameteri(opengl.TEXTURE_2D, opengl.TEXTURE_MAG_FILTER, opengl.LINEAR);
+	opengl.GenerateMipmap(opengl.TEXTURE_2D)
 }
