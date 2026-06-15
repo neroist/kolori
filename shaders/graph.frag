@@ -393,14 +393,6 @@ vec4   luvToRgb(float x, float y, float z, float a) {return   luvToRgb( vec4(x,y
 END HSLUV-GLSL
 */
 
-vec2 transform_coordinates(vec4 FragCoord)
-{
-		vec2 pos = FragCoord.xy;
-		float bound = min(resolution.x, resolution.y);
-
-		return zoom * (pos - 0.5f*resolution)/bound + shift;
-}
-
 // based on https://github.com/rust-num/num-complex/blob/master/src/lib.rs
 // Copyright 2013 The Rust Project Developers. MIT license
 // Ported to GLSL by Andrei Kashcha (github.com/anvaka), available under MIT license as well.
@@ -693,6 +685,14 @@ vec2 c_imag(vec2 c) {
 
 vec2 c_abs(vec2 c) {
 	return vec2(length(c), 0);
+}
+
+vec2 transform_coordinates(vec4 FragCoord)
+{
+	vec2 pos = FragCoord.xy;
+	float bound = min(resolution.x, resolution.y);
+
+	return zoom * (pos - 0.5f*resolution)/bound + shift;
 }
 
 vec4 color_hsv(vec2 z)
