@@ -50,8 +50,8 @@ setup_imgui :: proc(app: ^App_State)
 
     style_imgui()
     
-	imgui.FontAtlas_AddFontFromFileTTF(app.io.Fonts, "DMSans.ttf", 18)
-	app.math_font = imgui.FontAtlas_AddFontFromFileTTF(app.io.Fonts, "DMSans.ttf", 18)
+	imgui.FontAtlas_AddFontFromFileTTF(app.io.Fonts, "fonts/DMSans.ttf", 18)
+	app.math_font = imgui.FontAtlas_AddFontFromFileTTF(app.io.Fonts, "fonts/DMSans.ttf", 18)
 }
 
 deinit_imgui :: proc()
