@@ -340,7 +340,7 @@ handle_event :: proc(using app: ^App_Context, event: ^sdl.Event)
 			} else {
 				log.error("[sdl.SavePNG] Failed to save screenshot")
 			}
-		case sdl.K_F11:
+		case sdl.K_F11, sdl.K_F:
 			is_fullscreen := .FULLSCREEN in sdl.GetWindowFlags(window)
 			sdl.SetWindowFullscreen(window, !is_fullscreen)
 			sdl.SyncWindow(window)
