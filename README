@@ -2,9 +2,11 @@
 Kolori ("to color" in Esperanto) is an application that allows you to create
 beautiful images from mathematical functions. 
 
-An important note--users with epilepsy are not recommended to use the 
-animation feature (using "t" in your function input) with high speed
-values or otherwise rapidly-changing functions. 
+An important note--users with epilepsy are not recommended to use the
+animation feature (using "t" in your function input) with high speed values or
+otherwise rapidly-changing functions. Zooming out too far during an animation
+is also recommended. This advice is very general and depends heavily on the
+function being graphed. Still stay cautious, however.
 
 ### Gallery
 See the `gallery/` directory for a gallery of generated images.
@@ -51,9 +53,10 @@ means that "t" will inrease by 1 every second. While the slider is clamped to
 - Example: With a speed of 1, the earlier example will rotate the plane at a
 rate of 1 radian per second.
 
-Since, with high speeds or rapidly-changing functions, this may lead to 
-the display of rapidly flashing lights, using this feature with such is
-not recommended.
+Since, with high speeds or rapidly-changing functions, this may lead to the
+display of rapidly flashing lights, using this feature with such is not
+recommended for those with epilepsy. Even with perhaps "low" speed values, for
+some functions zooming out far may also cause flashing lights to appear.
 
 ### Coloring modes
 We offer several different coloring modes for coloring the complex plane:
