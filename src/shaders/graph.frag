@@ -719,12 +719,10 @@ vec4 color_hsluv(vec2 z)
 
 vec4 color_rgb(vec2 z)
 {
-	float a = gamma_correction;
-
-	float r = degrees(atan(z.y,z.x));
-	float g = TWO_OVER_PI * atan(pow(length(z),a));
+	float r = atan(z.y,z.x) * 255./TAU;
+	float g = length(z) * 255.;
 	
-	return vec4(r, 1., g, 1);
+	return vec4(r, 1., g, 1.);
 }
 
 
