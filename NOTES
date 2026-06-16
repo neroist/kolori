@@ -1,6 +1,5 @@
 - (feature) zoom in towards mouse cursor current position
-- (feature) "p" to pause animation, some key to reset animation
-- (feature) gamma, digamma, zeta functions; ceil, floor, frac functions; sum and product functions
+- (feature) gamma, digamma, zeta functions; sum and product functions
 - (feature) discrete color wheel coloring mode
 - (feature) keybinds + supported functions/variables section in ui
 - (feature) ability to take screenshots of arbitrary size/quality
