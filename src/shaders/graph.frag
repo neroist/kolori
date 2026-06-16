@@ -16,15 +16,15 @@ uniform sampler2D tex;
 uniform vec3 abcd[4];
 uniform float gamma_correction;
 
-const float PI          = 3.14159265358979323846f;
-const float TAU         = 6.28318530717958647692f;
-const float TWO_OVER_PI = 0.63661977236758134308f;
+const float PI          = 3.14159265358979323846;
+const float TAU         = 6.28318530717958647692;
+const float TWO_OVER_PI = 0.63661977236758134308;
 
 const vec2 C_I   = vec2(0, 1);
-const vec2 C_PI  = vec2(3.14159265358979323846f, 0);
-const vec2 C_TAU = vec2(6.28318530717958647692f, 0);
-const vec2 C_E   = vec2(2.71828182845904523536f, 0);
-const vec2 C_PHI = vec2(1.61803398874989484820f, 0);
+const vec2 C_PI  = vec2(3.14159265358979323846, 0);
+const vec2 C_TAU = vec2(6.28318530717958647692, 0);
+const vec2 C_E   = vec2(2.71828182845904523536, 0);
+const vec2 C_PHI = vec2(1.61803398874989484820, 0);
 
 float hue2rgb(float f1, float f2, float hue)
 {
@@ -669,23 +669,23 @@ vec2 c_gamma(vec2 c) {
 }
 
 vec2 c_re(vec2 c) {
-	return vec2(c.x, 0);
+	return vec2(c.x, 0.);
 }
 
 vec2 c_real(vec2 c) {
-	return vec2(c.x, 0);
+	return vec2(c.x, 0.);
 }
 
 vec2 c_im(vec2 c) {
-	return vec2(c.y, 0);
+	return vec2(c.y, 0.);
 }
 
 vec2 c_imag(vec2 c) {
-	return vec2(c.y, 0);
+	return vec2(c.y, 0.);
 }
 
 vec2 c_abs(vec2 c) {
-	return vec2(length(c), 0);
+	return vec2(length(c), 0.);
 }
 
 vec2 transform_coordinates(vec4 FragCoord)
@@ -728,13 +728,13 @@ vec4 color_rgb(vec2 z)
 
 vec4 color_texture(vec2 z)
 {
-	return vec4(texture(tex, z).xyz, 1);
+	return vec4(texture(tex, z).xyz, 1.);
 }
 
 // From https://iquilezles.org/articles/palettes/
 vec4 color_palette(float t, vec3 a, vec3 b, vec3 c, vec3 d)
 {
-	return vec4(a + b*cos(TAU * (c*t+d)), 1);
+	return vec4(a + b*cos(TAU * (c*t+d)), 1.);
 }
 
 vec2 f(vec2 z);
