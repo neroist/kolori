@@ -36,7 +36,7 @@ also supported. A list of supported functions is found at the top of
 `src/translator.odin`. You may also use the constants "i", "pi", "tau", "e",
 and "phi" (the Golden Ratio).
 
-## Features
+## Features?
 Some features, such as zooming, panning, and function input are evident both
 in existance, usage, and ability. This section discusses some of the more
 interesting features.
@@ -95,7 +95,7 @@ held here: <https://odin-lang.org/docs/install/>.
 - We also use **Python** to build the ImGui binaries. If you haven't already,
 install Python from here: <https://www.python.org/downloads/>.
 
-- Finally, on Linux/Mac OS X, install **SDL3** and **libc++** using your
+- Finally, on Linux/Mac OS, install **SDL3** and **libc++** using your
 system's package manager (`apt`, `pacman`, `brew`, etc.). On Windows,
 binaries are already provided (or seemingly unneeded, in the case of libc++).
 
