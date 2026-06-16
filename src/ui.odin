@@ -31,9 +31,8 @@ Ui_State :: struct {
 Coloring_Method :: enum i32 {
 	Use_HSL,
 	Use_HSLuv,
-	Use_Texture,
 	Use_Palette,
-	// Use_User,
+	Use_Texture,
 }
 
 APP_ICON_DATA :: #load("../favicon/favicon-64x64.png", []u8)
