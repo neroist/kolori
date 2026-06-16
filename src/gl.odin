@@ -243,7 +243,7 @@ reload_shaders :: proc(using app: ^App_State)
 
 	// we all <3 pointer arithmetic!
 	frag_ptr := transmute(uintptr)(FRAGMENT_SHADER)
-	frag_wanted_part := transmute(cstring)(frag_ptr + 17)
+	frag_wanted_part := transmute(cstring)(frag_ptr + 16)
 
 	fragment_shader_id, ok := compile_fragment_shader(
 		{
