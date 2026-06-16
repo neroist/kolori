@@ -74,6 +74,7 @@ handle_event :: proc(app: ^App_State, event: ^sdl.Event)
 handle_key :: proc(app: ^App_State, event: ^sdl.Event) 
 {
 	shift_key := .LSHIFT in event.key.mod || .RSHIFT in event.key.mod
+	ctrl_key := .LCTRL in event.key.mod || .RCTRL in event.key.mod
 
 	switch event.key.key {
 	case sdl.K_F12:
@@ -86,6 +87,15 @@ handle_key :: proc(app: ^App_State, event: ^sdl.Event)
 		sdl.SetWindowFullscreen(app.window, !is_fullscreen)
 		sdl.SyncWindow(app.window)
 	case sdl.K_ESCAPE:
+		if ctrl_key || shift_key {
+			app.time = 0
+			app.animation_paused = false
+
+			if ctrl_key {
+				return
+			}
+		}
+
 		reset_view(app)
 	case sdl.K_R:
 		if shift_key {
