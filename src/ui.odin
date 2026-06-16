@@ -307,7 +307,7 @@ dialog_file_callback :: proc "c" (
 
 	if image_data == nil {
 		msg := fmt.ctprintf(
-			"Failed to load the image file \"%s\"",
+			"Failed to load the image file \"%s\".",
 			filelist[0],
 		)
 

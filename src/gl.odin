@@ -224,7 +224,7 @@ reload_shaders :: proc(using app: ^App_State)
 		success: i32
 		opengl.GetShaderiv(id, opengl.COMPILE_STATUS, &success)
 		if success == 0 {
-			return 0, false
+			return id, false
 		}
 
 		return id, true
@@ -262,8 +262,8 @@ reload_shaders :: proc(using app: ^App_State)
 			nil,
 			([^]u8)(&info_log),
 		)
-		msg := fmt.ctprint(
-			"[compile_fragment_shader] Failed to compile fragment shader. Error msg:",
+		msg := fmt.ctprintf(
+			"[compile_fragment_shader] Failed to compile fragment shader. Error msg:\n\n\"%s\".",
 			info_log,
 		)
 
@@ -278,9 +278,10 @@ reload_shaders :: proc(using app: ^App_State)
 	)
 
 	if !ok {
+		gl_err_msg, _ := opengl.get_last_error_message()
 		msg := fmt.ctprintf(
-			"[opengl.load_shaders_source] Failed to compile shader progam. Error msg:",
-			opengl.get_last_error_message(),
+			"[opengl.load_shaders_source] Failed to compile shader program. Error msg:\n\n\"%s\".",
+			gl_err_msg,
 		)
 
 		log.error(msg)
