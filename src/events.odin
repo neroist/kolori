@@ -99,10 +99,10 @@ handle_key :: proc(app: ^App_State, event: ^sdl.Event)
 
 		if shift_key {
 			ok: bool
-			if sdl.CursorVisible() {
-				ok = sdl.HideCursor()
-			} else {
+			if app.show_ui {
 				ok = sdl.ShowCursor()
+			} else {
+				ok = sdl.HideCursor()
 			}
 
 			if !ok {
