@@ -88,7 +88,7 @@ setup_gl :: proc(using app: ^App_State)
 	if ctx == nil {
 		log.fatal(
 			"[sdl.GL_CreateContext] Failed to create an OpenGL context. Error msg:",
-			sdl.GetError()
+			sdl.GetError(),
 		)
 
 		app.running = false
@@ -235,8 +235,8 @@ reload_shaders :: proc(using app: ^App_State)
 
 	@(static, rodata)
 	coloring_method_headers := [Coloring_Method]cstring {
-		.Use_HSL = "#define USE_HSL\n",
-		.Use_HSLuv = "#define USE_HSLUV\n",
+		.Use_HSL     = "#define USE_HSL\n",
+		.Use_HSLuv   = "#define USE_HSLUV\n",
 		.Use_Palette = "#define USE_PALETTE\n",
 		.Use_Texture = "#define USE_TEXTURE\n",
 	}

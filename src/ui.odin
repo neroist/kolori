@@ -16,7 +16,7 @@ import "core:log"
 IMGUI_CONFIG_FLAGS :: imgui.ConfigFlags{.NavEnableKeyboard, .DockingEnable}
 
 Ui_State :: struct {
-    window:           ^sdl.Window,
+	window:           ^sdl.Window,
 	window_icon:      ^sdl.Surface,
 	io:               ^imgui.IO,
 	math_font:        ^imgui.Font,
@@ -49,7 +49,7 @@ setup_sdl :: proc(using app: ^App_State)
 	if !sdl.Init({.VIDEO}) {
 		log.fatal(
 			"[sdl.Init] Failed to initialize SDL3. Error msg:",
-			sdl.GetError()
+			sdl.GetError(),
 		)
 
 		app.running = false
@@ -57,11 +57,16 @@ setup_sdl :: proc(using app: ^App_State)
 	}
 
 	window_flags := sdl.WindowFlags{.OPENGL, .RESIZABLE, .HIGH_PIXEL_DENSITY}
-	window = sdl.CreateWindow("Kolori, from Stardance <3", 800, 600, window_flags)
+	window = sdl.CreateWindow(
+		"Kolori, from Stardance <3",
+		800,
+		600,
+		window_flags,
+	)
 	if window == nil {
 		log.fatal(
 			"[sdl.CreateWindow] Failed to create window. Error msg:",
-			sdl.GetError()
+			sdl.GetError(),
 		)
 
 		app.running = false
@@ -193,10 +198,13 @@ draw_ui :: proc(using app: ^App_State)
 	}
 
 	if imgui.CollapsingHeader("Coloring Settings", {.DefaultOpen}) {
-		combo_items: cstring =
-			"HSL Coloring\x00HSLuv Coloring\x00Custom Color Palette\x00Use an Image (doesn't work!)\x00"
+		combo_items: cstring = "HSL Coloring\x00HSLuv Coloring\x00Custom Color Palette\x00Use an Image (doesn't work!)\x00"
 
-		if imgui.Combo("Coloring Method", (^i32)(&coloring_method), combo_items) {
+		if imgui.Combo(
+			"Coloring Method",
+			(^i32)(&coloring_method),
+			combo_items,
+		) {
 			time = 0
 			animation_paused = false
 			reload_shaders(app)
@@ -212,8 +220,8 @@ draw_ui :: proc(using app: ^App_State)
 			) {
 				opengl.Uniform1f(uniforms.gamma_correction, gamma_correction)
 			}
-        case .Use_Palette:
-			rand_color :: proc () -> (color: [3]f32)
+		case .Use_Palette:
+			rand_color :: proc() -> (color: [3]f32) 
 			{
 				color.r = rand.float32()
 				color.g = rand.float32()
@@ -222,12 +230,12 @@ draw_ui :: proc(using app: ^App_State)
 			}
 
 			flags := imgui.ColorEditFlags{.InputRGB, .Float}
-            colors_changed :=
+			colors_changed :=
 				imgui.ColorEdit3("A", &abcd[0], flags) |
-            	imgui.ColorEdit3("B", &abcd[1], flags) |
-            	imgui.ColorEdit3("C", &abcd[2], flags) |
-            	imgui.ColorEdit3("D", &abcd[3], flags)
-			
+				imgui.ColorEdit3("B", &abcd[1], flags) |
+				imgui.ColorEdit3("C", &abcd[2], flags) |
+				imgui.ColorEdit3("D", &abcd[3], flags)
+
 			if imgui.Button("Random Palette") {
 				abcd[0] = rand_color()
 				abcd[1] = rand_color()
@@ -246,10 +254,10 @@ draw_ui :: proc(using app: ^App_State)
 					{.ERROR},
 					"Doesn't Work",
 					"This functionality doesn't work right now, sorry <3",
-					app.window
+					app.window,
 				)
 
-                /*
+				/*
 				@(static, rodata)
 				filters := [?]sdl.DialogFileFilter {
 					{"PNG & JPEG images", "png;jpg;jpeg"},
@@ -300,10 +308,15 @@ dialog_file_callback :: proc "c" (
 	if image_data == nil {
 		msg := fmt.ctprintf(
 			"Failed to load the image file \"%s\"",
-			filelist[0]
+			filelist[0],
 		)
 
-		sdl.ShowSimpleMessageBox({.WARNING}, "Could not load image", msg, app.window)
+		sdl.ShowSimpleMessageBox(
+			{.WARNING},
+			"Could not load image",
+			msg,
+			app.window,
+		)
 		return
 	}
 	// sdl.GL_MakeCurrent(app.window, app.gl_ctx)

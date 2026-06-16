@@ -7,13 +7,13 @@ import "../odin-imgui/imgui_impl_sdl3"
 import opengl "vendor:OpenGL"
 import imgui "../odin-imgui"
 import sdl "vendor:sdl3"
+import "core:math/rand"
 import "base:runtime"
 import "core:strings"
 import "core:c/libc"
 import "core:log"
 import "core:fmt"
 import "core:mem"
-import "core:os"
 
 // four coloring modes:
 //  1. predefined coloring functions for H, S, and L
@@ -27,14 +27,17 @@ App_State :: struct {
 	running:  bool,
 }
 
-custom_allocator_proc :: proc (
+custom_allocator_proc :: proc(
 	allocator_data: rawptr,
 	mode: mem.Allocator_Mode,
 	size, alignment: int,
 	old_memory: rawptr,
 	old_size: int,
 	loc := #caller_location,
-) -> (result: []byte, err: mem.Allocator_Error)
+) -> (
+	result: []byte,
+	err: mem.Allocator_Error,
+) 
 {
 	// don't want to "io.write_*" for a bunch of lines...
 	// libc's printf gives us an api similar to fmt.printf's
@@ -44,23 +47,28 @@ custom_allocator_proc :: proc (
 		libc.printf(
 			"[Tracking Allocator] Allocation made of size %i and alignment %i\n",
 			size,
-			alignment
+			alignment,
 		)
 	case .Resize, .Resize_Non_Zeroed:
-		libc.printf(
-			"[Tracking Allocator] Free of size %i\n",
-			size
-		)
+		libc.printf("[Tracking Allocator] Free made of size %i\n", size)
 	case .Free, .Free_All:
 		libc.printf(
-			"[Tracking Allocator] Resize from size %i to size %i with alignment %i\n",
+			"[Tracking Allocator] Resize made from size %i to size %i with alignment %i\n",
 			old_size,
 			size,
-			alignment
+			alignment,
 		)
 	}
 
-	return mem.tracking_allocator_proc(allocator_data, mode, size, alignment, old_memory, old_size, loc)
+	return mem.tracking_allocator_proc(
+		allocator_data,
+		mode,
+		size,
+		alignment,
+		old_memory,
+		old_size,
+		loc,
+	)
 }
 
 main :: proc() 
@@ -73,9 +81,9 @@ main :: proc()
 	when ODIN_DEBUG {
 		track: mem.Tracking_Allocator
 		mem.tracking_allocator_init(&track, context.allocator)
-		context.allocator = mem.Allocator{
-			data = &track,
-			procedure = custom_allocator_proc
+		context.allocator = mem.Allocator {
+			data      = &track,
+			procedure = custom_allocator_proc,
 		}
 
 		defer {
@@ -140,10 +148,10 @@ main :: proc()
 		// draw everything to window
 		render_graph(&app)
 		draw_ui(&app)
-
 		sdl.GL_SwapWindow(window)
-		// free_all(context.temp_allocator)
-		// free_all(context.allocator)
+
+		// (self-explanitory)
+		free_all(context.temp_allocator)
 	}
 }
 
@@ -161,10 +169,4 @@ setup_app :: proc(using app: ^App_State)
 	err_msg = strings.clone_to_cstring("")
 	function = (cstring)(make([^]u8, 1024))
 	([^]u8)(function)[0] = 'z'
-}
-
-exit :: proc(using app: ^App_State) 
-{
-	runtime._cleanup_runtime()
-	os.exit(1)
 }

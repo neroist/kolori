@@ -28,8 +28,7 @@ handle_event :: proc(app: ^App_State, event: ^sdl.Event)
 
 	#partial switch event.type {
 	// todo(touchscreens) support pinching motions for zoom in/out 
-	case .QUIT:
-		app.running = false
+	case .QUIT: app.running = false
 	case .WINDOW_RESIZED:
 		width, height: i32
 		sdl.GetWindowSizeInPixels(app.window, &width, &height)
@@ -53,7 +52,8 @@ handle_event :: proc(app: ^App_State, event: ^sdl.Event)
 		}
 
 		// there's a more elegant, set-theoretic way to check this
-		if mod_state := sdl.GetModState(); .LSHIFT in mod_state || .RSHIFT in mod_state {
+		if mod_state := sdl.GetModState();
+		   .LSHIFT in mod_state || .RSHIFT in mod_state {
 			speed *= speed
 		}
 
@@ -107,15 +107,15 @@ handle_key :: proc(app: ^App_State, event: ^sdl.Event)
 
 			if !ok {
 				log.warn(
-                    "[sdl.ShowCursor] Failed to change cursor visiblity. Error msg:",
-                    sdl.GetError()
-                )
+					"[sdl.ShowCursor] Failed to change cursor visiblity. Error msg:",
+					sdl.GetError(),
+				)
 			}
 		}
 	case sdl.K_MINUS, sdl.K_Z:
 		zoom(app, ZOOM_SPEED * (shift_key ? ZOOM_SPEED : 1))
 	case sdl.K_EQUALS, sdl.K_X:
-		zoom(app, 1/ZOOM_SPEED * (shift_key ? 1/ZOOM_SPEED : 1))
+		zoom(app, 1 / ZOOM_SPEED * (shift_key ? 1 / ZOOM_SPEED : 1))
 	case sdl.K_W, sdl.K_UP:
 		pan(app, {0, 1}, PAN_SPEED * (shift_key ? 2 : 1))
 	case sdl.K_A, sdl.K_LEFT:
@@ -152,11 +152,11 @@ take_screenshot :: proc(window: ^sdl.Window, width, height: i32)
 		log.info("Saved screenshot to", filename)
 	} else {
 		log.warn(
-            "[sdl.SavePNG] Failed to save screenshot. Error msg:",
-            sdl.GetError()
-        )
+			"[sdl.SavePNG] Failed to save screenshot. Error msg:",
+			sdl.GetError(),
+		)
 
-        sdl.ShowSimpleMessageBox(
+		sdl.ShowSimpleMessageBox(
 			{.WARNING},
 			"Failure!",
 			"Failed to save screenshot :(",
@@ -182,7 +182,7 @@ pan :: proc(app: ^App_State, direction: [2]f32, speed: f32 = 1)
 	opengl.Uniform2f(app.uniforms.shift, app.shift.x, app.shift.y)
 }
 
-reset_view :: proc(app: ^App_State)
+reset_view :: proc(app: ^App_State) 
 {
 	app.zoom = 1
 	app.shift = {0, 0}
