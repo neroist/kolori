@@ -24,6 +24,7 @@ Ui_State :: struct {
 	err_msg:          cstring,
 	coloring_method:  Coloring_Method,
 	time_speed:       f32,
+	main_scale:       f32,
 	animation_paused: bool,
 	show_ui:          bool,
 	vsync:            bool,
@@ -56,11 +57,16 @@ setup_sdl :: proc(using app: ^App_State)
 		return
 	}
 
-	window_flags := sdl.WindowFlags{.OPENGL, .RESIZABLE, .HIGH_PIXEL_DENSITY}
+	main_scale = sdl.GetDisplayContentScale(sdl.GetPrimaryDisplay());
+	if main_scale == 0 {
+		main_scale = 1
+	}
+
+	window_flags := sdl.WindowFlags{.OPENGL, .RESIZABLE, .HIDDEN, .HIGH_PIXEL_DENSITY}
 	window = sdl.CreateWindow(
 		"Kolori, from Stardance <3",
-		800,
-		600,
+		(i32)(800 * main_scale),
+		(i32)(600 * main_scale),
 		window_flags,
 	)
 	if window == nil {
@@ -97,7 +103,7 @@ setup_imgui :: proc(app: ^App_State)
 	app.io = imgui.GetIO()
 	app.io.ConfigFlags += IMGUI_CONFIG_FLAGS
 
-	style_imgui()
+	style_imgui(app.main_scale)
 
 	imgui.FontAtlas_AddFontFromFileTTF(app.io.Fonts, "fonts/DMSans.ttf", 18)
 	app.math_font = imgui.FontAtlas_AddFontFromFileTTF(
@@ -114,9 +120,12 @@ deinit_imgui :: proc()
 	imgui.DestroyContext()
 }
 
-style_imgui :: proc() 
+style_imgui :: proc(scale: f32 = 1) 
 {
 	style := imgui.GetStyle()
+	
+	imgui.Style_ScaleAllSizes(style, scale)
+	style.FontScaleDpi = scale
 
 	imgui.StyleColorsDark(style)
 	style.WindowRounding = 8
