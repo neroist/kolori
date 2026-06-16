@@ -93,7 +93,7 @@ handle_key :: proc(app: ^App_State, event: ^sdl.Event)
 			}
 
 			if !ok {
-				log.error(
+				log.warn(
                     "[sdl.ShowCursor] Failed to change cursor visiblity. Error msg:",
                     sdl.GetError()
                 )
@@ -138,13 +138,13 @@ take_screenshot :: proc(window: ^sdl.Window, width, height: i32)
 	if sdl.SavePNG(surface, filename) {
 		log.info("Saved screenshot to", filename)
 	} else {
-		log.error(
+		log.warn(
             "[sdl.SavePNG] Failed to save screenshot. Error msg:",
             sdl.GetError()
         )
 
         sdl.ShowSimpleMessageBox(
-			{.ERROR},
+			{.WARNING},
 			"Failure!",
 			"Failed to save screenshot :(",
 			window,
@@ -166,6 +166,15 @@ pan :: proc(app: ^App_State, direction: [2]f32, speed: f32 = 1)
 	scale := (f32)(min(width, height))
 	app.shift += speed * direction / scale * app.zoom
 
+	opengl.Uniform2f(app.uniforms.shift, app.shift.x, app.shift.y)
+}
+
+reset_view :: proc(app: ^App_State)
+{
+	app.zoom = 1
+	app.shift = {0, 0}
+
+	opengl.Uniform1f(app.uniforms.zoom, app.zoom)
 	opengl.Uniform2f(app.uniforms.shift, app.shift.x, app.shift.y)
 }
 
