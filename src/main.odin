@@ -149,12 +149,15 @@ main :: proc()
 
 setup_app :: proc(using app: ^App_State) 
 {
+	running = true
+
+	// default settings
 	zoom = 1
 	show_ui = true
 	time_speed = 1
 	gamma_correction = 0.65
-	running = true
-	// coloring_method = .Use_Texture
+
+	// initialize to default values
 	err_msg = strings.clone_to_cstring("")
 	function = (cstring)(make([^]u8, 1024))
 	([^]u8)(function)[0] = 'z'

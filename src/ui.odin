@@ -29,7 +29,8 @@ Ui_State :: struct {
 }
 
 Coloring_Method :: enum i32 {
-	Use_Default,
+	Use_HSL,
+	Use_HSLuv,
 	Use_Texture,
 	Use_Palette,
 	// Use_User,
@@ -192,7 +193,8 @@ draw_ui :: proc(using app: ^App_State)
 	}
 
 	if imgui.CollapsingHeader("Coloring Settings", {.DefaultOpen}) {
-		combo_items: cstring = "Default Method\x00Use an Image\x00Custom Color Palette\x00"
+		combo_items: cstring =
+			"HSL Coloring\x00HSLuv Coloring\x00Use an Image (doesn't work!)\x00Custom Color Palette\x00"
 
 		if imgui.Combo("Coloring Method", (^i32)(&coloring_method), combo_items) {
 			time = 0
@@ -201,8 +203,7 @@ draw_ui :: proc(using app: ^App_State)
 		}
 
 		switch coloring_method {
-		case .Use_Default:
-			// checkbox instead?
+		case .Use_HSL, .Use_HSLuv:
 			if imgui.SliderFloat(
 				"Gamma Correction",
 				&gamma_correction,

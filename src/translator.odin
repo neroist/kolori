@@ -101,7 +101,7 @@ translate_expr :: proc(expr: mp.Expression) -> string
 		case:
 			// this function is only called after using `validate()`.
 			// this should ensure that there are no errors, thus we 
-			// should never be able to reach this case block 
+			// should never be able to reach this case block.
 			unreachable()
 		}
 	case ^mp.Binary:
@@ -130,6 +130,7 @@ translate_expr :: proc(expr: mp.Expression) -> string
 		return fmt.tprintf("-%s", translate_expr(expr.inner))
 	}
 
+	// since odin asks me to add a return here
 	unreachable()
 }
 

@@ -695,7 +695,7 @@ vec2 transform_coordinates(vec4 FragCoord)
 	return zoom * (pos - 0.5f*resolution)/bound + shift;
 }
 
-vec4 color_hsv(vec2 z)
+vec4 color_hsl(vec2 z)
 {
 	// gamma correction
 	// const float a = 0.65f;
@@ -739,8 +739,10 @@ void main()
 	#elif defined(USE_PALETTE)
 		// maybe compose f with a function g:C->R?
 		FragColor = color_palette(f(z).x, abcd[0], abcd[1], abcd[2], abcd[3]);
+	#elif defined(USE_HSLUV)
+		FragColor = color_hsluv(f(z));
 	#else
-		#define USE_DEFAULT
-		FragColor = color_hsv(f(z));
+		#define USE_HSL
+		FragColor = color_hsl(f(z));
 	#endif
 }
