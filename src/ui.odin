@@ -212,7 +212,7 @@ draw_ui :: proc(using app: ^App_State)
 				opengl.Uniform1f(uniforms.gamma_correction, gamma_correction)
 			}
         case .Use_Palette:
-            flags := imgui.ColorEditFlags{.InputRGB, .HDR, .Float}
+            flags := imgui.ColorEditFlags{.InputRGB, .Float}
             imgui.ColorEdit3("A", &abcd[0], flags)
             imgui.ColorEdit3("B", &abcd[1], flags)
             imgui.ColorEdit3("C", &abcd[2], flags)
