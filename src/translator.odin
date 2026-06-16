@@ -14,18 +14,22 @@ import "core:log"
 // functions supported by kolori
 @(rodata)
 funcs := []string {
+	"gamma",
+	"floor",
+	"ceil",
+	"frac",
+	"trunc",
 	"real",
-	"re",
+	"re", // synonym for "real"
 	"imag",
-	"im",
+	"im", // synonym for "imag"
 	"abs",
-	// until the parser is extended for the "%" operator
-	"mod",
+	"mod", // you may also use the "%" operator
 	"arg",
 	"conj",
 	"exp",
 	"ln",
-	"log",
+	"log", // synonym for "ln"
 	"log2",
 	"log10",
 	"logbase",
@@ -55,11 +59,6 @@ funcs := []string {
 	"acsch",
 	"asech",
 	"acoth",
-	"gamma",
-	"floor",
-	"ceil",
-	"frac",
-	"trunc",
 }
 
 // functions that require two arguments
