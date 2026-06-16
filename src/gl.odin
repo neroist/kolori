@@ -247,7 +247,7 @@ reload_shaders :: proc(using app: ^App_State)
 
 	fragment_shader_id, ok := compile_fragment_shader(
 		{
-			"#version 330 core\n",
+			"#version 300 es\n",
 			coloring_method_headers[coloring_method],
 			frag_wanted_part,
 			translate(function),
@@ -307,7 +307,7 @@ reload_shaders :: proc(using app: ^App_State)
 	width, height: i32
 	sdl.GetWindowSizeInPixels(window, &width, &height)
 	opengl.Viewport(0, 0, width, height)
-	opengl.Uniform2i(uniforms.resolution, width, height)
+	opengl.Uniform2f(uniforms.resolution, (f32)(width), (f32)(height))
 	opengl.Uniform2f(uniforms.shift, shift.x, shift.y)
 	opengl.Uniform1f(uniforms.zoom, zoom)
 	opengl.Uniform1f(uniforms.time, time)

@@ -33,7 +33,7 @@ handle_event :: proc(app: ^App_State, event: ^sdl.Event)
 		width, height: i32
 		sdl.GetWindowSizeInPixels(app.window, &width, &height)
 		opengl.Viewport(0, 0, width, height)
-		opengl.Uniform2i(app.uniforms.resolution, width, height)
+		opengl.Uniform2f(app.uniforms.resolution, (f32)(width), (f32)(height))
 	case .KEY_DOWN:
 		if app.io.WantCaptureKeyboard {
 			break
@@ -151,8 +151,8 @@ take_screenshot :: proc(window: ^sdl.Window, width, height: i32)
 	if sdl.SavePNG(surface, filename) {
 		log.info("Saved screenshot to", filename)
 	} else {
-		log.warn(
-			"[sdl.SavePNG] Failed to save screenshot. Error msg:",
+		log.warnf(
+			"[sdl.SavePNG] Failed to save screenshot. Error msg:\n\n\"%s\".",
 			sdl.GetError(),
 		)
 

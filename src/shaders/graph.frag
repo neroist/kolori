@@ -1,4 +1,4 @@
-#version 330 core
+#version 300 es;
 precision highp float;
 precision highp int;
 precision highp sampler2D;
@@ -9,7 +9,7 @@ out vec4 FragColor;
 
 uniform float time;
 uniform float zoom;
-uniform ivec2 resolution;
+uniform vec2 resolution;
 uniform vec2 shift;
 uniform sampler2D tex;
 uniform vec3 abcd[4];
@@ -449,12 +449,12 @@ vec2 c_logbase(vec2 c, float base) {
 
 // Returns the logarithm of `c` with respect to an arbitrary base.
 vec2 c_log2(vec2 c, float base) {
-	return c_logbase(c, 2);
+	return c_logbase(c, 2.);
 }
 
 // Returns the logarithm of `c` with respect to an arbitrary base.
 vec2 c_log10(vec2 c, float base) {
-	return c_logbase(c, 10);
+	return c_logbase(c, 10.);
 }
 
 // Computes the square root of complex number `c`.
@@ -692,7 +692,7 @@ vec2 transform_coordinates(vec4 FragCoord)
 	vec2 pos = FragCoord.xy;
 	float bound = min(resolution.x, resolution.y);
 
-	return zoom * (pos - 0.5f*resolution)/bound + shift;
+	return zoom * (pos - .5*resolution)/bound + shift;
 }
 
 vec4 color_hsl(vec2 z)
@@ -702,7 +702,7 @@ vec4 color_hsl(vec2 z)
 	float hue = atan(z.y,z.x)/TAU;
 	float lightness = TWO_OVER_PI * atan(pow(length(z),a));
 
-	return hsl2rgb(hue, 1.0f, lightness);
+	return hsl2rgb(hue, 1., lightness);
 }
 
 vec4 color_hsluv(vec2 z)
@@ -710,9 +710,9 @@ vec4 color_hsluv(vec2 z)
 	float a = gamma_correction;
 
 	float hue = degrees(atan(z.y,z.x));
-	float lightness = TWO_OVER_PI * atan(pow(length(z),a)) * 33;
+	float lightness = TWO_OVER_PI * atan(pow(length(z),a)) * 33.;
 
-	return hsluvToRgb(hue, 100.0f, lightness, 1);
+	return hsluvToRgb(hue, 100., lightness, 1.);
 }
 
 
@@ -723,7 +723,7 @@ vec4 color_rgb(vec2 z)
 	float r = degrees(atan(z.y,z.x));
 	float g = TWO_OVER_PI * atan(pow(length(z),a));
 	
-	return vec4(r, 1.f, g, 1);
+	return vec4(r, 1., g, 1);
 }
 
 

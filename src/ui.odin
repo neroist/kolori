@@ -92,7 +92,7 @@ setup_imgui :: proc(app: ^App_State)
 	imgui.CreateContext()
 
 	imgui_impl_sdl3.InitForOpenGL(app.window, app.gl.ctx)
-	imgui_impl_opengl3.Init("#version 330 core")
+	imgui_impl_opengl3.Init("#version 300 es")
 
 	app.io = imgui.GetIO()
 	app.io.ConfigFlags += IMGUI_CONFIG_FLAGS
