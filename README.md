@@ -100,6 +100,10 @@ system's package manager (`apt`, `pacman`, `brew`, etc.). On Windows,
 binaries are already provided (or seemingly unneeded, in the case of libc++).
 
 ### Steps
+> Throughout these instructions, if you're on Windows, replace `-out:kolori`
+with `-out:kolori.exe`. You will get an error (guiding you to do so) 
+otherwize.
+
 The first three steps you will only need to perform once. After that, simply
 execute:
 
