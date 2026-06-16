@@ -59,15 +59,15 @@ funcs := []string {
 	"floor",
 	"ceil",
 	"frac",
-	"trunc"
+	"trunc",
 }
 
 // functions that require two arguments
 @(rodata)
 binary_funcs := []string{"mod", "logbase"}
 
-@(private="file")
-translate_expr :: proc(expr: mp.Expression) -> string
+@(private = "file")
+translate_expr :: proc(expr: mp.Expression) -> string 
 {
 	@(static, rodata)
 	func_names := [mp.BinaryType]string {
@@ -133,7 +133,7 @@ translate_expr :: proc(expr: mp.Expression) -> string
 	unreachable()
 }
 
-validate_expr :: proc(expr: mp.Expression) -> (Maybe(cstring))
+validate_expr :: proc(expr: mp.Expression) -> Maybe(cstring) 
 {
 	switch expr in expr {
 	case ^mp.Variable:
@@ -150,7 +150,7 @@ validate_expr :: proc(expr: mp.Expression) -> (Maybe(cstring))
 	case ^mp.Binary:
 		if err := validate_expr(expr.left); err != nil {
 			return err
-		} 
+		}
 
 		return validate_expr(expr.right)
 	case ^mp.FunctionCall:
@@ -175,42 +175,52 @@ validate_expr :: proc(expr: mp.Expression) -> (Maybe(cstring))
 	unreachable()
 }
 
-validate :: proc(source: cstring) -> (Maybe(cstring))
+validate :: proc(source: cstring) -> Maybe(cstring) 
 {
 	// issue in the odin compiler:
 	//
 	// `cast` is needed here else we get a "Missing type in compound literal"
 	// error for the bitset
-	expr, reports := mp.parse(cast(string)(source), funcs, {.Implicit_Multiplication}, context.temp_allocator)
+	expr, reports := mp.parse(
+		cast(string)(source),
+		funcs,
+		{.Implicit_Multiplication},
+		context.temp_allocator,
+	)
 
 	if len(reports) > 0 {
 		return strings.clone_to_cstring(reports[0].msg)
 	}
-	
+
 	return validate_expr(expr)
 }
 
-translate :: proc(source: cstring, func_name := "f") -> cstring
+translate :: proc(source: cstring, func_name := "f") -> cstring 
 {
-	expr := mp.parse(
-		cast(string)(source),
-		funcs,
-		{.Implicit_Multiplication},
-		context.temp_allocator
-	) or_else unreachable()
-	
-	glsl := fmt.ctprintf("vec2 %s(vec2 z) {{ return %s; }}", func_name, translate_expr(expr))
+	expr :=
+		mp.parse(
+			cast(string)(source),
+			funcs,
+			{.Implicit_Multiplication},
+			context.temp_allocator,
+		) or_else unreachable()
+
+	glsl := fmt.ctprintf(
+		"vec2 %s(vec2 z) {{ return %s; }}",
+		func_name,
+		translate_expr(expr),
+	)
 	log.debug("generated glsl:", glsl)
 	return glsl
 }
 
 @(test)
-test_translator :: proc (t: ^testing.T)
+test_translator :: proc(t: ^testing.T) 
 {
-	inp_to_outp := map[cstring]cstring{
-		"z" =         "vec2 f(vec2 z) { return z; }",
-		"z+1" =       "vec2 f(vec2 z) { return c_add(z, vec2(1, 0)); }",
-		"z^(t - 1)" = "vec2 f(vec2 z) { return c_pow(z, c_sub(vec2(time, 0), vec2(1, 0))); }"
+	inp_to_outp := map[cstring]cstring {
+		"z"         = "vec2 f(vec2 z) { return z; }",
+		"z+1"       = "vec2 f(vec2 z) { return c_add(z, vec2(1, 0)); }",
+		"z^(t - 1)" = "vec2 f(vec2 z) { return c_pow(z, c_sub(vec2(time, 0), vec2(1, 0))); }",
 	}
 
 	for inp, outp in inp_to_outp {

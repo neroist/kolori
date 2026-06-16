@@ -9,7 +9,7 @@ import "core:log"
 import "core:fmt"
 
 GL_State :: struct {
-	abcd:			  [4][3]f32,
+	abcd:             [4][3]f32,
 	uniforms:         Uniforms,
 	shift:            [2]f32,
 	// resolution:       [2]f32,
@@ -47,7 +47,7 @@ Uniforms :: struct {
 }
 
 when ODIN_DEBUG {
-    // for glDebugMessageCallback
+	// for glDebugMessageCallback
 	GL_MAJOR_VERSION :: 4
 	GL_MINOR_VERSION :: 3
 } else {
@@ -61,9 +61,18 @@ VERTEX_SHADER := #load("shaders/graph.vert", string)
 @(rodata)
 FRAGMENT_SHADER := #load("shaders/graph.frag", cstring)
 
-debug_proc :: proc "c" (source: u32, type: u32, id: u32, severity: u32, length: i32, message: cstring, user_param: rawptr)
+debug_proc :: proc "c" (
+	source: u32,
+	type: u32,
+	id: u32,
+	severity: u32,
+	length: i32,
+	message: cstring,
+	user_param: rawptr,
+) 
 {
-	if severity != opengl.DEBUG_SEVERITY_HIGH || severity != opengl.DEBUG_SEVERITY_MEDIUM {
+	if severity != opengl.DEBUG_SEVERITY_HIGH ||
+	   severity != opengl.DEBUG_SEVERITY_MEDIUM {
 		return
 	}
 
@@ -79,20 +88,23 @@ setup_gl :: proc(using app: ^App_State)
 	if ctx == nil {
 		log.fatal("[sdl.GL_CreateContext]", sdl.GetError())
 		app.running = false
-        return
+		return
 	}
 
 	context_flags: sdl.GLContextFlag
 	when ODIN_DEBUG {
-        context_flags |= sdl.GL_CONTEXT_DEBUG_FLAG
-    }
+		context_flags |= sdl.GL_CONTEXT_DEBUG_FLAG
+	}
 	when ODIN_OS == .Darwin {
-        context_flags |= sdl.GL_CONTEXT_FORWARD_COMPATIBLE_FLAG
-    }
+		context_flags |= sdl.GL_CONTEXT_FORWARD_COMPATIBLE_FLAG
+	}
 
 	// See odin-lang/Odin issue 2123: https://github.com/odin-lang/odin/issues/2123
 	sdl.GL_SetAttribute(.CONTEXT_FLAGS, transmute(i32)(context_flags))
-	sdl.GL_SetAttribute(.CONTEXT_PROFILE_MASK, (i32)(sdl.GL_CONTEXT_PROFILE_CORE))
+	sdl.GL_SetAttribute(
+		.CONTEXT_PROFILE_MASK,
+		(i32)(sdl.GL_CONTEXT_PROFILE_CORE),
+	)
 	sdl.GL_SetAttribute(.CONTEXT_MAJOR_VERSION, GL_MAJOR_VERSION)
 	sdl.GL_SetAttribute(.CONTEXT_MINOR_VERSION, GL_MINOR_VERSION)
 	sdl.GL_SetAttribute(.DOUBLEBUFFER, 1)
@@ -102,7 +114,11 @@ setup_gl :: proc(using app: ^App_State)
 
 	sdl.GL_MakeCurrent(window, gl.ctx)
 
-	opengl.load_up_to(GL_MAJOR_VERSION, GL_MINOR_VERSION, sdl.gl_set_proc_address)
+	opengl.load_up_to(
+		GL_MAJOR_VERSION,
+		GL_MINOR_VERSION,
+		sdl.gl_set_proc_address,
+	)
 
 	when ODIN_DEBUG {
 		opengl.DebugMessageCallback(debug_proc, app)
@@ -155,7 +171,10 @@ setup_gl :: proc(using app: ^App_State)
 	opengl.EnableVertexAttribArray(0)
 
 	ok: bool
-	vertex_shader_id, ok = opengl.compile_shader_from_source(VERTEX_SHADER, .VERTEX_SHADER)
+	vertex_shader_id, ok = opengl.compile_shader_from_source(
+		VERTEX_SHADER,
+		.VERTEX_SHADER,
+	)
 	if !ok {
 		log.fatal("Could not compile vertex shader")
 	}
@@ -182,19 +201,19 @@ render_graph :: proc(using app: ^App_State)
 
 reload_shaders :: proc(using app: ^App_State) 
 {
-	compile_fragment_shader :: proc (sources: []cstring) -> (id: u32, ok: bool)
+	compile_fragment_shader :: proc(sources: []cstring) -> (id: u32, ok: bool) 
 	{
 		lengths := make([dynamic]i32, 0, len(sources), context.temp_allocator)
 		for i in sources {
 			append(&lengths, (i32)(len(i)))
 		}
-		
+
 		id = opengl.CreateShader(opengl.FRAGMENT_SHADER)
 		opengl.ShaderSource(
 			id,
 			(i32)(len(sources)),
 			raw_data(sources),
-			raw_data(lengths)
+			raw_data(lengths),
 		)
 		opengl.CompileShader(id)
 
@@ -211,42 +230,58 @@ reload_shaders :: proc(using app: ^App_State)
 	opengl.DeleteProgram(program)
 
 	@(static, rodata)
-	coloring_method_headers := [Coloring_Method]cstring{
+	coloring_method_headers := [Coloring_Method]cstring {
 		.Use_Default = "#define USE_DEFAULT\n",
 		.Use_Palette = "#define USE_PALETTE\n",
-		.Use_Texture = "#define USE_TEXTURE\n"
+		.Use_Texture = "#define USE_TEXTURE\n",
 	}
 
 	// we all <3 pointer arithmetic!
 	frag_ptr := transmute(uintptr)(FRAGMENT_SHADER)
 	frag_wanted_part := transmute(cstring)(frag_ptr + 17)
 
-	fragment_shader_id, ok := compile_fragment_shader({
-		"#version 330 core\n",
-		coloring_method_headers[coloring_method],
-		frag_wanted_part,
-		translate(function)
-	})
+	fragment_shader_id, ok := compile_fragment_shader(
+		{
+			"#version 330 core\n",
+			coloring_method_headers[coloring_method],
+			frag_wanted_part,
+			translate(function),
+		},
+	)
 	defer opengl.DeleteShader(fragment_shader_id)
 	if !ok {
 		info_log: [512]u8
-        opengl.GetShaderInfoLog(fragment_shader_id, len(info_log), nil, ([^]u8)(&info_log))
-        log.errorf("Failed to compile fragment shader: %s", info_log)
-
-		app.running = false
-        return
-	}
-
-	program, ok = opengl.create_and_link_program({vertex_shader_id, fragment_shader_id})
-
-	if !ok {
-		log.error(
-			"[opengl.load_shaders_source] Failed to compile shader progam. Error msg:",
-			opengl.get_last_error_message()
+		opengl.GetShaderInfoLog(
+			fragment_shader_id,
+			len(info_log),
+			nil,
+			([^]u8)(&info_log),
+		)
+		msg := fmt.ctprint(
+			"[compile_fragment_shader] Failed to compile fragment shader. Error msg:",
+			info_log,
 		)
 
-        app.running = false
-        return
+		log.error(msg)
+		sdl.ShowSimpleMessageBox({.ERROR}, "Failure!", msg, window)
+
+		return
+	}
+
+	program, ok = opengl.create_and_link_program(
+		{vertex_shader_id, fragment_shader_id},
+	)
+
+	if !ok {
+		msg := fmt.ctprintf(
+			"[opengl.load_shaders_source] Failed to compile shader progam. Error msg:",
+			opengl.get_last_error_message(),
+		)
+
+		log.error(msg)
+		sdl.ShowSimpleMessageBox({.ERROR}, "Failure!", msg, window)
+
+		return
 	}
 
 	opengl.UseProgram(program)
@@ -257,7 +292,10 @@ reload_shaders :: proc(using app: ^App_State)
 		resolution       = opengl.GetUniformLocation(program, "resolution"),
 		shift            = opengl.GetUniformLocation(program, "shift"),
 		abcd             = opengl.GetUniformLocation(program, "abcd"),
-		gamma_correction = opengl.GetUniformLocation(program, "gamma_correction")
+		gamma_correction = opengl.GetUniformLocation(
+			program,
+			"gamma_correction",
+		),
 	}
 
 	width, height: i32

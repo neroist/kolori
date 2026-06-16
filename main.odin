@@ -24,7 +24,7 @@ App_State :: struct {
 	using gl: GL_State,
 	using ui: Ui_State,
 	window:   ^sdl.Window,
-	running:  bool
+	running:  bool,
 }
 
 main :: proc() 
@@ -124,14 +124,14 @@ setup_sdl :: proc(using app: ^App_State)
 	_ = sdl.SetAppMetadata("Kolori", "0.1.0", "com.neroist.kolori")
 	_ = sdl.SetAppMetadataProperty(
 		sdl.PROP_APP_METADATA_URL_STRING,
-		"https://github.com/neroist/kolori"
+		"https://github.com/neroist/kolori",
 	)
 
 	if !sdl.Init({.VIDEO}) {
 		log.fatal("[sdl.Init]", sdl.GetError())
 
 		app.running = false
-        return
+		return
 	}
 
 	window_flags := sdl.WindowFlags{.OPENGL, .RESIZABLE, .HIGH_PIXEL_DENSITY}
@@ -140,7 +140,7 @@ setup_sdl :: proc(using app: ^App_State)
 		log.fatal("[sdl.CreateWindow]", sdl.GetError())
 
 		app.running = false
-        return
+		return
 	}
 
 	sdl.SetWindowPosition(
@@ -151,7 +151,7 @@ setup_sdl :: proc(using app: ^App_State)
 	sdl.ShowWindow(window)
 }
 
-exit :: proc(using app: ^App_State)
+exit :: proc(using app: ^App_State) 
 {
 	runtime._cleanup_runtime()
 	os.exit(1)

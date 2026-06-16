@@ -12,10 +12,7 @@ import "base:runtime"
 import "core:fmt"
 import "core:log"
 
-IMGUI_CONFIG_FLAGS :: imgui.ConfigFlags{
-    .NavEnableKeyboard,
-    .DockingEnable
-}
+IMGUI_CONFIG_FLAGS :: imgui.ConfigFlags{.NavEnableKeyboard, .DockingEnable}
 
 Ui_State :: struct {
 	io:               ^imgui.IO,
@@ -42,29 +39,33 @@ setup_imgui :: proc(app: ^App_State)
 	imgui.CHECKVERSION()
 	imgui.CreateContext()
 
-    imgui_impl_sdl3.InitForOpenGL(app.window, app.gl.ctx)
+	imgui_impl_sdl3.InitForOpenGL(app.window, app.gl.ctx)
 	imgui_impl_opengl3.Init("#version 330 core")
 
 	app.io = imgui.GetIO()
 	app.io.ConfigFlags += IMGUI_CONFIG_FLAGS
 
-    style_imgui()
-    
+	style_imgui()
+
 	imgui.FontAtlas_AddFontFromFileTTF(app.io.Fonts, "fonts/DMSans.ttf", 18)
-	app.math_font = imgui.FontAtlas_AddFontFromFileTTF(app.io.Fonts, "fonts/DMSans.ttf", 18)
+	app.math_font = imgui.FontAtlas_AddFontFromFileTTF(
+		app.io.Fonts,
+		"fonts/DMSans.ttf",
+		18,
+	)
 }
 
-deinit_imgui :: proc()
+deinit_imgui :: proc() 
 {
-    imgui_impl_opengl3.Shutdown()
-    imgui_impl_sdl3.Shutdown()
-    imgui.DestroyContext()
+	imgui_impl_opengl3.Shutdown()
+	imgui_impl_sdl3.Shutdown()
+	imgui.DestroyContext()
 }
 
-style_imgui :: proc()
+style_imgui :: proc() 
 {
-    style := imgui.GetStyle()
-    
+	style := imgui.GetStyle()
+
 	imgui.StyleColorsDark(style)
 	style.WindowRounding = 8
 	style.ChildRounding = 8
@@ -81,16 +82,11 @@ draw_ui :: proc(using app: ^App_State)
 		return
 	}
 
-    @(static)
-    failure: bool
+	@(static) failure: bool
 
 	imgui_impl_opengl3.NewFrame()
 	imgui_impl_sdl3.NewFrame()
 	imgui.NewFrame()
-
-	// imgui.ShowDemoWindow()
-	imgui.ShowUserGuide()
-    // imgui.ShowMetricsWindow()
 
 	imgui.SetNextWindowBgAlpha(0.35)
 
@@ -103,44 +99,44 @@ draw_ui :: proc(using app: ^App_State)
 	imgui.SameLine()
 
 	if imgui.InputText("##function", function, 1024) && len(function) > 0 {
-        err: cstring
-        err, failure = validate(function).?
+		err: cstring
+		err, failure = validate(function).?
 
-        // simply `err != err_msg` compiles
-        // when `err` is nil and `err_msg` is a string.
-        // what does that even do?
-        if !failure {
-            // if the function hasn't changed since 
-            // last time do we really need to this?
-            time = 0
+		// simply `err != err_msg` compiles
+		// when `err` is nil and `err_msg` is a string.
+		// what does that even do?
+		if !failure {
+			// if the function hasn't changed since 
+			// last time do we really need to this?
+			time = 0
 			animation_paused = false
 			reload_shaders(app)
-        } // we have a new error message, show it
-        else if err != err_msg {
-            delete(err_msg)
-            err_msg = err
-        } // same error message, we dont need this one
-        else {
-            delete(err)
-        }
+		} else // we have a new error message, show it
+		if err != err_msg {
+			delete(err_msg)
+			err_msg = err
+		} else // same error message, we dont need this one
+		{
+			delete(err)
+		}
 	}
 
-    if failure {
-        imgui.PushStyleColorImVec4(.Text, [4]f32{255, 0, 0, 255})
-        imgui.TextWrapped(err_msg)
-        imgui.PopStyleColor()
-    }
+	if failure {
+		imgui.PushStyleColorImVec4(.Text, [4]f32{255, 0, 0, 255})
+		imgui.TextWrapped(err_msg)
+		imgui.PopStyleColor()
+	}
 
-    if imgui.CollapsingHeader("General Settings") {
-        if imgui.Checkbox("Enable VSync", &vsync) {
-            _vsync: i32
-            ok := sdl.GL_GetSwapInterval(&_vsync)
-            ok &= sdl.GL_SetSwapInterval(_vsync == 0 ? 1 : 0)
-            if !ok {
-                vsync = !vsync
-            }
-        }
-    }
+	if imgui.CollapsingHeader("General Settings") {
+		if imgui.Checkbox("Enable VSync", &vsync) {
+			_vsync: i32
+			ok := sdl.GL_GetSwapInterval(&_vsync)
+			ok &= sdl.GL_SetSwapInterval(_vsync == 0 ? 1 : 0)
+			if !ok {
+				vsync = !vsync
+			}
+		}
+	}
 
 	if imgui.CollapsingHeader("Animation Settings") {
 		imgui.SliderFloat("Anim. Speed", &time_speed, 0.1, 10)
@@ -152,91 +148,132 @@ draw_ui :: proc(using app: ^App_State)
 	}
 
 	if imgui.CollapsingHeader("Coloring Settings", {.DefaultOpen}) {
-        combo_items: cstring = 
-            "Default Method\x00Use an Image\x00Custom Color Palette\x00"
-		
+		combo_items: cstring = "Default Method\x00Use an Image\x00Custom Color Palette\x00"
+
 		imgui.Combo("Coloring Method", (^i32)(&coloring_method), combo_items)
-		
-		#partial switch coloring_method {
+
+		switch coloring_method {
 		case .Use_Default:
 			// checkbox instead?
-			if imgui.SliderFloat("Gamma Correction", &gamma_correction, -1, 1) {
+			if imgui.SliderFloat(
+				"Gamma Correction",
+				&gamma_correction,
+				-1,
+				1,
+			) {
 				opengl.Uniform1f(uniforms.gamma_correction, gamma_correction)
 			}
-        case .Use_Texture:
-            if imgui.Button("Choose Image") {
-                @(static, rodata)
-                filters := [?]sdl.DialogFileFilter{
-                    { "PNG & JPEG images",  "png;jpg;jpeg" },
-                    { "All Files",  "*" },
-                }
+        case .Use_Palette:
+            flags := imgui.ColorEditFlags{.InputRGB, .HDR, .Float}
+            imgui.ColorEdit3("A", &abcd[0], flags)
+            imgui.ColorEdit3("B", &abcd[1], flags)
+            imgui.ColorEdit3("C", &abcd[2], flags)
+            imgui.ColorEdit3("D", &abcd[3], flags)
+            opengl.Uniform3fv(uniforms.abcd, 4, ([^]f32)(&abcd))
+		case .Use_Texture:
+			if imgui.Button("Choose Image") {
+				sdl.ShowSimpleMessageBox(
+					{.ERROR},
+					"Doesn't Work",
+					"This functionality doesn't work right now, sorry <3",
+					app.window,
+				)
 
-                // not (windows) asan friendly!
-                sdl.ShowOpenFileDialog(
-                    dialog_file_callback,
-                    app,
-                    app.window,
-                    ([^]sdl.DialogFileFilter)(&filters),
-                    len(filters),
-                    nil,
-                    false
-                )
-            }
+                /*
+				@(static, rodata)
+				filters := [?]sdl.DialogFileFilter {
+					{"PNG & JPEG images", "png;jpg;jpeg"},
+					{"All Files", "*"},
+				}
+
+				// not (windows) asan friendly!
+				sdl.ShowOpenFileDialog(
+					dialog_file_callback,
+					app,
+					app.window,
+					([^]sdl.DialogFileFilter)(&filters),
+					len(filters),
+					nil,
+					false,
+				)
+                */
+			}
 
 		}
 	}
 	imgui.End()
-    
+
 	imgui.Render()
 	imgui_impl_opengl3.RenderDrawData(imgui.GetDrawData())
 }
 
-dialog_file_callback :: proc "c" (userdata: rawptr, filelist: [^]cstring, filter: i32)
+// doesn't work </3
+dialog_file_callback :: proc "c" (
+	userdata: rawptr,
+	filelist: [^]cstring,
+	filter: i32,
+) 
 {
-    context = runtime.default_context()
-    // fmt.println("hi")
-    if filelist == nil {
-        return
-    }
-    
-    app := (^App_State)(userdata)
+	context = runtime.default_context()
+	// fmt.println("hi")
+	if filelist == nil {
+		return
+	}
 
-    // image := sdl_image.Load(filelist[0])
-    // defer sdl.DestroySurface(image)
-    // if image == nil {
-    //     return
-    // }
-    width, height, channels: i32
+	app := (^App_State)(userdata)
+
+	// image := sdl_image.Load(filelist[0])
+	// defer sdl.DestroySurface(image)
+	// if image == nil {
+	//     return
+	// }
+	width, height, channels: i32
 	image.set_flip_vertically_on_load((i32)(true))
 	image_data := image.load(filelist[0], &width, &height, &channels, 0)
-    defer image.image_free(image_data)
+	defer image.image_free(image_data)
 
-    if image_data == nil {
-        fmt.println("fail!")
-        return
-    }
-    // sdl.GL_MakeCurrent(app.window, app.gl_ctx)
-    // opengl.load_up_to(3, 3, sdl.gl_set_proc_address)
-    // opengl.BindBuffer(opengl.PIXEL_UNPACK_BUFFER, 0)
-    // opengl.BindTexture(opengl.TEXTURE_2D, app.texture)
-    opengl.DeleteTextures(1, &app.texture)
-    opengl.TexImage2D(
-        opengl.TEXTURE_2D,
-        0,
-        channels == 4 ? opengl.RGBA : opengl.RGB,
-        // opengl.RGB,
-        width,
-        height,
-        0,
-        channels == 4 ? opengl.RGBA : opengl.RGB,
-        // opengl.RGB,
-        opengl.UNSIGNED_BYTE,
-        image_data
-    )
+	if image_data == nil {
+		fmt.println("fail!")
+		return
+	}
+	// sdl.GL_MakeCurrent(app.window, app.gl_ctx)
+	// opengl.load_up_to(3, 3, sdl.gl_set_proc_address)
+	// opengl.BindBuffer(opengl.PIXEL_UNPACK_BUFFER, 0)
+	// opengl.BindTexture(opengl.TEXTURE_2D, app.texture)
+	opengl.DeleteTextures(1, &app.texture)
+	opengl.TexImage2D(
+		opengl.TEXTURE_2D,
+		0,
+		channels == 4 ? opengl.RGBA : opengl.RGB,
+		// opengl.RGB,
+		width,
+		height,
+		0,
+		channels == 4 ? opengl.RGBA : opengl.RGB,
+		// opengl.RGB,
+		opengl.UNSIGNED_BYTE,
+		image_data,
+	)
 
-    opengl.TexParameteri(opengl.TEXTURE_2D, opengl.TEXTURE_WRAP_S, opengl.REPEAT);	// set texture wrapping to GL_REPEAT (default wrapping method)
-    opengl.TexParameteri(opengl.TEXTURE_2D, opengl.TEXTURE_WRAP_T, opengl.REPEAT);
-    opengl.TexParameteri(opengl.TEXTURE_2D, opengl.TEXTURE_MIN_FILTER, opengl.LINEAR_MIPMAP_LINEAR);
-    opengl.TexParameteri(opengl.TEXTURE_2D, opengl.TEXTURE_MAG_FILTER, opengl.LINEAR);
+	opengl.TexParameteri(
+		opengl.TEXTURE_2D,
+		opengl.TEXTURE_WRAP_S,
+		opengl.REPEAT,
+	) // set texture wrapping to GL_REPEAT (default wrapping method)
+	opengl.TexParameteri(
+		opengl.TEXTURE_2D,
+		opengl.TEXTURE_WRAP_T,
+		opengl.REPEAT,
+	)
+	opengl.TexParameteri(
+		opengl.TEXTURE_2D,
+		opengl.TEXTURE_MIN_FILTER,
+		opengl.LINEAR_MIPMAP_LINEAR,
+	)
+	opengl.TexParameteri(
+		opengl.TEXTURE_2D,
+		opengl.TEXTURE_MAG_FILTER,
+		opengl.LINEAR,
+	)
 	opengl.GenerateMipmap(opengl.TEXTURE_2D)
 }
