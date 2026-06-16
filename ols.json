@@ -3,9 +3,6 @@
     "enable_document_symbols": true,
     "enable_hover": true,
     "enable_snippets": true,
-    "enable_inlay_hints_default_params": true,
-    "enable_inlay_hints_implicit_return": true,
-    "enable_inlay_hints_params": true,
     "enable_comp_lit_signature_help": true,
     "enable_comp_lit_signature_help_use_docs": true
 }
