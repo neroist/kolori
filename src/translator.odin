@@ -189,7 +189,9 @@ validate :: proc(source: cstring) -> Maybe(cstring)
 	)
 
 	if len(reports) > 0 {
-		return strings.clone_to_cstring(reports[0].msg)
+		err_msg := strings.clone_to_cstring(reports[0].msg)
+		// delete(reports)
+		return err_msg
 	}
 
 	return validate_expr(expr)

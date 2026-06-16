@@ -2,9 +2,8 @@
 
 package kolori
 
-import "odin-imgui/imgui_impl_opengl3"
-import "odin-imgui/imgui_impl_sdl3"
-import imgui "odin-imgui"
+import "../odin-imgui/imgui_impl_sdl3"
+import imgui "../odin-imgui"
 import opengl "vendor:OpenGL"
 import sdl "vendor:sdl3"
 import "core:time"
@@ -19,14 +18,8 @@ process_events :: proc(app: ^App_State)
 	event: sdl.Event
 	for sdl.PollEvent(&event) {
 		imgui_impl_sdl3.ProcessEvent(&event)
-
-		if event.type == .QUIT {
-			app.running = false
-		}
-
 		handle_event(app, &event)
 	}
-
 }
 
 handle_event :: proc(app: ^App_State, event: ^sdl.Event) 
@@ -35,7 +28,8 @@ handle_event :: proc(app: ^App_State, event: ^sdl.Event)
 
 	#partial switch event.type {
 	// todo(touchscreens) support pinching motions for zoom in/out 
-
+	case .QUIT:
+		app.running = false
 	case .WINDOW_RESIZED:
 		width, height: i32
 		sdl.GetWindowSizeInPixels(app.window, &width, &height)
@@ -101,7 +95,10 @@ handle_key :: proc(app: ^App_State, event: ^sdl.Event)
 			}
 
 			if !ok {
-				log.error("[sdl.ShowCursor] Failed to change cursor visiblity")
+				log.error(
+                    "[sdl.ShowCursor] Failed to change cursor visiblity. Error msg:",
+                    sdl.GetError()
+                )
 			}
 		}
 	case sdl.K_MINUS, sdl.K_Z:
@@ -123,7 +120,7 @@ take_screenshot :: proc(window: ^sdl.Window, width, height: i32)
 {
 	surface := sdl.CreateSurface(width, height, .RGB24)
 
-	opengl.ReadBuffer(opengl.FRONT)
+	opengl.ReadBuffer(opengl.BACK)
 	opengl.PixelStorei(opengl.PACK_ALIGNMENT, 1)
 	opengl.ReadPixels(
 		0,
@@ -143,8 +140,12 @@ take_screenshot :: proc(window: ^sdl.Window, width, height: i32)
 	if sdl.SavePNG(surface, filename) {
 		log.info("Saved screenshot to", filename)
 	} else {
-		log.error("[sdl.SavePNG] Failed to save screenshot")
-		sdl.ShowSimpleMessageBox(
+		log.error(
+            "[sdl.SavePNG] Failed to save screenshot. Error msg:",
+            sdl.GetError()
+        )
+
+        sdl.ShowSimpleMessageBox(
 			{.ERROR},
 			"Failure!",
 			"Failed to save screenshot :(",

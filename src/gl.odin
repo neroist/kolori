@@ -86,7 +86,11 @@ setup_gl :: proc(using app: ^App_State)
 {
 	ctx = sdl.GL_CreateContext(window)
 	if ctx == nil {
-		log.fatal("[sdl.GL_CreateContext]", sdl.GetError())
+		log.fatal(
+			"[sdl.GL_CreateContext] Failed to create an OpenGL context. Error msg:",
+			sdl.GetError()
+		)
+
 		app.running = false
 		return
 	}

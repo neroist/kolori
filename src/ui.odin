@@ -2,11 +2,11 @@
 
 package kolori
 
-import "odin-imgui/imgui_impl_opengl3"
-import "odin-imgui/imgui_impl_sdl3"
+import "../odin-imgui/imgui_impl_opengl3"
+import "../odin-imgui/imgui_impl_sdl3"
+import stbi "vendor:stb/image"
 import opengl "vendor:OpenGL"
-import "vendor:stb/image"
-import imgui "odin-imgui"
+import imgui "../odin-imgui"
 import sdl "vendor:sdl3"
 import "base:runtime"
 import "core:fmt"
@@ -15,6 +15,8 @@ import "core:log"
 IMGUI_CONFIG_FLAGS :: imgui.ConfigFlags{.NavEnableKeyboard, .DockingEnable}
 
 Ui_State :: struct {
+    window:           ^sdl.Window,
+	window_icon:      ^sdl.Surface,
 	io:               ^imgui.IO,
 	math_font:        ^imgui.Font,
 	function:         cstring,
@@ -31,6 +33,50 @@ Coloring_Method :: enum i32 {
 	Use_Texture,
 	Use_Palette,
 	// Use_User,
+}
+
+APP_ICON_DATA :: #load("../favicon/favicon-64x64.png", []u8)
+
+setup_sdl :: proc(using app: ^App_State) 
+{
+	_ = sdl.SetAppMetadata("Kolori", "0.1.0", "com.neroist.kolori")
+	_ = sdl.SetAppMetadataProperty(
+		sdl.PROP_APP_METADATA_URL_STRING,
+		"https://github.com/neroist/kolori",
+	)
+
+	if !sdl.Init({.VIDEO}) {
+		log.fatal(
+			"[sdl.Init] Failed to initialize SDL3. Error msg:",
+			sdl.GetError()
+		)
+
+		app.running = false
+		return
+	}
+
+	window_flags := sdl.WindowFlags{.OPENGL, .RESIZABLE, .HIGH_PIXEL_DENSITY}
+	window = sdl.CreateWindow("Kolori, from Stardance <3", 800, 600, window_flags)
+	if window == nil {
+		log.fatal(
+			"[sdl.CreateWindow] Failed to create window. Error msg:",
+			sdl.GetError()
+		)
+
+		app.running = false
+		return
+	}
+
+	stream := sdl.IOFromMem(raw_data(APP_ICON_DATA), len(APP_ICON_DATA))
+	window_icon = sdl.LoadPNG_IO(stream, true)
+	sdl.SetWindowIcon(window, window_icon)
+
+	sdl.SetWindowPosition(
+		window,
+		sdl.WINDOWPOS_CENTERED,
+		sdl.WINDOWPOS_CENTERED,
+	)
+	sdl.ShowWindow(window)
 }
 
 // @(deferred_none=deinit_imgui)
@@ -127,7 +173,7 @@ draw_ui :: proc(using app: ^App_State)
 		imgui.PopStyleColor()
 	}
 
-	if imgui.CollapsingHeader("General Settings") {
+	if imgui.CollapsingHeader("Animation Settings") {
 		if imgui.Checkbox("Enable VSync", &vsync) {
 			_vsync: i32
 			ok := sdl.GL_GetSwapInterval(&_vsync)
@@ -136,9 +182,7 @@ draw_ui :: proc(using app: ^App_State)
 				vsync = !vsync
 			}
 		}
-	}
 
-	if imgui.CollapsingHeader("Animation Settings") {
 		imgui.SliderFloat("Anim. Speed", &time_speed, 0.1, 10)
 		imgui.Checkbox("Pause Anim.", &animation_paused)
 		if imgui.Button("Reset Anim.") {
@@ -150,7 +194,11 @@ draw_ui :: proc(using app: ^App_State)
 	if imgui.CollapsingHeader("Coloring Settings", {.DefaultOpen}) {
 		combo_items: cstring = "Default Method\x00Use an Image\x00Custom Color Palette\x00"
 
-		imgui.Combo("Coloring Method", (^i32)(&coloring_method), combo_items)
+		if imgui.Combo("Coloring Method", (^i32)(&coloring_method), combo_items) {
+			time = 0
+			animation_paused = false
+			reload_shaders(app)
+		}
 
 		switch coloring_method {
 		case .Use_Default:
@@ -176,7 +224,7 @@ draw_ui :: proc(using app: ^App_State)
 					{.ERROR},
 					"Doesn't Work",
 					"This functionality doesn't work right now, sorry <3",
-					app.window,
+					app.window
 				)
 
                 /*
@@ -222,18 +270,18 @@ dialog_file_callback :: proc "c" (
 
 	app := (^App_State)(userdata)
 
-	// image := sdl_image.Load(filelist[0])
-	// defer sdl.DestroySurface(image)
-	// if image == nil {
-	//     return
-	// }
 	width, height, channels: i32
-	image.set_flip_vertically_on_load((i32)(true))
-	image_data := image.load(filelist[0], &width, &height, &channels, 0)
-	defer image.image_free(image_data)
+	stbi.set_flip_vertically_on_load((i32)(true))
+	image_data := stbi.load(filelist[0], &width, &height, &channels, 0)
+	defer stbi.image_free(image_data)
 
 	if image_data == nil {
-		fmt.println("fail!")
+		msg := fmt.ctprintf(
+			"Failed to load the image file \"%s\"",
+			filelist[0]
+		)
+
+		sdl.ShowSimpleMessageBox({.WARNING}, "Could not load image", msg, app.window)
 		return
 	}
 	// sdl.GL_MakeCurrent(app.window, app.gl_ctx)

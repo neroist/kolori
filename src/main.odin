@@ -2,13 +2,14 @@
 
 package kolori
 
-import "base:runtime"
-import "odin-imgui/imgui_impl_opengl3"
-import "odin-imgui/imgui_impl_sdl3"
-import imgui "odin-imgui"
+import "../odin-imgui/imgui_impl_opengl3"
+import "../odin-imgui/imgui_impl_sdl3"
 import opengl "vendor:OpenGL"
+import imgui "../odin-imgui"
 import sdl "vendor:sdl3"
+import "base:runtime"
 import "core:strings"
+import "core:c/libc"
 import "core:log"
 import "core:fmt"
 import "core:mem"
@@ -23,8 +24,43 @@ import "core:os"
 App_State :: struct {
 	using gl: GL_State,
 	using ui: Ui_State,
-	window:   ^sdl.Window,
 	running:  bool,
+}
+
+custom_allocator_proc :: proc (
+	allocator_data: rawptr,
+	mode: mem.Allocator_Mode,
+	size, alignment: int,
+	old_memory: rawptr,
+	old_size: int,
+	loc := #caller_location,
+) -> (result: []byte, err: mem.Allocator_Error)
+{
+	// don't want to "io.write_*" for a bunch of lines...
+	// libc's printf gives us an api similar to fmt.printf's
+	// while not relying on context.allocator, which is nice
+	#partial switch mode {
+	case .Alloc, .Alloc_Non_Zeroed:
+		libc.printf(
+			"[Tracking Allocator] Allocation made of size %i and alignment %i\n",
+			size,
+			alignment
+		)
+	case .Resize, .Resize_Non_Zeroed:
+		libc.printf(
+			"[Tracking Allocator] Free of size %i\n",
+			size
+		)
+	case .Free, .Free_All:
+		libc.printf(
+			"[Tracking Allocator] Resize from size %i to size %i with alignment %i\n",
+			old_size,
+			size,
+			alignment
+		)
+	}
+
+	return mem.tracking_allocator_proc(allocator_data, mode, size, alignment, old_memory, old_size, loc)
 }
 
 main :: proc() 
@@ -33,11 +69,14 @@ main :: proc()
 	context.logger.lowest_level = ODIN_DEBUG ? .Debug : .Info
 	defer log.destroy_console_logger(context.logger)
 
-	// Lets all love Odin <3
+	// Lets all love Odin.
 	when ODIN_DEBUG {
 		track: mem.Tracking_Allocator
 		mem.tracking_allocator_init(&track, context.allocator)
-		context.allocator = mem.tracking_allocator(&track)
+		context.allocator = mem.Allocator{
+			data = &track,
+			procedure = custom_allocator_proc
+		}
 
 		defer {
 			if len(track.allocation_map) > 0 {
@@ -67,6 +106,7 @@ main :: proc()
 	setup_sdl(&app)
 	defer {
 		sdl.GL_DestroyContext(gl.ctx)
+		sdl.DestroySurface(window_icon)
 		sdl.DestroyWindow(window)
 		sdl.Quit()
 	}
@@ -102,7 +142,8 @@ main :: proc()
 		draw_ui(&app)
 
 		sdl.GL_SwapWindow(window)
-		free_all(context.temp_allocator)
+		// free_all(context.temp_allocator)
+		// free_all(context.allocator)
 	}
 }
 
@@ -117,38 +158,6 @@ setup_app :: proc(using app: ^App_State)
 	err_msg = strings.clone_to_cstring("")
 	function = (cstring)(make([^]u8, 1024))
 	([^]u8)(function)[0] = 'z'
-}
-
-setup_sdl :: proc(using app: ^App_State) 
-{
-	_ = sdl.SetAppMetadata("Kolori", "0.1.0", "com.neroist.kolori")
-	_ = sdl.SetAppMetadataProperty(
-		sdl.PROP_APP_METADATA_URL_STRING,
-		"https://github.com/neroist/kolori",
-	)
-
-	if !sdl.Init({.VIDEO}) {
-		log.fatal("[sdl.Init]", sdl.GetError())
-
-		app.running = false
-		return
-	}
-
-	window_flags := sdl.WindowFlags{.OPENGL, .RESIZABLE, .HIGH_PIXEL_DENSITY}
-	window = sdl.CreateWindow("Kolori", 800, 600, window_flags)
-	if window == nil {
-		log.fatal("[sdl.CreateWindow]", sdl.GetError())
-
-		app.running = false
-		return
-	}
-
-	sdl.SetWindowPosition(
-		window,
-		sdl.WINDOWPOS_CENTERED,
-		sdl.WINDOWPOS_CENTERED,
-	)
-	sdl.ShowWindow(window)
 }
 
 exit :: proc(using app: ^App_State) 

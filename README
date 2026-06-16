@@ -90,5 +90,5 @@ $ python build.py
 
 ```sh
 $ cd ..
-$ odin build .
+$ odin build src -out:kolori
 ```
