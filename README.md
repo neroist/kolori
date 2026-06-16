@@ -24,7 +24,8 @@ functions.
 - `f` or `F11` to toggle fullscreen.
 - `F12` to take a screenshot. It will be saved in the curent woking directory
 with filename `kolori_screenshotDD-MM-YYYY_HHMMSS.png`.
-- `ESC` to reset zoom and pan.
+- `ESC` to reset zoom and pan. Hold `Shift` to also reset animations (set time to
+zero). Hold `Ctrl` to only perform the latter.
 
 You may always hold `Shift` to zoom/pan faster.
 
@@ -118,7 +119,9 @@ use:
 $ odin run .
 ```
 
-1. Clone the git repository and its submodules:
+---
+
+1. Clone the git repository and its submodules.
 
 ```sh
 $ git clone --recursive https://github.com/neroist/kolori.git
@@ -139,14 +142,16 @@ such modifications to you. However, in the case that you need to
 compile with `gcc` instead of `clang`, it is sufficient to do a
 simple search-and-replace operation on the entire file.
 
-3. Run the build script
+3. Run the build script.
+
+> If you're on Windows run `vcvarsall x64` first.
 
 ```sh
 $ cd odin-imgui
 $ python build.py
 ```
 
-4. Build the project
+4. Build the project.
 
 ```sh
 $ cd ..
