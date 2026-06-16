@@ -711,9 +711,9 @@ vec4 color_hsluv(vec2 z)
 	float a = gamma_correction;
 
 	float hue = degrees(atan(z.y,z.x));
-	float lightness = TWO_OVER_PI * atan(pow(length(z),a)) * 33.;
+	float lightness = TWO_OVER_PI * atan(pow(length(z),a)) * 50.;
 
-	return hsluvToRgb(hue, 100., lightness, 1.);
+	return hsluvToRgb(hue, 50., lightness, 1.);
 }
 
 
