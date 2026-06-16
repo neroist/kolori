@@ -8,6 +8,7 @@ import stbi "vendor:stb/image"
 import opengl "vendor:OpenGL"
 import imgui "../odin-imgui"
 import sdl "vendor:sdl3"
+import "core:math/rand"
 import "base:runtime"
 import "core:fmt"
 import "core:log"
@@ -148,7 +149,7 @@ draw_ui :: proc(using app: ^App_State)
 		err: cstring
 		err, failure = validate(function).?
 
-		// simply `err != err_msg` compiles
+		// simply `err != err_msg` as a predicate compiles
 		// when `err` is nil and `err_msg` is a string.
 		// what does that even do?
 		if !failure {
@@ -212,12 +213,33 @@ draw_ui :: proc(using app: ^App_State)
 				opengl.Uniform1f(uniforms.gamma_correction, gamma_correction)
 			}
         case .Use_Palette:
-            flags := imgui.ColorEditFlags{.InputRGB, .Float}
-            imgui.ColorEdit3("A", &abcd[0], flags)
-            imgui.ColorEdit3("B", &abcd[1], flags)
-            imgui.ColorEdit3("C", &abcd[2], flags)
-            imgui.ColorEdit3("D", &abcd[3], flags)
-            opengl.Uniform3fv(uniforms.abcd, 4, ([^]f32)(&abcd))
+			rand_color :: proc () -> (color: [3]f32)
+			{
+				color.r = rand.float32()
+				color.g = rand.float32()
+				color.b = rand.float32()
+				return
+			}
+
+			flags := imgui.ColorEditFlags{.InputRGB, .Float}
+            colors_changed :=
+				imgui.ColorEdit3("A", &abcd[0], flags) |
+            	imgui.ColorEdit3("B", &abcd[1], flags) |
+            	imgui.ColorEdit3("C", &abcd[2], flags) |
+            	imgui.ColorEdit3("D", &abcd[3], flags)
+			
+			if imgui.Button("Random Palette") {
+				abcd[0] = rand_color()
+				abcd[1] = rand_color()
+				abcd[2] = rand_color()
+				abcd[3] = rand_color()
+
+				colors_changed = true
+			}
+
+			if colors_changed {
+				opengl.Uniform3fv(uniforms.abcd, 4, ([^]f32)(&abcd))
+			}
 		case .Use_Texture:
 			if imgui.Button("Choose Image") {
 				sdl.ShowSimpleMessageBox(
