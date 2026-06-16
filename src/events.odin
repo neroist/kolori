@@ -46,14 +46,27 @@ handle_event :: proc(app: ^App_State, event: ^sdl.Event)
 			break
 		}
 
-		zoom(app, event.wheel.y < 0 ? ZOOM_SPEED : 1 / ZOOM_SPEED)
+		speed: f32 = ZOOM_SPEED
+
+		if event.wheel.y > 0 {
+			speed *= 1 / (ZOOM_SPEED * ZOOM_SPEED)
+		}
+
+		// there's a more elegant, set-theoretic way to check this
+		if mod_state := sdl.GetModState(); .LSHIFT in mod_state || .RSHIFT in mod_state {
+			speed *= speed
+		}
+
+		zoom(app, speed)
 	case .MOUSE_MOTION:
 		if app.io.WantCaptureMouse {
 			break
 		}
 
 		if .LEFT in event.motion.state {
-			pan(app, {-event.motion.xrel, event.motion.yrel})
+			mod_state := sdl.GetModState()
+			speed: f32 = .LSHIFT in mod_state || .RSHIFT in mod_state ? 2 : 1
+			pan(app, {-event.motion.xrel, event.motion.yrel}, speed)
 		}
 	}
 }
@@ -100,9 +113,9 @@ handle_key :: proc(app: ^App_State, event: ^sdl.Event)
 			}
 		}
 	case sdl.K_MINUS, sdl.K_Z:
-		zoom(app, ZOOM_SPEED)
+		zoom(app, ZOOM_SPEED * (shift_key ? ZOOM_SPEED : 1))
 	case sdl.K_EQUALS, sdl.K_X:
-		zoom(app, 1 / ZOOM_SPEED)
+		zoom(app, 1/ZOOM_SPEED * (shift_key ? 1/ZOOM_SPEED : 1))
 	case sdl.K_W, sdl.K_UP:
 		pan(app, {0, 1}, PAN_SPEED * (shift_key ? 2 : 1))
 	case sdl.K_A, sdl.K_LEFT:
