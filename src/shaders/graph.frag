@@ -3,8 +3,8 @@ precision highp float;
 precision highp int;
 precision highp sampler2D;
 
-in vec2 pos;
-in vec2 tex_coord;
+// in vec2 pos;
+// in vec2 tex_coord;
 out vec4 FragColor;
 
 uniform float time;
@@ -697,8 +697,6 @@ vec2 transform_coordinates(vec4 FragCoord)
 
 vec4 color_hsl(vec2 z)
 {
-	// gamma correction
-	// const float a = 0.65f;
 	float a = gamma_correction;
 
 	float hue = atan(z.y,z.x)/TAU;
@@ -710,10 +708,24 @@ vec4 color_hsl(vec2 z)
 vec4 color_hsluv(vec2 z)
 {
 	float a = gamma_correction;
+
 	float hue = degrees(atan(z.y,z.x));
 	float lightness = TWO_OVER_PI * atan(pow(length(z),a)) * 33;
+
 	return hsluvToRgb(hue, 100.0f, lightness, 1);
 }
+
+
+vec4 color_rgb(vec2 z)
+{
+	float a = gamma_correction;
+
+	float r = degrees(atan(z.y,z.x));
+	float g = TWO_OVER_PI * atan(pow(length(z),a));
+	
+	return vec4(r, 1.f, g, 1);
+}
+
 
 vec4 color_texture(vec2 z)
 {
@@ -741,6 +753,8 @@ void main()
 		FragColor = color_palette(f(z).x, abcd[0], abcd[1], abcd[2], abcd[3]);
 	#elif defined(USE_HSLUV)
 		FragColor = color_hsluv(f(z));
+	#elif defined(USE_RGB)
+		FragColor = color_rgb(f(z))
 	#else
 		#define USE_HSL
 		FragColor = color_hsl(f(z));
