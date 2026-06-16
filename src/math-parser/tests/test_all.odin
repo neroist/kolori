@@ -35,6 +35,8 @@ eval :: proc(expr: math_parser.Expression) -> f64
 			return eval(expr.left) / eval(expr.right)
 		case .Exponentiation:
 			return math.pow(eval(expr.left), eval(expr.right))
+		case .Modulo:
+			return math.mod(eval(expr.left), eval(expr.right))
 		}
 	case ^math_parser.FunctionCall:
 		switch expr.name {
@@ -86,6 +88,7 @@ expr_to_str :: proc(expr: math_parser.Expression) -> string
 			.Multiplication = '*',
 			.Division       = '/',
 			.Exponentiation = '^',
+			.Modulo         = '%',
 		}
 
 		return fmt.tprintf(
