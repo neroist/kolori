@@ -73,12 +73,10 @@ handle_key :: proc(app: ^App_State, event: ^sdl.Event)
 		sdl.SetWindowFullscreen(app.window, !is_fullscreen)
 		sdl.SyncWindow(app.window)
 	case sdl.K_ESCAPE:
-		app.zoom = 1
-		app.shift = {0, 0}
+		reset_view(app)
 	case sdl.K_R:
 		if shift_key {
-			app.zoom = 1
-			app.shift = {0, 0}
+			reset_view(app)
 		}
 
 		reload_shaders(app)
