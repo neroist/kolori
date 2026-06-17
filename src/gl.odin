@@ -93,7 +93,7 @@ debug_proc :: proc "c" (
 
 	context = runtime.default_context()
 	context.logger = log.create_console_logger()
-	context.logger.options = {.Level}
+	context.logger.options = {.Level, .Time}
 	defer log.destroy_console_logger(context.logger)
 
 	src := (Message_Source)(source)
