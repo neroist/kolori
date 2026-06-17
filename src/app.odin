@@ -23,6 +23,7 @@ main :: proc()
 {
 	context.logger = log.create_console_logger()
 	context.logger.lowest_level = ODIN_DEBUG ? .Debug : .Info
+	context.logger.options -= {.Date}
 	defer log.destroy_console_logger(context.logger)
 
 	// Lets all love Odin.
