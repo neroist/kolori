@@ -10,6 +10,7 @@ import imgui "../odin-imgui"
 import sdl "vendor:sdl3"
 import "core:math/rand"
 import "base:runtime"
+import "core:math"
 import "core:fmt"
 import "core:log"
 
@@ -109,10 +110,10 @@ setup_imgui :: proc(app: ^App_State)
 	// these are simply the defaults as described in `imgui.odin`
 	font_cfg := imgui.FontConfig{
 		FontDataOwnedByAtlas = false,
-		RasterizerDensity = 1,
-		RasterizerMultiply = 1,
 		ExtraSizeScale = 1,
-		GlyphMaxAdvanceX = (f32)(0x7F800000),
+		GlyphMaxAdvanceX = math.F32_MAX,
+		RasterizerMultiply = 1,
+		RasterizerDensity = 1,
 	}
 
 	// this will also be used as the main ui font,
