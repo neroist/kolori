@@ -38,6 +38,7 @@ Coloring_Method :: enum i32 {
 
 IMGUI_CONFIG_FLAGS :: imgui.ConfigFlags{.NavEnableKeyboard, .DockingEnable}
 APP_ICON_DATA :: #load("../favicon/favicon-64x64.png", []u8)
+MAIN_FONT_DATA :: #load("../fonts/DMSans.ttf", []u8)
 MAX_FRAMERATE :: 260
 
 setup_sdl :: proc(using app: ^App_State) 
@@ -58,8 +59,8 @@ setup_sdl :: proc(using app: ^App_State)
 		return
 	}
 
-	display := sdl.GetPrimaryDisplay()
-	main_scale = sdl.GetDisplayContentScale(display)
+	primary_display := sdl.GetPrimaryDisplay()
+	main_scale = sdl.GetDisplayContentScale(primary_display)
 	if main_scale == 0 {
 		main_scale = 1
 	}
@@ -96,22 +97,32 @@ setup_sdl :: proc(using app: ^App_State)
 // @(deferred_none=deinit_imgui)
 setup_imgui :: proc(app: ^App_State) 
 {
-	imgui.CHECKVERSION()
 	imgui.CreateContext()
-
-	imgui_impl_sdl3.InitForOpenGL(app.window, app.gl.ctx)
 	imgui_impl_opengl3.Init("#version 300 es")
+	imgui_impl_sdl3.InitForOpenGL(app.window, app.gl.ctx)
 
 	app.io = imgui.GetIO()
 	app.io.ConfigFlags += IMGUI_CONFIG_FLAGS
 
 	style_imgui(app.main_scale)
 
-	imgui.FontAtlas_AddFontFromFileTTF(app.io.Fonts, "fonts/DMSans.ttf", 18)
-	app.math_font = imgui.FontAtlas_AddFontFromFileTTF(
+	// these are simply the defaults as described in `imgui.odin`
+	font_cfg := imgui.FontConfig{
+		FontDataOwnedByAtlas = false,
+		RasterizerDensity = 1,
+		RasterizerMultiply = 1,
+		ExtraSizeScale = 1,
+		GlyphMaxAdvanceX = (f32)(0x7F800000),
+	}
+
+	// this will also be used as the main ui font,
+	// as it is the first font loaded
+	app.math_font = imgui.FontAtlas_AddFontFromMemoryTTF(
 		app.io.Fonts,
-		"fonts/DMSans.ttf",
+		raw_data(MAIN_FONT_DATA),
+		(i32)(len(MAIN_FONT_DATA)),
 		18,
+		&font_cfg
 	)
 }
 
