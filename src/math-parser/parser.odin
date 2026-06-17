@@ -330,7 +330,7 @@ parser_parse :: proc(p: ^Parser) -> (expr: Expression, report: Maybe(Error_Repor
 		report = new_report(
 			token,
 			.UnexpectedEOF,
-			"Unexpected trailing input after the \"%s\" token at position %i.",
+			"Unexpected trailing input after token \"%s\" at position %i.",
 			token.lexeme,
 			token.column
 		)
