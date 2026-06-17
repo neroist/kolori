@@ -298,8 +298,9 @@ reload_shaders :: proc(using app: ^App_State)
 			info_log,
 		)
 
-		log.error(msg)
+		log.fatal(msg)
 		sdl.ShowSimpleMessageBox({.ERROR}, "Failure!", msg, window)
+		app.running = false
 
 		return
 	}
@@ -315,8 +316,9 @@ reload_shaders :: proc(using app: ^App_State)
 			gl_err_msg,
 		)
 
-		log.error(msg)
+		log.fatal(msg)
 		sdl.ShowSimpleMessageBox({.ERROR}, "Failure!", msg, window)
+		app.running = false
 
 		return
 	}
