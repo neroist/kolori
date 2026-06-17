@@ -93,67 +93,40 @@ currently does not work.
 need to install the Odin compiler to build. Instructions for installation are
 held here: <https://odin-lang.org/docs/install/>.
 
-- We also use **Python** to build the ImGui binaries. If you haven't already,
-install Python from here: <https://www.python.org/downloads/>.
+- For Mac OS, we also use *Clang* to build the ImGui binaries, and *Python* to
+run the build commands.
 
-- Finally, on Linux/Mac OS, install **SDL3** and **libc++** using your
+- Finally, on Linux and Mac OS, install **SDL3** and **libc++** using your
 system's package manager (`apt`, `pacman`, `brew`, etc.). On Windows,
-binaries are already provided (or seemingly unneeded, in the case of libc++).
+binaries are already provided.
 
 ### Steps
-> Throughout these instructions, if you're on Windows, replace `-out:kolori`
-with `-out:kolori.exe`. You will get an error (guiding you to do so) 
-otherwize.
-
-The first three steps you will only need to perform once. After that, simply
-execute:
-
-```sh
-$ odin build src -out:kolori
-```
-
-to build the entire project. If you just want to immediately run the project,
-use:
-
-```sh
-$ odin run .
-```
-
----
-
-1. Clone the git repository and its submodules.
-
+1. Clone the repo.
 ```sh
 $ git clone --recursive https://github.com/neroist/kolori.git
 $ cd kolori
 ```
 
-2. Modify the Python build script at `odin-imgui/build.py` as such:
-
-```diff
-- wanted_backends = ["vulkan", "sdl2", "sdl3", "sdlrenderer3", "sdlgpu3", "opengl3", "glfw",
--				     "dx11", "dx12", "osx", "metal", "null", "wgpu", "webgl"]
-+ wanted_backends = ["sdl3", "opengl3"]
-```
-
-You may also change the default compiler from `cl` (on Windows) or 
-`clang` (everywhere else) to another compiler if need be. We leave
-such modifications to you. However, in the case that you need to 
-compile with `gcc` instead of `clang`, it is sufficient to do a
-simple search-and-replace operation on the entire file.
-
-3. Run the build script.
-
-> If you're on Windows run `vcvarsall x64` first.
-
+2. (Mac OS only) Build ImGui.
 ```sh
 $ cd odin-imgui
-$ python build.py
+$ python3 build.py
+$ cd ..
 ```
 
-4. Build the project.
+This step only needs to be done once.
 
+> You may also change the default compiler from `clang` to another compiler if
+> need be. We leave such modifications to you. However, in the case that you
+> need to compile with `gcc` instead of `clang`, it is sufficient to do a simple
+> search-and-replace operation on `build.py` in its entirety.
+
+3. Build the project.
 ```sh
-$ cd ..
-$ odin build src -out:kolori
+$ make
+```
+
+On Windows without MSYS or MinGW installed, run `build.bat` instead:
+```sh
+> build.bat
 ```
