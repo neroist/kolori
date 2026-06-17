@@ -161,7 +161,7 @@ draw_ui :: proc(using app: ^App_State)
 
 	imgui.SameLine()
 
-	if imgui.InputText("##function", function, FUNCTION_BUF_SIZE) && len(function) > 0 {
+	if imgui.InputText("##function", function, FUNCTION_BUF_SIZE) {
 		err: cstring
 		err, failure = validate(function).?
 

@@ -321,8 +321,6 @@ expression_free :: proc(expr: Expression, allocator := context.allocator) {
 }
 
 parser_parse :: proc(p: ^Parser) -> (expr: Expression, report: Maybe(Error_Report)) {
-	assert(len(p.tokens) > 0)
-
 	expr = expression(p) or_return
 
 	if !parser_is_at_end(p) {
