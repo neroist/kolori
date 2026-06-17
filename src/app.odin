@@ -115,6 +115,8 @@ setup_app :: proc(app: ^App_State)
 	app.show_ui = true
 	app.time_speed = 1
 	app.gamma_correction = 0.65
+	app.saturation = 100
+	app.lightness = 100
 	app.framerate = 60 // if we can, we try to enable vsync automatically
 	                   // otherwise, we operate off of 60 fps
 

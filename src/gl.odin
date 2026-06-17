@@ -21,11 +21,13 @@ GL_State :: struct {
 	zoom:             f32,
 	time:             f32,
 	gamma_correction: f32,
+	saturation:       f32,
+	lightness:        f32,
 }
 
 Color :: [3]f32
 
-// use uniform buffer object and a single "set_uniforms" proc?
+// use uniform buffer object and a single "set_uniforms" proc (UBO)?
 // Uniform :: struct($T: typeid) {
 // 	location: i32,
 // 	value: T
@@ -37,6 +39,8 @@ Color :: [3]f32
 // 	shift:            Uniform([2]f32),
 // 	abcd:             Uniform([4]Color),
 // 	gamma_correction: Uniform(f32),
+// 	saturation:       Uniform(f32),
+// 	lightness:        Uniform(f32),
 // }
 
 Uniforms :: struct {
@@ -46,6 +50,8 @@ Uniforms :: struct {
 	shift:            i32,
 	abcd:             i32,
 	gamma_correction: i32,
+	saturation:       i32,
+	lightness:        i32,
 }
 
 when ODIN_DEBUG {
@@ -285,6 +291,7 @@ reload_shaders :: proc(using app: ^App_State)
 		},
 	)
 	defer opengl.DeleteShader(fragment_shader_id)
+
 	if !ok {
 		info_log: [512]u8
 		opengl.GetShaderInfoLog(
@@ -312,7 +319,7 @@ reload_shaders :: proc(using app: ^App_State)
 	if !ok {
 		gl_err_msg, _ := opengl.get_last_error_message()
 		msg := fmt.ctprintf(
-			"[opengl.load_shaders_source] Failed to compile shader program. Error msg:\n\n\"%s\".",
+			"[opengl.create_and_link_program] Failed to compile shader program. Error msg:\n\n\"%s\".",
 			gl_err_msg,
 		)
 
@@ -331,6 +338,8 @@ reload_shaders :: proc(using app: ^App_State)
 		resolution       = opengl.GetUniformLocation(program, "resolution"),
 		shift            = opengl.GetUniformLocation(program, "shift"),
 		abcd             = opengl.GetUniformLocation(program, "abcd"),
+		saturation       = opengl.GetUniformLocation(program, "saturation"),
+		lightness        = opengl.GetUniformLocation(program, "lightness"),
 		gamma_correction = opengl.GetUniformLocation(
 			program,
 			"gamma_correction",
@@ -346,4 +355,6 @@ reload_shaders :: proc(using app: ^App_State)
 	opengl.Uniform1f(uniforms.time, time)
 	opengl.Uniform1f(uniforms.gamma_correction, gamma_correction)
 	opengl.Uniform3fv(uniforms.abcd, 4, ([^]f32)(&abcd))
+	opengl.Uniform1f(uniforms.saturation, saturation)
+	opengl.Uniform1f(uniforms.lightness, lightness)
 }

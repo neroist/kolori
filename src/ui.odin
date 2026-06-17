@@ -276,6 +276,14 @@ coloring_settings :: proc(app: ^App_State)
 
 	switch app.coloring_method {
 	case .Use_HSL, .Use_HSLuv:
+		if imgui.SliderFloat("Saturation", &app.saturation, 0, 100, "%.1f%%") {
+			opengl.Uniform1f(app.uniforms.saturation, app.saturation)
+		}
+
+		if imgui.SliderFloat("Lightness", &app.lightness, 0, 100, "%.1f%%") {
+			opengl.Uniform1f(app.uniforms.lightness, app.lightness)
+		}
+		
 		if imgui.SliderFloat(
 			"Gamma Correction",
 			&app.gamma_correction,

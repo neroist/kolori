@@ -15,6 +15,8 @@ uniform vec2 shift;
 uniform sampler2D tex;
 uniform vec3 abcd[4];
 uniform float gamma_correction;
+uniform float saturation;
+uniform float lightness;
 
 const float PI          = 3.14159265358979323846;
 const float TAU         = 6.28318530717958647692;
@@ -705,9 +707,9 @@ vec4 color_hsl(vec2 z)
 	float a = gamma_correction;
 
 	float hue = atan(z.y,z.x)/TAU;
-	float lightness = TWO_OVER_PI * atan(pow(length(z),a));
+	float _lightness = TWO_OVER_PI * atan(pow(length(z),a));
 
-	return hsl2rgb(hue, 1., lightness);
+	return hsl2rgb(hue, saturation / 100., _lightness * lightness / 100.);
 }
 
 vec4 color_hsluv(vec2 z)
@@ -715,9 +717,9 @@ vec4 color_hsluv(vec2 z)
 	float a = gamma_correction;
 
 	float hue = degrees(atan(z.y,z.x));
-	float lightness = TWO_OVER_PI * atan(pow(length(z),a)) * 50.;
+	float _lightness = TWO_OVER_PI * atan(pow(length(z),a));
 
-	return hsluvToRgb(hue, 50., lightness, 1.);
+	return hsluvToRgb(hue, saturation, _lightness * lightness, 1.);
 }
 
 
