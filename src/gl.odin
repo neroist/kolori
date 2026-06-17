@@ -73,15 +73,43 @@ debug_proc :: proc "c" (
 	user_param: rawptr,
 ) 
 {
-	if severity != opengl.DEBUG_SEVERITY_HIGH ||
-	   severity != opengl.DEBUG_SEVERITY_MEDIUM {
-		return
+	Message_Source :: enum u32 {
+		API = opengl.DEBUG_SOURCE_API,
+		Window_System = opengl.DEBUG_SOURCE_WINDOW_SYSTEM,
+		Shader_Compiler = opengl.DEBUG_SOURCE_SHADER_COMPILER,
+		Third_Party = opengl.DEBUG_SOURCE_THIRD_PARTY,
+		Application = opengl.DEBUG_SOURCE_APPLICATION,
+		Other = opengl.DEBUG_SOURCE_OTHER,
+	}
+
+	Message_Type :: enum u32 {
+		Error = opengl.DEBUG_TYPE_ERROR,
+		Deprecated_Behavior = opengl.DEBUG_TYPE_DEPRECATED_BEHAVIOR,
+		Undefined_Behavior = opengl.DEBUG_TYPE_UNDEFINED_BEHAVIOR,
+		Portability = opengl.DEBUG_TYPE_PORTABILITY,
+		Performance = opengl.DEBUG_TYPE_PERFORMANCE,
+		Other = opengl.DEBUG_TYPE_OTHER,
 	}
 
 	context = runtime.default_context()
-	app := (^App_State)(user_param)
+	context.logger = log.create_console_logger()
+	context.logger.options = {.Level}
+	defer log.destroy_console_logger(context.logger)
 
-	fmt.println("[OpenGL] debug message:", message)
+	src := (Message_Source)(source)
+	typ := (Message_Type)(type)
+	format :: "[OpenGL] [source: %s; type: %s] %s"
+
+	switch severity {
+	case opengl.DEBUG_SEVERITY_HIGH:
+		log.errorf(format, src, typ, message)
+	case opengl.DEBUG_SEVERITY_MEDIUM:
+		log.warnf(format, src, typ, message)
+	case opengl.DEBUG_SEVERITY_LOW:
+		log.infof(format, src, typ, message)
+	case opengl.DEBUG_SEVERITY_NOTIFICATION:
+		log.debugf(format, src, typ, message)
+	}
 }
 
 setup_gl :: proc(using app: ^App_State) 
@@ -128,7 +156,7 @@ setup_gl :: proc(using app: ^App_State)
 	)
 
 	when ODIN_DEBUG {
-		opengl.DebugMessageCallback(debug_proc, app)
+		opengl.DebugMessageCallback(debug_proc, nil)
 		opengl.Enable(opengl.DEBUG_OUTPUT)
 		opengl.Enable(opengl.DEBUG_OUTPUT_SYNCHRONOUS)
 	}
