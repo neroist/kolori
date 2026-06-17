@@ -7,7 +7,6 @@ import imgui "../odin-imgui"
 import sdl "vendor:sdl3"
 import "base:runtime"
 import "core:strings"
-import "core:c/libc"
 import "core:log"
 import "core:fmt"
 import "core:mem"
@@ -20,50 +19,6 @@ App_State :: struct {
 
 FUNCTION_BUF_SIZE :: 1024
 
-custom_allocator_proc :: proc(
-	allocator_data: rawptr,
-	mode: mem.Allocator_Mode,
-	size, alignment: int,
-	old_memory: rawptr,
-	old_size: int,
-	loc := #caller_location,
-) -> (
-	result: []byte,
-	err: mem.Allocator_Error,
-) 
-{
-	// don't want to "io.write_*" for a bunch of lines...
-	// libc's printf gives us an api similar to fmt.printf's
-	// while not relying on context.allocator
-	#partial switch mode {
-	case .Alloc, .Alloc_Non_Zeroed:
-		libc.printf(
-			"[Tracking Allocator] Allocation made of size %i and alignment %i\n",
-			size,
-			alignment,
-		)
-	case .Resize, .Resize_Non_Zeroed:
-		libc.printf("[Tracking Allocator] Free made of size %i\n", size)
-	case .Free, .Free_All:
-		libc.printf(
-			"[Tracking Allocator] Resize made from size %i to size %i with alignment %i\n",
-			old_size,
-			size,
-			alignment,
-		)
-	}
-
-	return mem.tracking_allocator_proc(
-		allocator_data,
-		mode,
-		size,
-		alignment,
-		old_memory,
-		old_size,
-		loc,
-	)
-}
-
 main :: proc() 
 {
 	context.logger = log.create_console_logger()
@@ -74,10 +29,7 @@ main :: proc()
 	when ODIN_DEBUG {
 		track: mem.Tracking_Allocator
 		mem.tracking_allocator_init(&track, context.allocator)
-		context.allocator = mem.Allocator {
-			data      = &track,
-			procedure = custom_allocator_proc,
-		}
+		context.allocator = logging_allocator(&track)
 
 		defer {
 			if len(track.allocation_map) > 0 {
