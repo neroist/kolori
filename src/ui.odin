@@ -1,5 +1,3 @@
-#+feature using-stmt
-
 package kolori
 
 import "../odin-imgui/imgui_impl_opengl3"
@@ -42,7 +40,7 @@ APP_ICON_DATA :: #load("../favicon/favicon-64x64.png", []u8)
 MAIN_FONT_DATA :: #load("../fonts/DMSans.ttf", []u8)
 MAX_FRAMERATE :: 260
 
-setup_sdl :: proc(using app: ^App_State) 
+setup_sdl :: proc(app: ^App_State) 
 {
 	_ = sdl.SetAppMetadata("Kolori", "0.1.0", "com.neroist.kolori")
 	_ = sdl.SetAppMetadataProperty(
@@ -61,19 +59,19 @@ setup_sdl :: proc(using app: ^App_State)
 	}
 
 	primary_display := sdl.GetPrimaryDisplay()
-	main_scale = sdl.GetDisplayContentScale(primary_display)
-	if main_scale == 0 {
-		main_scale = 1
+	app.main_scale = sdl.GetDisplayContentScale(primary_display)
+	if app.main_scale == 0 {
+		app.main_scale = 1
 	}
 
 	window_flags := sdl.WindowFlags{.OPENGL, .RESIZABLE, .HIDDEN, .HIGH_PIXEL_DENSITY}
-	window = sdl.CreateWindow(
+	app.window = sdl.CreateWindow(
 		"Kolori, from Stardance <3",
-		(i32)(800 * main_scale),
-		(i32)(600 * main_scale),
+		(i32)(800 * app.main_scale),
+		(i32)(600 * app.main_scale),
 		window_flags,
 	)
-	if window == nil {
+	if app.window == nil {
 		log.fatal(
 			"[sdl.CreateWindow] Failed to create window. Error msg:",
 			sdl.GetError(),
@@ -84,15 +82,15 @@ setup_sdl :: proc(using app: ^App_State)
 	}
 
 	stream := sdl.IOFromMem(raw_data(APP_ICON_DATA), len(APP_ICON_DATA))
-	window_icon = sdl.LoadPNG_IO(stream, true)
-	sdl.SetWindowIcon(window, window_icon)
+	app.window_icon = sdl.LoadPNG_IO(stream, true)
+	sdl.SetWindowIcon(app.window, app.window_icon)
 
 	sdl.SetWindowPosition(
-		window,
+		app.window,
 		sdl.WINDOWPOS_CENTERED,
 		sdl.WINDOWPOS_CENTERED,
 	)
-	sdl.ShowWindow(window)
+	sdl.ShowWindow(app.window)
 }
 
 // @(deferred_none=deinit_imgui)
@@ -152,13 +150,11 @@ style_imgui :: proc(scale: f32 = 1)
 	style.TabRounding = 6
 }
 
-draw_ui :: proc(using app: ^App_State) 
+draw_ui :: proc(app: ^App_State) 
 {
-	if !show_ui {
+	if !app.show_ui {
 		return
 	}
-
-	@(static) failure: bool
 
 	imgui_impl_opengl3.NewFrame()
 	imgui_impl_sdl3.NewFrame()
@@ -167,16 +163,28 @@ draw_ui :: proc(using app: ^App_State)
 	imgui.SetNextWindowBgAlpha(0.35)
 
 	imgui.Begin("Plotter", flags = {.AlwaysAutoResize})
+		function_input(app)
+		animation_settings(app)
+		coloring_settings(app)
+	imgui.End()
 
-	imgui.PushFontFloat(math_font, 22)
+	imgui.Render()
+	imgui_impl_opengl3.RenderDrawData(imgui.GetDrawData())
+}
+
+function_input :: proc(app: ^App_State)
+{
+	@(static) failure: bool
+
+	imgui.PushFontFloat(app.math_font, 22)
 	imgui.Text("f(z) =")
 	imgui.PopFont()
 
 	imgui.SameLine()
 
-	if imgui.InputText("##function", function, FUNCTION_BUF_SIZE) {
+	if imgui.InputText("##function", app.function, FUNCTION_BUF_SIZE) {
 		err: cstring
-		err, failure = validate(function).?
+		err, failure = validate(app.function).?
 
 		// simply `err != err_msg` as a predicate compiles
 		// when `err` is nil and `err_msg` is a string.
@@ -184,13 +192,13 @@ draw_ui :: proc(using app: ^App_State)
 		if !failure {
 			// if the function hasn't changed since 
 			// last time do we really need to this?
-			time = 0
-			animation_paused = false
+			app.time = 0
+			app.animation_paused = false
 			reload_shaders(app)
 		} else // we have a new error message, show it
-		if err != err_msg {
-			delete(err_msg)
-			err_msg = err
+		if err != app.err_msg {
+			delete(app.err_msg)
+			app.err_msg = err
 		} else // same error message, we dont need this one
 		{
 			delete(err)
@@ -199,135 +207,141 @@ draw_ui :: proc(using app: ^App_State)
 
 	if failure {
 		imgui.PushStyleColorImVec4(.Text, [4]f32{255, 0, 0, 255})
-		imgui.TextWrapped(err_msg)
+		imgui.TextWrapped(app.err_msg)
 		imgui.PopStyleColor()
 	}
+}
 
-	if imgui.CollapsingHeader("Animation Settings") {
-		if vsync {
-			imgui.BeginDisabled()
-		}
+animation_settings :: proc(app: ^App_State)
+{
+	if !imgui.CollapsingHeader("Animation Settings") {
+		return
+	}
 
-		slider_fmt: cstring
-		if framerate >= MAX_FRAMERATE {
-			slider_fmt = "Unlimited FPS!"
-		} else {
-			slider_fmt = "%d FPS"
-		}
+	if app.vsync {
+		imgui.BeginDisabled()
+	}
 
-		imgui.SliderInt("Framerate", &framerate, 5, MAX_FRAMERATE, slider_fmt, {.ClampOnInput})
+	slider_fmt: cstring
+	if app.framerate >= MAX_FRAMERATE {
+		slider_fmt = "Unlimited FPS!"
+	} else {
+		slider_fmt = "%d FPS"
+	}
 
-		if vsync {
-			imgui.EndDisabled()
-		}
+	imgui.SliderInt("Framerate", &app.framerate, 5, MAX_FRAMERATE, slider_fmt, {.ClampOnInput})
 
-		if imgui.Checkbox("Enable VSync", &vsync) {
-			_vsync: i32
-			if ok := sdl.GL_GetSwapInterval(&_vsync); ok {
-				ok &= sdl.GL_SetSwapInterval(_vsync == 0 ? 1 : 0)
-				if !ok {
-					log.warn("Failed to change swap interval. Error msg:", sdl.GetError())
-					vsync = !vsync
-				}
+	if app.vsync {
+		imgui.EndDisabled()
+	}
+
+	if imgui.Checkbox("Enable VSync", &app.vsync) {
+		_vsync: i32
+		if ok := sdl.GL_GetSwapInterval(&_vsync); ok {
+			ok &= sdl.GL_SetSwapInterval(_vsync == 0 ? 1 : 0)
+			if !ok {
+				log.warn("Failed to change swap interval. Error msg:", sdl.GetError())
+				app.vsync = !app.vsync
 			}
-		}
-
-		imgui.SeparatorEx({.Horizontal}, 2)
-
-		imgui.SliderFloat("Anim. Speed", &time_speed, 0.1, 10)
-		imgui.Checkbox("Pause Anim.", &animation_paused)
-		if imgui.Button("Reset Anim.") {
-			time = 0
-			animation_paused = false
 		}
 	}
 
-	if imgui.CollapsingHeader("Coloring Settings") {
-		combo_items: cstring = "HSL Coloring\x00HSLuv Coloring\x00Custom Color Palette\x00Use an Image (doesn't work!)\x00"
+	imgui.SeparatorEx({.Horizontal}, 2)
 
-		if imgui.Combo(
-			"Coloring Method",
-			(^i32)(&coloring_method),
-			combo_items,
+	imgui.SliderFloat("Anim. Speed", &app.time_speed, 0.1, 10)
+	imgui.Checkbox("Pause Anim.", &app.animation_paused)
+	if imgui.Button("Reset Anim.") {
+		app.time = 0
+		app.animation_paused = false
+	}
+}
+
+coloring_settings :: proc(app: ^App_State)
+{
+	if !imgui.CollapsingHeader("Coloring Settings") {
+		return
+	}
+
+	combo_items: cstring = "HSL Coloring\x00HSLuv Coloring\x00Custom Color Palette\x00Use an Image (doesn't work!)\x00"
+
+	if imgui.Combo(
+		"Coloring Method",
+		(^i32)(&app.coloring_method),
+		combo_items,
+	) {
+		app.time = 0
+		app.animation_paused = false
+		reload_shaders(app)
+	}
+
+	switch app.coloring_method {
+	case .Use_HSL, .Use_HSLuv:
+		if imgui.SliderFloat(
+			"Gamma Correction",
+			&app.gamma_correction,
+			-1,
+			1,
 		) {
-			time = 0
-			animation_paused = false
-			reload_shaders(app)
+			opengl.Uniform1f(app.uniforms.gamma_correction, app.gamma_correction)
+		}
+	case .Use_Palette:
+		rand_color :: proc() -> (color: Color) 
+		{
+			color.r = rand.float32()
+			color.g = rand.float32()
+			color.b = rand.float32()
+			return
 		}
 
-		switch coloring_method {
-		case .Use_HSL, .Use_HSLuv:
-			if imgui.SliderFloat(
-				"Gamma Correction",
-				&gamma_correction,
-				-1,
-				1,
-			) {
-				opengl.Uniform1f(uniforms.gamma_correction, gamma_correction)
-			}
-		case .Use_Palette:
-			rand_color :: proc() -> (color: Color) 
-			{
-				color.r = rand.float32()
-				color.g = rand.float32()
-				color.b = rand.float32()
-				return
-			}
+		flags := imgui.ColorEditFlags{.InputRGB, .Float}
+		colors_changed :=
+			imgui.ColorEdit3("A", &app.abcd[0], flags) |
+			imgui.ColorEdit3("B", &app.abcd[1], flags) |
+			imgui.ColorEdit3("C", &app.abcd[2], flags) |
+			imgui.ColorEdit3("D", &app.abcd[3], flags)
 
-			flags := imgui.ColorEditFlags{.InputRGB, .Float}
-			colors_changed :=
-				imgui.ColorEdit3("A", &abcd[0], flags) |
-				imgui.ColorEdit3("B", &abcd[1], flags) |
-				imgui.ColorEdit3("C", &abcd[2], flags) |
-				imgui.ColorEdit3("D", &abcd[3], flags)
+		if imgui.Button("Random Palette") {
+			app.abcd[0] = rand_color()
+			app.abcd[1] = rand_color()
+			app.abcd[2] = rand_color()
+			app.abcd[3] = rand_color()
 
-			if imgui.Button("Random Palette") {
-				abcd[0] = rand_color()
-				abcd[1] = rand_color()
-				abcd[2] = rand_color()
-				abcd[3] = rand_color()
-
-				colors_changed = true
-			}
-
-			if colors_changed {
-				opengl.Uniform3fv(uniforms.abcd, 4, ([^]f32)(&abcd))
-			}
-		case .Use_Texture:
-			if imgui.Button("Choose Image") {
-				sdl.ShowSimpleMessageBox(
-					{.ERROR},
-					"Doesn't Work",
-					"This functionality doesn't work right now, sorry <3",
-					app.window,
-				)
-
-				/*
-				@(static, rodata)
-				filters := [?]sdl.DialogFileFilter {
-					{"PNG & JPEG images", "png;jpg;jpeg"},
-					{"All Files", "*"},
-				}
-
-				// not (windows) asan friendly!
-				sdl.ShowOpenFileDialog(
-					dialog_file_callback,
-					app,
-					app.window,
-					([^]sdl.DialogFileFilter)(&filters),
-					len(filters),
-					nil,
-					false,
-				)
-                */
-			}
-
+			colors_changed = true
 		}
+
+		if colors_changed {
+			opengl.Uniform3fv(app.uniforms.abcd, 4, ([^]f32)(&app.abcd))
+		}
+	case .Use_Texture:
+		if imgui.Button("Choose Image") {
+			sdl.ShowSimpleMessageBox(
+				{.ERROR},
+				"Doesn't Work",
+				"This functionality doesn't work right now, sorry <3",
+				app.window,
+			)
+
+			/*
+			@(static, rodata)
+			filters := [?]sdl.DialogFileFilter {
+				{"PNG & JPEG images", "png;jpg;jpeg"},
+				{"All Files", "*"},
+			}
+
+			// not (windows) asan friendly!
+			sdl.ShowOpenFileDialog(
+				dialog_file_callback,
+				app,
+				app.window,
+				([^]sdl.DialogFileFilter)(&filters),
+				len(filters),
+				nil,
+				false,
+			)
+			*/
+		}
+
 	}
-	imgui.End()
-
-	imgui.Render()
-	imgui_impl_opengl3.RenderDrawData(imgui.GetDrawData())
 }
 
 // doesn't work </3
@@ -338,7 +352,7 @@ dialog_file_callback :: proc "c" (
 ) 
 {
 	context = runtime.default_context()
-	// fmt.println("hi")
+
 	if filelist == nil {
 		return
 	}
