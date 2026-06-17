@@ -688,6 +688,10 @@ vec2 c_abs(vec2 c) {
 	return vec2(length(c), 0.);
 }
 
+vec2 c_ncr(vec2 z, vec2 w) {
+	return c_div(c_gamma(z + vec2(1., 0.)), c_mul(c_gamma(w + vec2(1., 0.)), c_gamma(z - w + vec2(1., 0.))));
+}
+
 vec2 transform_coordinates(vec4 FragCoord)
 {
 	vec2 pos = FragCoord.xy;

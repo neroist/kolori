@@ -15,6 +15,7 @@ import "core:log"
 @(rodata)
 funcs := []string {
 	"gamma",
+	"ncr",
 	"floor",
 	"ceil",
 	"frac",
@@ -63,7 +64,7 @@ funcs := []string {
 
 // functions that require two arguments
 @(rodata)
-binary_funcs := []string{"mod", "logbase"}
+binary_funcs := []string{"ncr", "mod", "logbase"}
 
 @(private = "file")
 translate_expr :: proc(expr: mp.Expression) -> string 
