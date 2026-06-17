@@ -9,7 +9,7 @@ import "core:log"
 import "core:fmt"
 
 GL_State :: struct {
-	abcd:             [4][3]f32,
+	abcd:             [4]Color,
 	uniforms:         Uniforms,
 	shift:            [2]f32,
 	// resolution:       [2]f32,
@@ -23,6 +23,8 @@ GL_State :: struct {
 	gamma_correction: f32,
 }
 
+Color :: [3]f32
+
 // use uniform buffer object and a single "set_uniforms" proc?
 // Uniform :: struct($T: typeid) {
 // 	location: i32,
@@ -33,7 +35,7 @@ GL_State :: struct {
 // 	time:             Uniform(f32),
 // 	resolution:       Uniform([2]f32),
 // 	shift:            Uniform([2]f32),
-// 	abcd:             Uniform([4][3]f32),
+// 	abcd:             Uniform([4]Color),
 // 	gamma_correction: Uniform(f32),
 // }
 

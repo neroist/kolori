@@ -230,7 +230,7 @@ draw_ui :: proc(using app: ^App_State)
 				opengl.Uniform1f(uniforms.gamma_correction, gamma_correction)
 			}
 		case .Use_Palette:
-			rand_color :: proc() -> (color: [3]f32) 
+			rand_color :: proc() -> (color: Color) 
 			{
 				color.r = rand.float32()
 				color.g = rand.float32()
