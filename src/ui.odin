@@ -242,7 +242,7 @@ draw_ui :: proc(using app: ^App_State)
 		}
 	}
 
-	if imgui.CollapsingHeader("Coloring Settings", {.DefaultOpen}) {
+	if imgui.CollapsingHeader("Coloring Settings") {
 		combo_items: cstring = "HSL Coloring\x00HSLuv Coloring\x00Custom Color Palette\x00Use an Image (doesn't work!)\x00"
 
 		if imgui.Combo(
