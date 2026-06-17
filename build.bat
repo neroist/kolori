@@ -1,3 +1,5 @@
+@echo off
+
 if "%1" == "1" (
 	set release_mode=1
 ) else if "%1" == "release" (
@@ -9,5 +11,5 @@ if "%1" == "1" (
 if %release_mode% equ 0 (
 	odin build src -out:kolori.exe -debug -o:none -sanitize:address
 ) else (
-	odin build src -out:kolori,exe
+	odin build src -out:kolori.exe -subsystem:windows
 )
