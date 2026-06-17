@@ -1,24 +1,33 @@
-CC := odin
-CCFLAGS :=
-DEBUG_CCFLAGS := -debug -o:none -sanitize:address
-RELEASE_CCFLAGS := 
+EXECUTABLE := kolori
+DEBUG_FLAGS := -debug -o:none -sanitize:address
+RELEASE_FLAGS := 
 
-ifeq ($(OS),Windows_NT) 
-	detected_OS := Windows
-else
-	detected_OS := $(shell sh -c 'uname 2>/dev/null || echo Unknown')
+# Check for Windows_NT environment variable (cmd.exe/PowerShell)
+OS ?= $(shell echo %OS% 2>/dev/null)  # Fetch %OS% from Windows shell
+ifeq ($(OS),Windows_NT)
+    IS_WINDOWS := 1  # Confirmed Windows (cmd.exe/PowerShell)
 endif
 
-ifeq (detected_OS,Windows)
-	CCFLAGS += -out:kolori.exe
+# Not Windows cmd.exe; check via `uname -s` (Unix-like shells)
+UNAME_S := $(shell uname -s 2>/dev/null)  # Get OS name (e.g., Linux, Darwin)
+
+# Detect Windows subsystems (MINGW64, CYGWIN, etc.)
+ifneq ($(filter MINGW%,$(UNAME_S)),)  # Git Bash/MinGW
+	IS_WINDOWS := 1
+else ifneq ($(filter MSYS%,$(UNAME_S)),)  # MSYS
+	IS_WINDOWS := 1
+else ifneq ($(filter CYGWIN%,$(UNAME_S)),)  # Cygwin
+	IS_WINDOWS := 1
+endif
+# Fallback: Assume Unix-like if unrecognized
+
+ifeq ($(IS_WINDOWS),1)
+	EXECUTABLE := kolori.exe
 	RELEASE_CCFLAGS += -subsystem:windows
-else
-	CCFLAGS += -out:kolori
 endif
 
 debug:
-	$(CC) build src $(CCFLAGS) $(DEBUG_CCFLAGS)
+	odin build src -out:$(EXECUTABLE) $(DEBUG_FLAGS)
 
 release:
-	$(CC) build src $(CCFLAGS) $(RELEASE_CCFLAGS)
-
+	odin build src -out:$(EXECUTABLE) $(RELEASE_FLAGS)
