@@ -168,7 +168,7 @@ draw_ui :: proc(using app: ^App_State)
 
 	imgui.Begin("Plotter", flags = {.AlwaysAutoResize})
 
-	imgui.PushFontFloat(math_font, 22.5)
+	imgui.PushFontFloat(math_font, 22)
 	imgui.Text("f(z) =")
 	imgui.PopFont()
 
