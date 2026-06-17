@@ -213,6 +213,7 @@ draw_ui :: proc(using app: ^App_State)
 			if ok := sdl.GL_GetSwapInterval(&_vsync); ok {
 				ok &= sdl.GL_SetSwapInterval(_vsync == 0 ? 1 : 0)
 				if !ok {
+					log.warn("Failed to change swap interval. Error msg:", sdl.GetError())
 					vsync = !vsync
 				}
 			}

@@ -130,7 +130,7 @@ main :: proc()
 		frame_begin := sdl.GetTicks()
 		defer delta_time = sdl.GetTicks() - frame_begin
 
-		// enforce desired framerate
+		// enforce desired framerate at end of render loop
 		defer if !app.vsync || app.framerate <= MAX_FRAMERATE {
 			enforce_framerate(delta_time, app.framerate)
 		}
@@ -162,7 +162,8 @@ setup_app :: proc(app: ^App_State)
 	app.show_ui = true
 	app.time_speed = 1
 	app.gamma_correction = 0.65
-	app.framerate = 60
+	app.framerate = 60 // if we can, we try to enable vsync automatically
+	                   // otherwise, we operate off of 60 fps
 
 	// initialize to default values
 	app.err_msg = strings.clone_to_cstring("")

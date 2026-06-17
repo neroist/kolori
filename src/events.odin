@@ -31,7 +31,15 @@ handle_event :: proc(app: ^App_State, event: ^sdl.Event)
 	case .QUIT: app.running = false
 	case .WINDOW_RESIZED:
 		width, height: i32
-		sdl.GetWindowSizeInPixels(app.window, &width, &height)
+		if !sdl.GetWindowSizeInPixels(app.window, &width, &height) {
+			log.warn(
+				"[sdl.GetWindowSizeInPixels] Failed to get window size. Error msg:",
+				sdl.GetError()
+			)
+
+			return
+		}
+
 		opengl.Viewport(0, 0, width, height)
 		opengl.Uniform2f(app.uniforms.resolution, (f32)(width), (f32)(height))
 	case .KEY_DOWN:
@@ -79,7 +87,14 @@ handle_key :: proc(app: ^App_State, event: ^sdl.Event)
 	switch event.key.key {
 	case sdl.K_F12:
 		width, height: i32
-		sdl.GetWindowSizeInPixels(app.window, &width, &height)
+		if !sdl.GetWindowSizeInPixels(app.window, &width, &height) {
+			log.warn(
+				"[sdl.GetWindowSizeInPixels] Failed to get window size. Error msg:",
+				sdl.GetError()
+			)
+
+			return
+		}
 
 		take_screenshot(app.window, width, height)
 	case sdl.K_F11, sdl.K_F:
@@ -103,7 +118,8 @@ handle_key :: proc(app: ^App_State, event: ^sdl.Event)
 		}
 
 		reload_shaders(app)
-	case sdl.K_P: app.animation_paused = !app.animation_paused
+	case sdl.K_P:
+		app.animation_paused = !app.animation_paused
 	case sdl.K_H:
 		app.show_ui = !app.show_ui
 
