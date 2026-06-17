@@ -200,7 +200,7 @@ zoom :: proc(app: ^App_State, speed: f32)
 pan :: proc(app: ^App_State, direction: [2]f32, speed: f32 = 1) 
 {
 	width, height: i32
-	sdl.GetWindowSizeInPixels(app.window, &width, &height)
+	sdl.GetWindowSize(app.window, &width, &height)
 
 	scale := (f32)(min(width, height))
 	app.shift += speed * direction / scale * app.zoom
