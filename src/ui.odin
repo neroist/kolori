@@ -105,7 +105,8 @@ setup_imgui :: proc(app: ^App_State)
 	app.io = imgui.GetIO()
 	app.io.ConfigFlags += IMGUI_CONFIG_FLAGS
 
-	style_imgui(app.main_scale)
+	// the ui is too big, scale it down some
+	style_imgui(app.main_scale * 0.75)
 
 	// these are simply the defaults as described in `imgui.odin`
 	font_cfg := imgui.FontConfig{
