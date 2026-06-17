@@ -6,6 +6,7 @@
 - (feature) arbitrary precision rendering
 - (feature) allow for definition and use of arbitrary functions and variables
   see: "Domain Coloring of Complex Functions" by Poelke and Polthier
+- (feature) ctrl-minus and ctrl-plus to scale ui smaller/larger
 - (showcase) heart functions images/gifs
   see: "Heart of Domain Coloring" by Ulrich Reitebuch1 et. al.
 - (linux) libc++ required to build
