@@ -116,7 +116,8 @@ setup_gl :: proc(using app: ^App_State)
 	sdl.GL_SetAttribute(.DOUBLEBUFFER, 1)
 	sdl.GL_SetAttribute(.DEPTH_SIZE, 24)
 	sdl.GL_SetAttribute(.STENCIL_SIZE, 8)
-	sdl.GL_SetSwapInterval(0)
+
+	app.vsync = sdl.GL_SetSwapInterval(1)
 
 	sdl.GL_MakeCurrent(window, gl.ctx)
 

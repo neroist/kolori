@@ -1,5 +1,3 @@
-#+feature using-stmt
-
 package kolori
 
 import "../odin-imgui/imgui_impl_opengl3"
@@ -7,7 +5,6 @@ import "../odin-imgui/imgui_impl_sdl3"
 import opengl "vendor:OpenGL"
 import imgui "../odin-imgui"
 import sdl "vendor:sdl3"
-import "core:math/rand"
 import "base:runtime"
 import "core:strings"
 import "core:c/libc"
@@ -15,17 +12,13 @@ import "core:log"
 import "core:fmt"
 import "core:mem"
 
-// four coloring modes:
-//  1. predefined coloring functions for H, S, and L
-//  2. user-provided coloring functions (HSL)
-//  3. image (texture)
-//  4. palette (https://iquilezles.org/articles/palettes/)
-
 App_State :: struct {
-	using gl: GL_State,
-	using ui: Ui_State,
-	running:  bool,
+	using gl:  GL_State,
+	using ui:  Ui_State,
+	running:   bool,
 }
+
+FUNCTION_BUF_SIZE :: 1024
 
 custom_allocator_proc :: proc(
 	allocator_data: rawptr,
@@ -41,7 +34,7 @@ custom_allocator_proc :: proc(
 {
 	// don't want to "io.write_*" for a bunch of lines...
 	// libc's printf gives us an api similar to fmt.printf's
-	// while not relying on context.allocator, which is nice
+	// while not relying on context.allocator
 	#partial switch mode {
 	case .Alloc, .Alloc_Non_Zeroed:
 		libc.printf(
@@ -104,25 +97,25 @@ main :: proc()
 		}
 	}
 
-	using app: App_State
+	app: App_State
 	setup_app(&app)
 	defer {
-		delete(function)
-		delete(err_msg)
+		delete(app.function)
+		delete(app.err_msg)
 	}
 
 	setup_sdl(&app)
 	defer {
-		sdl.GL_DestroyContext(gl.ctx)
-		sdl.DestroySurface(window_icon)
-		sdl.DestroyWindow(window)
+		sdl.GL_DestroyContext(app.gl.ctx)
+		sdl.DestroySurface(app.window_icon)
+		sdl.DestroyWindow(app.window)
 		sdl.Quit()
 	}
 
 	setup_gl(&app)
 	defer {
-		opengl.DeleteShader(vertex_shader_id)
-		opengl.DeleteProgram(program)
+		opengl.DeleteShader(app.vertex_shader_id)
+		opengl.DeleteProgram(app.program)
 	}
 
 	setup_imgui(&app)
@@ -132,41 +125,62 @@ main :: proc()
 		imgui.DestroyContext()
 	}
 
-	last_time := sdl.GetTicks()
+	delta_time: u64
 	for app.running {
-		process_events(&app)
+		frame_begin := sdl.GetTicks()
+		defer delta_time = sdl.GetTicks() - frame_begin
 
-		// advance time for animations
-		if !animation_paused {
-			delta_time := (f32)(sdl.GetTicks() - last_time)
-			time += delta_time
-			opengl.Uniform1f(uniforms.time, time * 1e-3 * time_speed)
+		// enforce desired framerate
+		defer if !app.vsync || app.framerate <= MAX_FRAMERATE {
+			enforce_framerate(delta_time, app.framerate)
 		}
 
-		last_time = sdl.GetTicks()
+		//
+		process_events(&app)
 
 		// draw everything to window
 		render_graph(&app)
 		draw_ui(&app)
-		sdl.GL_SwapWindow(window)
+		sdl.GL_SwapWindow(app.window)
 
-		// (self-explanitory)
+		// advance time for animations
+		if !app.animation_paused {
+			advance_time(&app, delta_time)
+		}
+		
+		// 
 		free_all(context.temp_allocator)
 	}
 }
 
-setup_app :: proc(using app: ^App_State) 
+setup_app :: proc(app: ^App_State) 
 {
-	running = true
+	app.running = true
 
 	// default settings
-	zoom = 1
-	show_ui = true
-	time_speed = 1
-	gamma_correction = 0.65
+	app.zoom = 1
+	app.show_ui = true
+	app.time_speed = 1
+	app.gamma_correction = 0.65
+	app.framerate = 60
 
 	// initialize to default values
-	err_msg = strings.clone_to_cstring("")
-	function = (cstring)(make([^]u8, 1024))
-	([^]u8)(function)[0] = 'z'
+	app.err_msg = strings.clone_to_cstring("")
+	app.function = (cstring)(make([^]u8, FUNCTION_BUF_SIZE))
+	([^]u8)(app.function)[0] = 'z'
+}
+
+enforce_framerate :: proc (delta: u64, framerate: i32)
+{
+	desired_delta := (u64)(1000 / framerate)
+
+	if (desired_delta > delta) {
+		sdl.Delay((u32)(desired_delta - delta))
+	}
+}
+
+advance_time :: proc (app: ^App_State, delta: u64)
+{
+	app.time += (f32)(delta) * 1e-3
+	opengl.Uniform1f(app.uniforms.time, app.time * app.time_speed)
 }

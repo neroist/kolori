@@ -13,8 +13,6 @@ import "base:runtime"
 import "core:fmt"
 import "core:log"
 
-IMGUI_CONFIG_FLAGS :: imgui.ConfigFlags{.NavEnableKeyboard, .DockingEnable}
-
 Ui_State :: struct {
 	window:           ^sdl.Window,
 	window_icon:      ^sdl.Surface,
@@ -25,6 +23,7 @@ Ui_State :: struct {
 	coloring_method:  Coloring_Method,
 	time_speed:       f32,
 	main_scale:       f32,
+	framerate:        i32,
 	animation_paused: bool,
 	show_ui:          bool,
 	vsync:            bool,
@@ -37,7 +36,9 @@ Coloring_Method :: enum i32 {
 	Use_Texture,
 }
 
+IMGUI_CONFIG_FLAGS :: imgui.ConfigFlags{.NavEnableKeyboard, .DockingEnable}
 APP_ICON_DATA :: #load("../favicon/favicon-64x64.png", []u8)
+MAX_FRAMERATE :: 260
 
 setup_sdl :: proc(using app: ^App_State) 
 {
@@ -57,7 +58,8 @@ setup_sdl :: proc(using app: ^App_State)
 		return
 	}
 
-	main_scale = sdl.GetDisplayContentScale(sdl.GetPrimaryDisplay());
+	display := sdl.GetPrimaryDisplay()
+	main_scale = sdl.GetDisplayContentScale(display)
 	if main_scale == 0 {
 		main_scale = 1
 	}
@@ -159,7 +161,7 @@ draw_ui :: proc(using app: ^App_State)
 
 	imgui.SameLine()
 
-	if imgui.InputText("##function", function, 1024) && len(function) > 0 {
+	if imgui.InputText("##function", function, FUNCTION_BUF_SIZE) && len(function) > 0 {
 		err: cstring
 		err, failure = validate(function).?
 
@@ -189,14 +191,34 @@ draw_ui :: proc(using app: ^App_State)
 	}
 
 	if imgui.CollapsingHeader("Animation Settings") {
+		if vsync {
+			imgui.BeginDisabled()
+		}
+
+		slider_fmt: cstring
+		if framerate >= MAX_FRAMERATE {
+			slider_fmt = "Unlimited FPS!"
+		} else {
+			slider_fmt = "%d FPS"
+		}
+
+		imgui.SliderInt("Framerate", &framerate, 5, MAX_FRAMERATE, slider_fmt, {.ClampOnInput})
+
+		if vsync {
+			imgui.EndDisabled()
+		}
+
 		if imgui.Checkbox("Enable VSync", &vsync) {
 			_vsync: i32
-			ok := sdl.GL_GetSwapInterval(&_vsync)
-			ok &= sdl.GL_SetSwapInterval(_vsync == 0 ? 1 : 0)
-			if !ok {
-				vsync = !vsync
+			if ok := sdl.GL_GetSwapInterval(&_vsync); ok {
+				ok &= sdl.GL_SetSwapInterval(_vsync == 0 ? 1 : 0)
+				if !ok {
+					vsync = !vsync
+				}
 			}
 		}
+
+		imgui.SeparatorEx({.Horizontal}, 2)
 
 		imgui.SliderFloat("Anim. Speed", &time_speed, 0.1, 10)
 		imgui.Checkbox("Pause Anim.", &animation_paused)
