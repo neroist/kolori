@@ -293,7 +293,7 @@ coloring_settings :: proc(app: ^App_State)
 			return
 		}
 
-		flags := imgui.ColorEditFlags{.InputRGB, .Float}
+		flags := imgui.ColorEditFlags{.InputRGB, .Uint8}
 		colors_changed :=
 			imgui.ColorEdit3("A", &app.abcd[0], flags) |
 			imgui.ColorEdit3("B", &app.abcd[1], flags) |
