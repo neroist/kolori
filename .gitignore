@@ -8,6 +8,9 @@ imgui.ini
 # Screenshots from Kolori
 kolori_screenshot*
 
+# Windows compiled resource files (exe icon)
+*.res
+
 # Static libraries
 *.lib
 *.a

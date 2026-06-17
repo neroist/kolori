@@ -1,10 +1,11 @@
-EXECUTABLE := kolori
+FLAGS := 
 DEBUG_FLAGS := -debug -o:none -sanitize:address
 RELEASE_FLAGS := 
+RC :=
+RC_FLAGS :=
 
 # Check for Windows_NT environment variable (cmd.exe/PowerShell)
-OS ?= $(shell echo %OS% 2>/dev/null)  # Fetch %OS% from Windows shell
-ifeq ($(OS),Windows_NT)
+ifeq ($(shell echo %OS% 2>/dev/null),Windows_NT)
     IS_WINDOWS := 1  # Confirmed Windows (cmd.exe/PowerShell)
 endif
 
@@ -22,12 +23,28 @@ endif
 # Fallback: Assume Unix-like if unrecognized
 
 ifeq ($(IS_WINDOWS),1)
-	EXECUTABLE := kolori.exe
-	RELEASE_CCFLAGS += -subsystem:windows
+	FLAGS += -out:kolori.exe
+	RELEASE_FLAGS += -subsystem:windows
+	RELEASE_FLAGS += -extra-linker-flags:icon.res
+
+	ifneq ($(shell rc --version 2>/dev/null),)
+		RC := rc
+		RC_FLAGS += /fo icon.res
+	else
+		RC := windres
+		RC_FLAGS += -O coff -o icon.res
+	endif
+else
+	FLAGS += -out:kolori
 endif
 
 debug:
-	odin build src -out:$(EXECUTABLE) $(DEBUG_FLAGS)
+	odin build src $(FLAGS) $(DEBUG_FLAGS)
 
-release:
-	odin build src -out:$(EXECUTABLE) $(RELEASE_FLAGS)
+release: icon.res
+	odin build src $(FLAGS) $(RELEASE_FLAGS)
+
+icon.res:
+ifeq ($(IS_WINDOWS),1)
+	$(RC) $(RC_FLAGS) ./src/icon.rc
+endif
