@@ -262,7 +262,7 @@ animation_settings :: proc(app: ^App_State)
 
 coloring_settings :: proc(app: ^App_State)
 {
-	if !imgui.CollapsingHeader("Coloring Settings") {
+	if !imgui.CollapsingHeader("Coloring Settings", {.DefaultOpen}) {
 		return
 	}
 
