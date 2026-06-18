@@ -50,8 +50,8 @@ ifeq ($(IS_WINDOWS),1)
 endif
 
 .PHONY clean:
-	rm -f *.bin
-	rm -f *.exe
-	rm -f *.pdb
-	rm -f *.res
-	rm -f kolori_screenshot*.png
+	@rm -f *.bin
+	@rm -f *.exe
+	@rm -f *.pdb
+	@rm -f *.res
+	@rm -f kolori_screenshot*.png
