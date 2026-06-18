@@ -256,7 +256,9 @@ coloring_settings :: proc(app: ^App_State)
 		return
 	}
 
-	combo_items: cstring = "HSL Coloring\x00HSLuv Coloring\x00Custom Color Palette\x00Use an Image (doesn't work!)\x00"
+	combo_items: cstring =
+		!ODIN_DEBUG ? "HSL Coloring\x00HSLuv Coloring\x00Custom Color Palette\x00Use an Image (doesn't work!)\x00" :
+		              "HSL Coloring\x00HSLuv Coloring\x00Custom Color Palette\x00"
 
 	if imgui.Combo(
 		"Coloring Method",
