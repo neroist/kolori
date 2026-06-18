@@ -191,7 +191,6 @@ validate :: proc(source: cstring) -> Maybe(cstring)
 
 	if len(reports) > 0 {
 		err_msg := strings.clone_to_cstring(reports[0].msg)
-		// delete(reports)
 		return err_msg
 	}
 
@@ -200,19 +199,19 @@ validate :: proc(source: cstring) -> Maybe(cstring)
 
 translate :: proc(source: cstring, func_name := "f") -> cstring 
 {
-	expr :=
-		mp.parse(
-			cast(string)(source),
-			funcs,
-			{.Implicit_Multiplication},
-			context.temp_allocator,
-		) or_else unreachable()
+	expr := mp.parse(
+		cast(string)(source),
+		funcs,
+		{.Implicit_Multiplication},
+		context.temp_allocator,
+	) or_else unreachable()
 
 	glsl := fmt.ctprintf(
 		"vec2 %s(vec2 z) {{ return %s; }}",
 		func_name,
 		translate_expr(expr),
 	)
+
 	log.debug("generated glsl:", glsl)
 	return glsl
 }

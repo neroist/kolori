@@ -317,6 +317,56 @@ reload_shaders :: proc(using app: ^App_State)
 	opengl.Uniform1f(uniforms.saturation, saturation)
 	opengl.Uniform1f(uniforms.lightness, lightness)
 }
+
+load_texture :: proc (app: ^App_State, w, h: i32, pixels: [^]u8)
+{
+	opengl.DeleteTextures(1, &app.texture)
+	opengl.GenTextures(1, &app.texture)
+	opengl.BindTexture(opengl.TEXTURE_2D, app.texture)
+
+	// https://stackoverflow.com/a/49126350
+	opengl.PixelStorei(opengl.UNPACK_ALIGNMENT, 1)
+	opengl.PixelStorei(opengl.UNPACK_ROW_LENGTH, 0)
+	opengl.TexImage2D(
+		opengl.TEXTURE_2D,
+		0,
+		opengl.RGB,
+		w,
+		h,
+		0,
+		opengl.RGB,
+		opengl.UNSIGNED_BYTE,
+		pixels,
+	)
+	set_tex_parameters(app.texture_wrap_s, app.texture_wrap_t)
+	opengl.GenerateMipmap(opengl.TEXTURE_2D)
+
+}
+
+set_tex_parameters :: proc (wrap_s, wrap_t: i32)
+{
+	opengl.TexParameteri(
+		opengl.TEXTURE_2D,
+		opengl.TEXTURE_WRAP_S,
+		wrap_s,
+	)
+	opengl.TexParameteri(
+		opengl.TEXTURE_2D,
+		opengl.TEXTURE_WRAP_T,
+		wrap_t,
+	)
+	opengl.TexParameteri(
+		opengl.TEXTURE_2D,
+		opengl.TEXTURE_MIN_FILTER,
+		opengl.LINEAR_MIPMAP_LINEAR
+	)
+	opengl.TexParameteri(
+		opengl.TEXTURE_2D,
+		opengl.TEXTURE_MAG_FILTER,
+		opengl.LINEAR
+	)
+}
+
 debug_proc :: proc "c" (
 	source: u32,
 	type: u32,

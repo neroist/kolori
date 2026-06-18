@@ -2,7 +2,7 @@ package kolori
 
 import "../odin-imgui/imgui_impl_opengl3"
 import "../odin-imgui/imgui_impl_sdl3"
-import stbi "vendor:stb/image"
+import stbi "vendor:stb/image" // consider using sdl_image
 import opengl "vendor:OpenGL"
 import imgui "../odin-imgui"
 import sdl "vendor:sdl3"
@@ -13,6 +13,7 @@ import "core:fmt"
 import "core:log"
 
 Ui_State :: struct {
+	img:              Image_Data,
 	window:           ^sdl.Window,
 	window_icon:      ^sdl.Surface,
 	io:               ^imgui.IO,
@@ -26,9 +27,6 @@ Ui_State :: struct {
 	animation_paused: bool,
 	show_ui:          bool,
 	vsync:            bool,
-	img_set:          bool,
-	img_display_size: [2]f32,
-	img_size_str:     cstring,
 }
 
 Coloring_Method :: enum i32 {
@@ -38,11 +36,19 @@ Coloring_Method :: enum i32 {
 	Use_Image,
 }
 
+Image_Data :: struct {
+	size: [2]i32,
+	display_size: [2]f32,
+	pixels: [^]u8,
+	size_str: cstring,
+	filename: cstring,
+}
+
 IMGUI_CONFIG_FLAGS :: imgui.ConfigFlags{.NavEnableKeyboard, .DockingEnable}
 APP_ICON_DATA :: #load("../favicon/favicon-64x64.png", []u8)
 MAIN_FONT_DATA :: #load("../fonts/DMSans.ttf", []u8)
 MAX_FRAMERATE :: 260
-PREFERED_IMG_SIZE :: 196 // 128, 256
+PREFERRED_IMG_SIZE :: 196 // 128, 256
 
 setup_sdl :: proc(app: ^App_State) 
 {
@@ -176,7 +182,7 @@ function_input :: proc(app: ^App_State)
 	imgui.Text("f(z) =")
 	imgui.PopFont()
 
-	imgui.SameLine()
+	imgui.SameLine() // x-offset: 62-ish
 
 	if imgui.InputText("##function", app.function, FUNCTION_BUF_SIZE) {
 		err: cstring
@@ -322,14 +328,37 @@ coloring_settings :: proc(app: ^App_State)
 			opengl.Uniform3fv(app.uniforms.abcd, 4, ([^]f32)(&app.abcd))
 		}
 	case .Use_Image:
-		if app.img_set {
+		@(static) img_set: bool
+
+		if app.img.pixels != nil {
+			load_texture(app, app.img.size.x, app.img.size.y, app.img.pixels)
+			stbi.image_free(app.img.pixels)
+			app.img.pixels = nil
+
+			delete(app.img.size_str)
+			app.img.size_str = fmt.caprintf("%ix%i", app.img.size.x, app.img.size.y)
+
+			// preserve aspect ratio while resizing to preferred size
+			app.img.display_size = ([2]f32)(app.img.size)
+			if (app.img.size.x >= PREFERRED_IMG_SIZE) || (app.img.size.y >= PREFERRED_IMG_SIZE) {
+				scale_by := PREFERRED_IMG_SIZE / (f32)(max(app.img.size.x, app.img.size.y))
+				app.img.display_size *= scale_by
+			}
+
+			log.infof("Loaded %s image at \"%s\"", app.img.size_str, app.img.filename)
+			img_set = true
+		}
+		
+		if img_set {
 			tex_id := (imgui.TextureID)(app.texture)
 			tex_ref := imgui.TextureRef{_TexID = tex_id}
-			imgui.SetCursorPosX((imgui.GetWindowSize().x - app.img_display_size.x)*0.5)
-			imgui.Image(tex_ref, app.img_display_size, {0, 1}, {1, 0})
+
+			// horizontally center image
+			imgui.SetCursorPosX((imgui.GetWindowSize().x - app.img.display_size.x)*0.5)
+			imgui.Image(tex_ref, app.img.display_size, {0, 1}, {1, 0})
 
 			imgui.PushStyleVarImVec2(.SelectableTextAlign, {0.5, 0.5})
-			imgui.Selectable(app.img_size_str)
+			imgui.Selectable(app.img.size_str)
 			imgui.PopStyleVar()
 		}
 
@@ -341,6 +370,9 @@ coloring_settings :: proc(app: ^App_State)
 				{"All Files", "*"},
 			}
 
+			// multi-threaded on windows, so we can't use opengl functions in
+			// the dialog callback 
+			// also not asan friendly on windows
 			sdl.ShowOpenFileDialog(
 				dialog_file_callback,
 				app,
@@ -354,45 +386,23 @@ coloring_settings :: proc(app: ^App_State)
 
 		imgui.SeparatorText("Image Settings")
 
-		horiz_wrap_normal := app.texture_wrap_s == opengl.REPEAT
-		combo_value: cstring = horiz_wrap_normal ? "Normal" : "Mirrored"
-		opts := [2]i32{opengl.REPEAT, opengl.MIRRORED_REPEAT}
-		if imgui.BeginCombo("Horiz. Repeat", combo_value) {
-			for opt in opts {
-				is_selected := app.texture_wrap_s == opt
-				label: cstring = opt == opengl.REPEAT ? "Normal" : "Mirrored"
-				if imgui.Selectable(label, is_selected) {
-					app.texture_wrap_s = opt
-					set_tex_parameters(app.texture_wrap_s, app.texture_wrap_t)
-				}
+		imgui.Text("Horizontal Repeat:")
+		imgui.SameLine()
+		upd_tex_params := imgui.RadioButtonIntPtr("Normal##norm_wrap_s", &app.texture_wrap_s, opengl.REPEAT)
+		imgui.SameLine()
+		upd_tex_params |= imgui.RadioButtonIntPtr("Mirrored##mirr_wrap_s", &app.texture_wrap_s, opengl.MIRRORED_REPEAT)
+		
+		imgui.Text("Vertical Repeat:")
+		imgui.SameLine()
+		upd_tex_params |= imgui.RadioButtonIntPtr("Normal##norm_wrap_t", &app.texture_wrap_t, opengl.REPEAT)
+		imgui.SameLine()
+		upd_tex_params |= imgui.RadioButtonIntPtr("Mirrored##mirr_wrap_t", &app.texture_wrap_t, opengl.MIRRORED_REPEAT)
 
-				if is_selected {
-					imgui.SetItemDefaultFocus()
-				}
-			}
-
-			imgui.EndCombo()
+		if upd_tex_params {
+			set_tex_parameters(app.texture_wrap_s, app.texture_wrap_t)
 		}
-
-		vert_wrap_normal := app.texture_wrap_t == opengl.REPEAT
-		combo_value = horiz_wrap_normal ? "Normal" : "Mirrored"
-		opts = [2]i32{opengl.REPEAT, opengl.MIRRORED_REPEAT}
-		if imgui.BeginCombo("Vert. Repeat", combo_value) {
-			for opt in opts {
-				is_selected := app.texture_wrap_t == opt
-				label: cstring = opt == opengl.REPEAT ? "Normal" : "Mirrored"
-				if imgui.Selectable(label, is_selected) {
-					app.texture_wrap_t = opt
-					set_tex_parameters(app.texture_wrap_t, app.texture_wrap_t)
-				}
-
-				if is_selected {
-					imgui.SetItemDefaultFocus()
-				}
-			}
-
-			imgui.EndCombo()
-		}
+		// rgba swizzle?
+		// min filter? mag filter?
 	}
 }
 
@@ -402,24 +412,22 @@ dialog_file_callback :: proc "c" (
 	filter: i32,
 ) 
 {
-	context = runtime.default_context()
-
-	if filelist == nil || filelist[0] == nil{
+	if filelist == nil || filelist[0] == nil {
 		return
 	}
-
+	
+	context = runtime.default_context()
 	app := (^App_State)(userdata)
 
-	width, height: i32
 	stbi.set_flip_vertically_on_load((i32)(true))
-	image_data := stbi.load(filelist[0], &width, &height, nil, 3)
-	defer stbi.image_free(image_data)
+	app.img.filename = filelist[0]
+	app.img.pixels = stbi.load(app.img.filename, &app.img.size.x, &app.img.size.y, nil, 3)
 
-	if image_data == nil {
+	if app.img.pixels == nil {
 		msg := fmt.ctprintf(
 			"Failed to load the image file \"%s\". Reason:\n\n\"%s\"",
 			filelist[0],
-			stbi.failure_reason()
+			stbi.failure_reason() // not threadsafe
 		)
 
 		sdl.ShowSimpleMessageBox(
@@ -428,59 +436,7 @@ dialog_file_callback :: proc "c" (
 			msg,
 			app.window,
 		)
-		return
 	}
-	// sdl.GL_MakeCurrent(app.window, app.gl_ctx)
-	// opengl.load_up_to(3, 3, sdl.gl_set_proc_address)
-	// opengl.BindBuffer(opengl.PIXEL_UNPACK_BUFFER, 0)
-	// opengl.BindTexture(opengl.TEXTURE_2D, app.texture)
-
-	app.img_set = false
-	opengl.DeleteTextures(1, &app.texture)
-	opengl.GenTextures(1, &app.texture)
-	opengl.BindTexture(opengl.TEXTURE_2D, app.texture)
-
-	// https://stackoverflow.com/a/49126350
-	opengl.PixelStorei(opengl.UNPACK_ALIGNMENT, 1)
-	opengl.PixelStorei(opengl.UNPACK_ROW_LENGTH, 0)
-	opengl.TexImage2D(
-		opengl.TEXTURE_2D,
-		0,
-		opengl.RGB,
-		width,
-		height,
-		0,
-		opengl.RGB,
-		opengl.UNSIGNED_BYTE,
-		image_data,
-	)
-	set_tex_parameters(app.texture_wrap_s, app.texture_wrap_t)
-	opengl.GenerateMipmap(opengl.TEXTURE_2D)
-
-	app.img_set = true
-
-	delete(app.img_size_str)
-	app.img_size_str = fmt.caprintf("%ix%i", width, height)
-	app.img_display_size = {(f32)(width), (f32)(height)}
-	if width >= PREFERED_IMG_SIZE || height >= PREFERED_IMG_SIZE {
-		// preserve aspect ratio while resizing
-		scale_by := PREFERED_IMG_SIZE / (f32)(max(width, height))
-		app.img_display_size *= scale_by
-	}
-}
-
-set_tex_parameters :: proc (wrap_s, wrap_t: i32)
-{
-	opengl.TexParameteri(
-		opengl.TEXTURE_2D,
-		opengl.TEXTURE_WRAP_S,
-		wrap_s,
-	)
-	opengl.TexParameteri(
-		opengl.TEXTURE_2D,
-		opengl.TEXTURE_WRAP_T,
-		wrap_t,
-	)
 }
 
 /*
