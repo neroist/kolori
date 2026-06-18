@@ -375,7 +375,7 @@ coloring_settings :: proc(app: ^App_State)
 			// the dialog callback 
 			// also not asan friendly on windows
 			sdl.ShowOpenFileDialog(
-				dialog_file_callback,
+				load_image,
 				app,
 				app.window,
 				([^]sdl.DialogFileFilter)(&filters),
@@ -412,10 +412,10 @@ coloring_settings :: proc(app: ^App_State)
 	}
 }
 
-dialog_file_callback :: proc "c" (
-	userdata: rawptr,
+load_image :: proc "c" (
+	app_ptr: rawptr,
 	filelist: [^]cstring,
-	filter: i32,
+	filter: i32 = 0,
 ) 
 {
 	if filelist == nil || filelist[0] == nil {
@@ -423,7 +423,7 @@ dialog_file_callback :: proc "c" (
 	}
 	
 	context = runtime.default_context()
-	app := (^App_State)(userdata)
+	app := (^App_State)(app_ptr)
 
 	stbi.set_flip_vertically_on_load((i32)(true))
 	app.img.filename = strings.clone_from_cstring(filelist[0])

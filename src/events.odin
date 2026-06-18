@@ -76,6 +76,16 @@ handle_event :: proc(app: ^App_State, event: ^sdl.Event)
 			speed: f32 = .LSHIFT in mod_state || .RSHIFT in mod_state ? 2 : 1
 			pan(app, {-event.motion.xrel, event.motion.yrel}, speed)
 		}
+	case .DROP_FILE:
+		log.infof("Recieved file \"%s\"", event.drop.data)
+		load_image(app, &event.drop.data)
+
+		if app.img.pixels != nil {
+			app.time = 0
+			app.animation_paused = false
+			app.coloring_method = .Use_Image
+			reload_shaders(app)
+		}
 	}
 }
 
