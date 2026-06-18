@@ -81,6 +81,7 @@ setup_sdl :: proc(app: ^App_State)
 		(i32)(600 * app.main_scale),
 		window_flags,
 	)
+
 	if app.window == nil {
 		log.fatal(
 			"[sdl.CreateWindow] Failed to create window. Error msg:",
@@ -112,8 +113,7 @@ setup_imgui :: proc(app: ^App_State)
 	app.io = imgui.GetIO()
 	app.io.ConfigFlags += IMGUI_CONFIG_FLAGS
 
-	// the ui is too big, scale it down some
-	style_imgui(app.main_scale * 0.8)
+	style_imgui() // app.main_scale
 
 	// these are simply the defaults as described in `imgui.odin`
 	font_cfg := imgui.FontConfig{
@@ -351,7 +351,7 @@ coloring_settings :: proc(app: ^App_State)
 		
 		if img_set {
 			tex_id := (imgui.TextureID)(app.texture)
-			tex_ref := imgui.TextureRef{_TexID = tex_id}
+			tex_ref := imgui.TextureRef{ _TexID = tex_id }
 
 			// horizontally center image
 			imgui.SetCursorPosX((imgui.GetWindowSize().x - app.img.display_size.x)*0.5)
