@@ -9,7 +9,8 @@ if "%1" == "1" (
 )
 
 if %release_mode% equ 0 (
-	odin build src -out:kolori.exe -show-timings -debug -o:none -sanitize:address
+	REM allow for extra building flags
+	odin build src -out:kolori.exe -show-timings -debug -o:none %*
 ) else (
 	windres .\src\icon.rc -O coff icon.res
 	odin build src -out:kolori.exe -show-timings -subsystem:windows -extra-linker-flags:icon.res

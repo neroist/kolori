@@ -1,5 +1,5 @@
 FLAGS := -show-timings
-DEBUG_FLAGS := -debug -o:none -sanitize:address
+DEBUG_FLAGS := -debug -o:none
 RELEASE_FLAGS := 
 RC :=
 RC_FLAGS :=
