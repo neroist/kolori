@@ -16,9 +16,9 @@ if %release_mode% equ 0 (
 	where rc >nul 2>nul
 	IF %ERRORLEVEL% NEQ 0 (
 		rc /fo icon.res ./src/icon.rc
-	) else {
-		windres -O coff icon.res .\src\icon.rc
-	}
+	) else (
+		windres -O coff -o icon.res .\src\icon.rc
+	)
 
 	REM link compiled resource file into executable
 	odin build src -out:kolori.exe -show-timings -subsystem:windows -extra-linker-flags:icon.res
