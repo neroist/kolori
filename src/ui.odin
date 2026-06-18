@@ -93,7 +93,6 @@ setup_sdl :: proc(app: ^App_State)
 	sdl.ShowWindow(app.window)
 }
 
-// @(deferred_none=deinit_imgui)
 setup_imgui :: proc(app: ^App_State) 
 {
 	imgui.CreateContext()
@@ -124,13 +123,6 @@ setup_imgui :: proc(app: ^App_State)
 		18,
 		&font_cfg
 	)
-}
-
-deinit_imgui :: proc() 
-{
-	imgui_impl_opengl3.Shutdown()
-	imgui_impl_sdl3.Shutdown()
-	imgui.DestroyContext()
 }
 
 style_imgui :: proc(scale: f32 = 1) 
@@ -224,6 +216,8 @@ animation_settings :: proc(app: ^App_State)
 
 	slider_fmt: cstring
 	if app.framerate >= MAX_FRAMERATE {
+		// *whiirrrrrr*
+		// "why is my computer making weird noises?"
 		slider_fmt = "Unlimited FPS!"
 	} else {
 		slider_fmt = "%d FPS"
@@ -427,3 +421,17 @@ dialog_file_callback :: proc "c" (
 	)
 	opengl.GenerateMipmap(opengl.TEXTURE_2D)
 }
+
+/*
+window_size_in_px :: proc (win: ^sdl.Window) -> (w, h: i32)
+{
+	sdl.GetWindowSizeInPixels(win, &w, &h)
+	return w, h
+}
+
+window_size :: proc (win: ^sdl.Window) -> (w, h: i32)
+{
+	sdl.GetWindowSize(win, &w, &h)
+	return w, h
+}
+*/
