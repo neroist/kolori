@@ -48,3 +48,10 @@ icon.res:
 ifeq ($(IS_WINDOWS),1)
 	$(RC) $(RC_FLAGS) ./src/icon.rc
 endif
+
+.PHONY clean:
+	rm -f *.bin
+	rm -f *.exe
+	rm -f *.pdb
+	rm -f *.res
+	rm -f kolori_screenshot*.png
