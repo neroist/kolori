@@ -101,7 +101,7 @@ handle_key :: proc(app: ^App_State, event: ^sdl.Event)
 		is_fullscreen := .FULLSCREEN in sdl.GetWindowFlags(app.window)
 		sdl.SetWindowFullscreen(app.window, !is_fullscreen)
 		sdl.SyncWindow(app.window)
-	case sdl.K_ESCAPE:
+	case sdl.K_Z:
 		if ctrl_key || shift_key {
 			app.time = 0
 			app.animation_paused = false

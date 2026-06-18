@@ -1,11 +1,13 @@
-## What is this?
-Kolori ("to color" in Esperanto) is an application that allows you to create
+# Kolori
+**Kolori** ("to color" in Esperanto) is an application that allows you to create
 beautiful images from mathematical functions. 
+
+![App icon](./gallery/misc/shades.png)
 
 An important note--users with epilepsy are not recommended to use the
 animation feature (using "t" in your function input) with high speed values or
 otherwise rapidly-changing functions. Zooming out too far during an animation
-is also recommended. This advice is very general and depends heavily on the
+is also not recommended. This advice is very general and depends heavily on the
 function being graphed. Still stay cautious, however.
 
 ### Gallery
@@ -21,11 +23,11 @@ device you may also simply use your finger.
 - `r` to reload shaders. Hold `Shift` to also reset zoom and pan.
 - `p` to pause/unpause animations. Animations will also unpause when switching
 functions.
+- `z` to reset zoom and pan. Hold `Shift` to also reset animations (set time to
+zero). Hold `Ctrl` to only perform the latter.
 - `f` or `F11` to toggle fullscreen.
 - `F12` to take a screenshot. It will be saved in the curent woking directory
 with filename `kolori_screenshotDD-MM-YYYY_HHMMSS.png`.
-- `ESC` to reset zoom and pan. Hold `Shift` to also reset animations (set time to
-zero). Hold `Ctrl` to only perform the latter.
 
 You may always hold `Shift` to zoom/pan faster.
 
