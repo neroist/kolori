@@ -7,6 +7,7 @@ import opengl "vendor:OpenGL"
 import imgui "../odin-imgui"
 import sdl "vendor:sdl3"
 import "core:math/rand"
+import "core:strings"
 import "base:runtime"
 import "core:math"
 import "core:fmt"
@@ -37,11 +38,11 @@ Coloring_Method :: enum i32 {
 }
 
 Image_Data :: struct {
+	filename: string,
 	size: [2]i32,
 	display_size: [2]f32,
 	pixels: [^]u8,
 	size_str: cstring,
-	filename: cstring,
 }
 
 IMGUI_CONFIG_FLAGS :: imgui.ConfigFlags{.NavEnableKeyboard, .DockingEnable}
@@ -188,12 +189,12 @@ function_input :: proc(app: ^App_State)
 		err: cstring
 		err, failure = validate(app.function).?
 
-		// simply `err != err_msg` as a predicate compiles
+		// `err != err_msg` as a predicate compiles
 		// when `err` is nil and `err_msg` is a string.
 		// what does that even do?
 		if !failure {
 			// if the function hasn't changed since 
-			// last time do we really need to this?
+			// last time do we really need to do this?
 			app.time = 0
 			app.animation_paused = false
 			reload_shaders(app)
@@ -386,21 +387,26 @@ coloring_settings :: proc(app: ^App_State)
 
 		imgui.SeparatorText("Image Settings")
 
+		upd_tex_params: bool
+		defer if upd_tex_params {
+			set_tex_parameters(app.texture_wrap_s, app.texture_wrap_t)
+		}
+
 		imgui.Text("Horizontal Repeat:")
 		imgui.SameLine()
-		upd_tex_params := imgui.RadioButtonIntPtr("Normal##norm_wrap_s", &app.texture_wrap_s, opengl.REPEAT)
+		upd_tex_params |=
+			imgui.RadioButtonIntPtr("Normal##norm_wrap_s", &app.texture_wrap_s, opengl.REPEAT)
 		imgui.SameLine()
-		upd_tex_params |= imgui.RadioButtonIntPtr("Mirrored##mirr_wrap_s", &app.texture_wrap_s, opengl.MIRRORED_REPEAT)
+		upd_tex_params |=
+			imgui.RadioButtonIntPtr("Mirrored##mirr_wrap_s", &app.texture_wrap_s, opengl.MIRRORED_REPEAT)
 		
 		imgui.Text("Vertical Repeat:")
 		imgui.SameLine()
-		upd_tex_params |= imgui.RadioButtonIntPtr("Normal##norm_wrap_t", &app.texture_wrap_t, opengl.REPEAT)
+		upd_tex_params |= 
+			imgui.RadioButtonIntPtr("Normal##norm_wrap_t", &app.texture_wrap_t, opengl.REPEAT)
 		imgui.SameLine()
-		upd_tex_params |= imgui.RadioButtonIntPtr("Mirrored##mirr_wrap_t", &app.texture_wrap_t, opengl.MIRRORED_REPEAT)
-
-		if upd_tex_params {
-			set_tex_parameters(app.texture_wrap_s, app.texture_wrap_t)
-		}
+		upd_tex_params |=
+			imgui.RadioButtonIntPtr("Mirrored##mirr_wrap_t", &app.texture_wrap_t, opengl.MIRRORED_REPEAT)
 		// rgba swizzle?
 		// min filter? mag filter?
 	}
@@ -420,8 +426,8 @@ dialog_file_callback :: proc "c" (
 	app := (^App_State)(userdata)
 
 	stbi.set_flip_vertically_on_load((i32)(true))
-	app.img.filename = filelist[0]
-	app.img.pixels = stbi.load(app.img.filename, &app.img.size.x, &app.img.size.y, nil, 3)
+	app.img.filename = strings.clone_from_cstring(filelist[0])
+	app.img.pixels = stbi.load(filelist[0], &app.img.size.x, &app.img.size.y, nil, 3)
 
 	if app.img.pixels == nil {
 		msg := fmt.ctprintf(
