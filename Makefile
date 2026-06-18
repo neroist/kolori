@@ -1,4 +1,4 @@
-FLAGS := 
+FLAGS := -show-timings
 DEBUG_FLAGS := -debug -o:none -sanitize:address
 RELEASE_FLAGS := 
 RC :=
