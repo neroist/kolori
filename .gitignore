@@ -8,6 +8,9 @@ imgui.ini
 # Screenshots from Kolori
 kolori_screenshot*
 
+# Release bundles
+*.zip
+
 # Windows compiled resource files (exe icon)
 *.res
 
