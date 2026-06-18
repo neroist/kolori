@@ -2,7 +2,7 @@
 **Kolori** ("to color" in Esperanto) is an application that allows you to create
 beautiful images from mathematical functions. 
 
-![App icon](./gallery/misc/shades.png)
+![Demo image](./gallery/misc/shades.png)
 
 An important note--users with epilepsy are not recommended to use the
 animation feature (using "t" in your function input) with high speed values or
