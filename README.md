@@ -23,7 +23,7 @@ device you may also simply use your finger.
 - `r` to reload shaders. Hold `Shift` to also reset zoom and pan.
 - `p` to pause/unpause animations. Animations will also unpause when switching
 functions.
-- `z` to reset zoom and pan. Hold `Shift` to also reset animations (set time to
+- `q` to reset zoom and pan. Hold `Shift` to also reset animations (set time to
 zero). Hold `Ctrl` to only perform the latter.
 - `f` or `F11` to toggle fullscreen.
 - `F12` to take a screenshot. It will be saved in the curent woking directory
