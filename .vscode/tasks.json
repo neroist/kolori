@@ -6,7 +6,7 @@
         {
             "label": "build",
             "type": "shell",
-            "command": "odin build . -debug -o:none",
+            "command": "odin build src -debug -o:none",
             "group": "build"
         }
     ]

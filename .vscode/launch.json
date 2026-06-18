@@ -9,7 +9,7 @@
             "type": "lldb",
             "preLaunchTask": "build",
             "request": "launch",
-            "program": "${workspaceRoot}/kolori",
+            "program": "${workspaceRoot}/src",
             "cwd": "${workspaceRoot}"
         }
     ]
