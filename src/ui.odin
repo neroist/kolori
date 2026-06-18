@@ -26,19 +26,23 @@ Ui_State :: struct {
 	animation_paused: bool,
 	show_ui:          bool,
 	vsync:            bool,
+	img_set:          bool,
+	img_display_size: [2]f32,
+	img_size_str:     cstring,
 }
 
 Coloring_Method :: enum i32 {
 	Use_HSL,
 	Use_HSLuv,
 	Use_Palette,
-	Use_Texture,
+	Use_Image,
 }
 
 IMGUI_CONFIG_FLAGS :: imgui.ConfigFlags{.NavEnableKeyboard, .DockingEnable}
 APP_ICON_DATA :: #load("../favicon/favicon-64x64.png", []u8)
 MAIN_FONT_DATA :: #load("../fonts/DMSans.ttf", []u8)
 MAX_FRAMERATE :: 260
+PREFERED_IMG_SIZE :: 196 // 128, 256
 
 setup_sdl :: proc(app: ^App_State) 
 {
@@ -257,8 +261,7 @@ coloring_settings :: proc(app: ^App_State)
 	}
 
 	combo_items: cstring =
-		!ODIN_DEBUG ? "HSL Coloring\x00HSLuv Coloring\x00Custom Color Palette\x00Use an Image (doesn't work!)\x00" :
-		              "HSL Coloring\x00HSLuv Coloring\x00Custom Color Palette\x00"
+		"HSL Coloring\x00HSLuv Coloring\x00Custom Color Palette\x00Use an Image\x00" 
 
 	if imgui.Combo(
 		"Coloring Method",
@@ -269,6 +272,8 @@ coloring_settings :: proc(app: ^App_State)
 		app.animation_paused = false
 		reload_shaders(app)
 	}
+
+	imgui.SeparatorText("Configuration")
 
 	switch app.coloring_method {
 	case .Use_HSL, .Use_HSLuv:
@@ -316,23 +321,26 @@ coloring_settings :: proc(app: ^App_State)
 		if colors_changed {
 			opengl.Uniform3fv(app.uniforms.abcd, 4, ([^]f32)(&app.abcd))
 		}
-	case .Use_Texture:
-		if imgui.Button("Choose Image") {
-			sdl.ShowSimpleMessageBox(
-				{.ERROR},
-				"Doesn't Work",
-				"This functionality doesn't work right now, sorry <3",
-				app.window,
-			)
+	case .Use_Image:
+		if app.img_set {
+			tex_id := (imgui.TextureID)(app.texture)
+			tex_ref := imgui.TextureRef{_TexID = tex_id}
+			imgui.SetCursorPosX((imgui.GetWindowSize().x - app.img_display_size.x)*0.5)
+			imgui.Image(tex_ref, app.img_display_size, {0, 1}, {1, 0})
 
-			/*
+			imgui.PushStyleVarImVec2(.SelectableTextAlign, {0.5, 0.5})
+			imgui.Selectable(app.img_size_str)
+			imgui.PopStyleVar()
+		}
+
+		if imgui.Button("Choose Image") {			
+			// stb image supports JPG, PNG, TGA, BMP, PSD, GIF, HDR, and PIC images
 			@(static, rodata)
 			filters := [?]sdl.DialogFileFilter {
-				{"PNG & JPEG images", "png;jpg;jpeg"},
+				{"Image files", "jpg;jpeg;png;tga;bmp;psd;gif;hdr;pic"},
 				{"All Files", "*"},
 			}
 
-			// not (windows) asan friendly!
 			sdl.ShowOpenFileDialog(
 				dialog_file_callback,
 				app,
@@ -342,13 +350,52 @@ coloring_settings :: proc(app: ^App_State)
 				nil,
 				false,
 			)
-			*/
 		}
 
+		imgui.SeparatorText("Image Settings")
+
+		horiz_wrap_normal := app.texture_wrap_s == opengl.REPEAT
+		combo_value: cstring = horiz_wrap_normal ? "Normal" : "Mirrored"
+		opts := [2]i32{opengl.REPEAT, opengl.MIRRORED_REPEAT}
+		if imgui.BeginCombo("Horiz. Repeat", combo_value) {
+			for opt in opts {
+				is_selected := app.texture_wrap_s == opt
+				label: cstring = opt == opengl.REPEAT ? "Normal" : "Mirrored"
+				if imgui.Selectable(label, is_selected) {
+					app.texture_wrap_s = opt
+					set_tex_parameters(app.texture_wrap_s, app.texture_wrap_t)
+				}
+
+				if is_selected {
+					imgui.SetItemDefaultFocus()
+				}
+			}
+
+			imgui.EndCombo()
+		}
+
+		vert_wrap_normal := app.texture_wrap_t == opengl.REPEAT
+		combo_value = horiz_wrap_normal ? "Normal" : "Mirrored"
+		opts = [2]i32{opengl.REPEAT, opengl.MIRRORED_REPEAT}
+		if imgui.BeginCombo("Vert. Repeat", combo_value) {
+			for opt in opts {
+				is_selected := app.texture_wrap_t == opt
+				label: cstring = opt == opengl.REPEAT ? "Normal" : "Mirrored"
+				if imgui.Selectable(label, is_selected) {
+					app.texture_wrap_t = opt
+					set_tex_parameters(app.texture_wrap_t, app.texture_wrap_t)
+				}
+
+				if is_selected {
+					imgui.SetItemDefaultFocus()
+				}
+			}
+
+			imgui.EndCombo()
+		}
 	}
 }
 
-// doesn't work </3
 dialog_file_callback :: proc "c" (
 	userdata: rawptr,
 	filelist: [^]cstring,
@@ -357,21 +404,22 @@ dialog_file_callback :: proc "c" (
 {
 	context = runtime.default_context()
 
-	if filelist == nil {
+	if filelist == nil || filelist[0] == nil{
 		return
 	}
 
 	app := (^App_State)(userdata)
 
-	width, height, channels: i32
+	width, height: i32
 	stbi.set_flip_vertically_on_load((i32)(true))
-	image_data := stbi.load(filelist[0], &width, &height, &channels, 0)
+	image_data := stbi.load(filelist[0], &width, &height, nil, 3)
 	defer stbi.image_free(image_data)
 
 	if image_data == nil {
 		msg := fmt.ctprintf(
-			"Failed to load the image file \"%s\".",
+			"Failed to load the image file \"%s\". Reason:\n\n\"%s\"",
 			filelist[0],
+			stbi.failure_reason()
 		)
 
 		sdl.ShowSimpleMessageBox(
@@ -386,42 +434,53 @@ dialog_file_callback :: proc "c" (
 	// opengl.load_up_to(3, 3, sdl.gl_set_proc_address)
 	// opengl.BindBuffer(opengl.PIXEL_UNPACK_BUFFER, 0)
 	// opengl.BindTexture(opengl.TEXTURE_2D, app.texture)
+
+	app.img_set = false
 	opengl.DeleteTextures(1, &app.texture)
+	opengl.GenTextures(1, &app.texture)
+	opengl.BindTexture(opengl.TEXTURE_2D, app.texture)
+
+	// https://stackoverflow.com/a/49126350
+	opengl.PixelStorei(opengl.UNPACK_ALIGNMENT, 1)
+	opengl.PixelStorei(opengl.UNPACK_ROW_LENGTH, 0)
 	opengl.TexImage2D(
 		opengl.TEXTURE_2D,
 		0,
-		channels == 4 ? opengl.RGBA : opengl.RGB,
-		// opengl.RGB,
+		opengl.RGB,
 		width,
 		height,
 		0,
-		channels == 4 ? opengl.RGBA : opengl.RGB,
-		// opengl.RGB,
+		opengl.RGB,
 		opengl.UNSIGNED_BYTE,
 		image_data,
 	)
+	set_tex_parameters(app.texture_wrap_s, app.texture_wrap_t)
+	opengl.GenerateMipmap(opengl.TEXTURE_2D)
 
+	app.img_set = true
+
+	delete(app.img_size_str)
+	app.img_size_str = fmt.caprintf("%ix%i", width, height)
+	app.img_display_size = {(f32)(width), (f32)(height)}
+	if width >= PREFERED_IMG_SIZE || height >= PREFERED_IMG_SIZE {
+		// preserve aspect ratio while resizing
+		scale_by := PREFERED_IMG_SIZE / (f32)(max(width, height))
+		app.img_display_size *= scale_by
+	}
+}
+
+set_tex_parameters :: proc (wrap_s, wrap_t: i32)
+{
 	opengl.TexParameteri(
 		opengl.TEXTURE_2D,
 		opengl.TEXTURE_WRAP_S,
-		opengl.REPEAT,
-	) // set texture wrapping to GL_REPEAT (default wrapping method)
+		wrap_s,
+	)
 	opengl.TexParameteri(
 		opengl.TEXTURE_2D,
 		opengl.TEXTURE_WRAP_T,
-		opengl.REPEAT,
+		wrap_t,
 	)
-	opengl.TexParameteri(
-		opengl.TEXTURE_2D,
-		opengl.TEXTURE_MIN_FILTER,
-		opengl.LINEAR_MIPMAP_LINEAR,
-	)
-	opengl.TexParameteri(
-		opengl.TEXTURE_2D,
-		opengl.TEXTURE_MAG_FILTER,
-		opengl.LINEAR,
-	)
-	opengl.GenerateMipmap(opengl.TEXTURE_2D)
 }
 
 /*

@@ -23,6 +23,10 @@ GL_State :: struct {
 	gamma_correction: f32,
 	saturation:       f32,
 	lightness:        f32,
+	texture_wrap_s:   i32,
+	texture_wrap_t:   i32,
+	texture_min_fltr: i32,
+	texture_mag_fltr: i32,
 }
 
 Color :: [3]f32
@@ -188,6 +192,10 @@ setup_gl :: proc(using app: ^App_State)
 
 	opengl.GenTextures(1, &texture)
 	opengl.BindTexture(opengl.TEXTURE_2D, texture)
+	app.texture_wrap_s = opengl.REPEAT // these are the default
+	app.texture_wrap_t = opengl.REPEAT
+	app.texture_min_fltr = opengl.LINEAR_MIPMAP_LINEAR
+	app.texture_mag_fltr = opengl.LINEAR
 
 	vbo: u32
 	opengl.GenBuffers(1, &vbo)
@@ -275,7 +283,7 @@ reload_shaders :: proc(using app: ^App_State)
 		.Use_HSL     = "#define USE_HSL\n",
 		.Use_HSLuv   = "#define USE_HSLUV\n",
 		.Use_Palette = "#define USE_PALETTE\n",
-		.Use_Texture = "#define USE_TEXTURE\n",
+		.Use_Image   = "#define USE_IMAGE\n",
 	}
 
 	// we all <3 pointer arithmetic!

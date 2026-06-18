@@ -732,7 +732,7 @@ vec4 color_rgb(vec2 z)
 }
 
 
-vec4 color_texture(vec2 z)
+vec4 color_image(vec2 z)
 {
 	return vec4(texture(tex, z).xyz, 1.);
 }
@@ -751,8 +751,8 @@ void main()
 {
 	vec2 z = transform_coordinates(gl_FragCoord);
 
-	#if defined(USE_TEXTURE)
-		FragColor = color_texture(f(z));
+	#if defined(USE_IMAGE)
+		FragColor = color_image(f(z));
 	#elif defined(USE_PALETTE)
 		// maybe compose f with a function g:C->R?
 		FragColor = color_palette(f(z).x, abcd[0], abcd[1], abcd[2], abcd[3]);
