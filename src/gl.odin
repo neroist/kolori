@@ -1,5 +1,3 @@
-#+feature using-stmt
-
 package kolori
 
 import opengl "vendor:OpenGL"
@@ -73,10 +71,10 @@ VERTEX_SHADER := #load("shaders/graph.vert", string)
 @(rodata)
 FRAGMENT_SHADER := #load("shaders/graph.frag", cstring)
 
-setup_gl :: proc(using app: ^App_State) 
+setup_gl :: proc(app: ^App_State) 
 {
-	ctx = sdl.GL_CreateContext(window)
-	if ctx == nil {
+	app.gl.ctx = sdl.GL_CreateContext(app.window)
+	if app.gl.ctx == nil {
 		log.fatal(
 			"[sdl.GL_CreateContext] Failed to create an OpenGL context. Error msg:",
 			sdl.GetError(),
@@ -108,7 +106,7 @@ setup_gl :: proc(using app: ^App_State)
 
 	app.vsync = sdl.GL_SetSwapInterval(1)
 
-	sdl.GL_MakeCurrent(window, gl.ctx)
+	sdl.GL_MakeCurrent(app.window, app.gl.ctx)
 
 	opengl.load_up_to(
 		GL_MAJOR_VERSION,
@@ -123,7 +121,7 @@ setup_gl :: proc(using app: ^App_State)
 	}
 
 	width, height: i32
-	sdl.GetWindowSizeInPixels(window, &width, &height)
+	sdl.GetWindowSizeInPixels(app.window, &width, &height)
 	opengl.Viewport(0, 0, width, height)
 
 	vertices := [?]f32 {
@@ -138,11 +136,11 @@ setup_gl :: proc(using app: ^App_State)
 		-1,
 	}
 
-	opengl.GenVertexArrays(1, &vao)
-	opengl.BindVertexArray(vao)
+	opengl.GenVertexArrays(1, &app.vao)
+	opengl.BindVertexArray(app.vao)
 
-	opengl.GenTextures(1, &texture)
-	opengl.BindTexture(opengl.TEXTURE_2D, texture)
+	opengl.GenTextures(1, &app.texture)
+	opengl.BindTexture(opengl.TEXTURE_2D, app.texture)
 	app.texture_wrap_s = opengl.REPEAT // these are the default
 	app.texture_wrap_t = opengl.REPEAT
 	app.texture_min_fltr = opengl.LINEAR_MIPMAP_LINEAR
@@ -171,7 +169,7 @@ setup_gl :: proc(using app: ^App_State)
 	opengl.EnableVertexAttribArray(0)
 
 	ok: bool
-	vertex_shader_id, ok = opengl.compile_shader_from_source(
+	app.vertex_shader_id, ok = opengl.compile_shader_from_source(
 		VERTEX_SHADER,
 		.VERTEX_SHADER,
 	)
@@ -180,13 +178,13 @@ setup_gl :: proc(using app: ^App_State)
 	}
 
 	reload_shaders(app)
-	opengl.Uniform1i(opengl.GetUniformLocation(program, "tex"), 0)
+	opengl.Uniform1i(opengl.GetUniformLocation(app.program, "tex"), 0)
 }
 
-render_graph :: proc(using app: ^App_State) 
+render_graph :: proc(app: ^App_State) 
 {
-	opengl.UseProgram(program)
-	opengl.BindVertexArray(vao)
+	opengl.UseProgram(app.program)
+	opengl.BindVertexArray(app.vao)
 
 	// Draw commands.
 	opengl.ClearColor(0.1, 0.1, 0.1, 1)
@@ -199,7 +197,7 @@ render_graph :: proc(using app: ^App_State)
 	)
 }
 
-reload_shaders :: proc(using app: ^App_State) 
+reload_shaders :: proc(app: ^App_State) 
 {
 	compile_fragment_shader :: proc(sources: []cstring) -> (id: u32, ok: bool) 
 	{
@@ -227,7 +225,7 @@ reload_shaders :: proc(using app: ^App_State)
 	}
 
 	opengl.UseProgram(0)
-	opengl.DeleteProgram(program)
+	opengl.DeleteProgram(app.program)
 
 	@(static, rodata)
 	coloring_method_headers := [Coloring_Method]cstring {
@@ -244,9 +242,9 @@ reload_shaders :: proc(using app: ^App_State)
 	fragment_shader_id, ok := compile_fragment_shader(
 		{
 			"#version 300 es\n",
-			coloring_method_headers[coloring_method],
+			coloring_method_headers[app.coloring_method],
 			frag_wanted_part,
-			translate(function),
+			translate(app.function),
 		},
 	)
 	defer opengl.DeleteShader(fragment_shader_id)
@@ -265,14 +263,14 @@ reload_shaders :: proc(using app: ^App_State)
 		)
 
 		log.fatal(msg)
-		sdl.ShowSimpleMessageBox({.ERROR}, "Failure!", msg, window)
+		sdl.ShowSimpleMessageBox({.ERROR}, "Failure!", msg, app.window)
 		app.running = false
 
 		return
 	}
 
-	program, ok = opengl.create_and_link_program(
-		{vertex_shader_id, fragment_shader_id},
+	app.program, ok = opengl.create_and_link_program(
+		{app.vertex_shader_id, fragment_shader_id},
 	)
 
 	if !ok {
@@ -283,42 +281,42 @@ reload_shaders :: proc(using app: ^App_State)
 		)
 
 		log.fatal(msg)
-		sdl.ShowSimpleMessageBox({.ERROR}, "Failure!", msg, window)
+		sdl.ShowSimpleMessageBox({.ERROR}, "Failure!", msg, app.window)
 		app.running = false
 
 		return
 	}
 
-	opengl.UseProgram(program)
+	opengl.UseProgram(app.program)
 
-	uniforms = {
-		zoom             = opengl.GetUniformLocation(program, "zoom"),
-		time             = opengl.GetUniformLocation(program, "time"),
-		resolution       = opengl.GetUniformLocation(program, "resolution"),
-		shift            = opengl.GetUniformLocation(program, "shift"),
-		abcd             = opengl.GetUniformLocation(program, "abcd"),
-		saturation       = opengl.GetUniformLocation(program, "saturation"),
-		lightness        = opengl.GetUniformLocation(program, "lightness"),
+	app.uniforms = {
+		zoom             = opengl.GetUniformLocation(app.program, "zoom"),
+		time             = opengl.GetUniformLocation(app.program, "time"),
+		resolution       = opengl.GetUniformLocation(app.program, "resolution"),
+		shift            = opengl.GetUniformLocation(app.program, "shift"),
+		abcd             = opengl.GetUniformLocation(app.program, "abcd"),
+		saturation       = opengl.GetUniformLocation(app.program, "saturation"),
+		lightness        = opengl.GetUniformLocation(app.program, "lightness"),
 		gamma_correction = opengl.GetUniformLocation(
-			program,
+			app.program,
 			"gamma_correction",
 		),
 	}
 
 	width, height: i32
-	sdl.GetWindowSizeInPixels(window, &width, &height)
+	sdl.GetWindowSizeInPixels(app.window, &width, &height)
 	opengl.Viewport(0, 0, width, height)
-	opengl.Uniform2f(uniforms.resolution, (f32)(width), (f32)(height))
-	opengl.Uniform2f(uniforms.shift, shift.x, shift.y)
-	opengl.Uniform1f(uniforms.zoom, zoom)
-	opengl.Uniform1f(uniforms.time, time)
-	opengl.Uniform1f(uniforms.gamma_correction, gamma_correction)
-	opengl.Uniform3fv(uniforms.abcd, 4, ([^]f32)(&abcd))
-	opengl.Uniform1f(uniforms.saturation, saturation)
-	opengl.Uniform1f(uniforms.lightness, lightness)
+	opengl.Uniform2f(app.uniforms.resolution, (f32)(width), (f32)(height))
+	opengl.Uniform2f(app.uniforms.shift, app.shift.x, app.shift.y)
+	opengl.Uniform1f(app.uniforms.zoom, app.zoom)
+	opengl.Uniform1f(app.uniforms.time, app.time)
+	opengl.Uniform1f(app.uniforms.gamma_correction, app.gamma_correction)
+	opengl.Uniform3fv(app.uniforms.abcd, 4, ([^]f32)(&app.abcd))
+	opengl.Uniform1f(app.uniforms.saturation, app.saturation)
+	opengl.Uniform1f(app.uniforms.lightness, app.lightness)
 }
 
-load_texture :: proc (app: ^App_State, w, h: i32, pixels: [^]u8)
+load_texture :: proc(app: ^App_State, w, h: i32, pixels: [^]u8) 
 {
 	opengl.DeleteTextures(1, &app.texture)
 	opengl.GenTextures(1, &app.texture)
@@ -343,27 +341,19 @@ load_texture :: proc (app: ^App_State, w, h: i32, pixels: [^]u8)
 
 }
 
-set_tex_parameters :: proc (wrap_s, wrap_t: i32)
+set_tex_parameters :: proc(wrap_s, wrap_t: i32) 
 {
-	opengl.TexParameteri(
-		opengl.TEXTURE_2D,
-		opengl.TEXTURE_WRAP_S,
-		wrap_s,
-	)
-	opengl.TexParameteri(
-		opengl.TEXTURE_2D,
-		opengl.TEXTURE_WRAP_T,
-		wrap_t,
-	)
+	opengl.TexParameteri(opengl.TEXTURE_2D, opengl.TEXTURE_WRAP_S, wrap_s)
+	opengl.TexParameteri(opengl.TEXTURE_2D, opengl.TEXTURE_WRAP_T, wrap_t)
 	opengl.TexParameteri(
 		opengl.TEXTURE_2D,
 		opengl.TEXTURE_MIN_FILTER,
-		opengl.LINEAR_MIPMAP_LINEAR
+		opengl.LINEAR_MIPMAP_LINEAR,
 	)
 	opengl.TexParameteri(
 		opengl.TEXTURE_2D,
 		opengl.TEXTURE_MAG_FILTER,
-		opengl.LINEAR
+		opengl.LINEAR,
 	)
 }
 
@@ -378,21 +368,21 @@ debug_proc :: proc "c" (
 ) 
 {
 	Message_Source :: enum u32 {
-		API = opengl.DEBUG_SOURCE_API,
-		Window_System = opengl.DEBUG_SOURCE_WINDOW_SYSTEM,
+		API             = opengl.DEBUG_SOURCE_API,
+		Window_System   = opengl.DEBUG_SOURCE_WINDOW_SYSTEM,
 		Shader_Compiler = opengl.DEBUG_SOURCE_SHADER_COMPILER,
-		Third_Party = opengl.DEBUG_SOURCE_THIRD_PARTY,
-		Application = opengl.DEBUG_SOURCE_APPLICATION,
-		Other = opengl.DEBUG_SOURCE_OTHER,
+		Third_Party     = opengl.DEBUG_SOURCE_THIRD_PARTY,
+		Application     = opengl.DEBUG_SOURCE_APPLICATION,
+		Other           = opengl.DEBUG_SOURCE_OTHER,
 	}
 
 	Message_Type :: enum u32 {
-		Error = opengl.DEBUG_TYPE_ERROR,
+		Error               = opengl.DEBUG_TYPE_ERROR,
 		Deprecated_Behavior = opengl.DEBUG_TYPE_DEPRECATED_BEHAVIOR,
-		Undefined_Behavior = opengl.DEBUG_TYPE_UNDEFINED_BEHAVIOR,
-		Portability = opengl.DEBUG_TYPE_PORTABILITY,
-		Performance = opengl.DEBUG_TYPE_PERFORMANCE,
-		Other = opengl.DEBUG_TYPE_OTHER,
+		Undefined_Behavior  = opengl.DEBUG_TYPE_UNDEFINED_BEHAVIOR,
+		Portability         = opengl.DEBUG_TYPE_PORTABILITY,
+		Performance         = opengl.DEBUG_TYPE_PERFORMANCE,
+		Other               = opengl.DEBUG_TYPE_OTHER,
 	}
 
 	context = runtime.default_context()

@@ -1,5 +1,3 @@
-#+feature using-stmt
-
 package kolori
 
 import "../odin-imgui/imgui_impl_sdl3"
@@ -28,13 +26,14 @@ handle_event :: proc(app: ^App_State, event: ^sdl.Event)
 
 	#partial switch event.type {
 	// todo(touchscreens) support pinching motions for zoom in/out 
-	case .QUIT: app.running = false
+	case .QUIT:
+		app.running = false
 	case .WINDOW_RESIZED:
 		width, height: i32
 		if !sdl.GetWindowSizeInPixels(app.window, &width, &height) {
 			log.warn(
 				"[sdl.GetWindowSizeInPixels] Failed to get window size. Error msg:",
-				sdl.GetError()
+				sdl.GetError(),
 			)
 
 			return
@@ -100,7 +99,7 @@ handle_key :: proc(app: ^App_State, event: ^sdl.Event)
 		if !sdl.GetWindowSizeInPixels(app.window, &width, &height) {
 			log.warn(
 				"[sdl.GetWindowSizeInPixels] Failed to get window size. Error msg:",
-				sdl.GetError()
+				sdl.GetError(),
 			)
 
 			return

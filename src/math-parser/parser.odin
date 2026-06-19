@@ -2,8 +2,8 @@ package math_parser
 
 // Parses a math expression given a slice of tokens from the user
 Parser :: struct {
-	tokens:    []Token,
-	current:   uint,
+	tokens:  []Token,
+	current: uint,
 }
 
 // AST types.
@@ -44,19 +44,27 @@ BinaryType :: enum {
 	Multiplication,
 	Division,
 	Exponentiation,
-	Modulo
+	Modulo,
 }
 
 @(private, rodata)
 op_tbl := #partial [TokenType]BinaryType {
-	.PLUS = .Addition,
-	.MINUS = .Subtraction,
-	.SLASH = .Division,
+	.PLUS     = .Addition,
+	.MINUS    = .Subtraction,
+	.SLASH    = .Division,
 	.ASTERISK = .Multiplication,
-	.PERCENT = .Modulo,
+	.PERCENT  = .Modulo,
 }
 
-parse_string :: proc (source: string, functions: []string = {}, scan_flags: bit_set[Scan_Flag] = {}, allocator := context.allocator) -> (Expression, []Error_Report)
+parse_string :: proc(
+	source: string,
+	functions: []string = {},
+	scan_flags: bit_set[Scan_Flag] = {},
+	allocator := context.allocator,
+) -> (
+	Expression,
+	[]Error_Report,
+) 
 {
 	context.allocator = allocator
 
@@ -78,22 +86,28 @@ parse_string :: proc (source: string, functions: []string = {}, scan_flags: bit_
 	return expr, {}
 }
 
-parse_tokens :: proc (tokens: []Token, allocator := context.allocator) -> (Expression, Maybe(Error_Report))
+parse_tokens :: proc(
+	tokens: []Token,
+	allocator := context.allocator,
+) -> (
+	Expression,
+	Maybe(Error_Report),
+) 
 {
 	context.allocator = allocator
 
-	parser: Parser 
+	parser: Parser
 	parser_init(&parser, tokens)
-	
+
 	return parser_parse(&parser)
 }
 
 parse :: proc {
 	parse_string,
-	parse_tokens
+	parse_tokens,
 }
 
-parser_init :: proc (p: ^Parser, tokens: []Token)
+parser_init :: proc(p: ^Parser, tokens: []Token) 
 {
 	p.tokens = tokens
 }
@@ -114,11 +128,18 @@ parser_init :: proc (p: ^Parser, tokens: []Token)
  * changing this in the future?
  */
 
-expression :: proc(p: ^Parser) -> (Expression, Maybe(Error_Report)) {
+expression :: proc(p: ^Parser) -> (Expression, Maybe(Error_Report)) 
+{
 	return addition(p)
 }
 
-addition :: proc(p: ^Parser) -> (expr: Expression, report: Maybe(Error_Report)) {
+addition :: proc(
+	p: ^Parser,
+) -> (
+	expr: Expression,
+	report: Maybe(Error_Report),
+) 
+{
 	expr = multiplication(p) or_return
 	defer if report != nil {
 		expression_free(expr)
@@ -141,7 +162,13 @@ addition :: proc(p: ^Parser) -> (expr: Expression, report: Maybe(Error_Report)) 
 	return expr, nil
 }
 
-multiplication :: proc(p: ^Parser) -> (expr: Expression, report: Maybe(Error_Report)) {
+multiplication :: proc(
+	p: ^Parser,
+) -> (
+	expr: Expression,
+	report: Maybe(Error_Report),
+) 
+{
 	expr = power(p) or_return
 	defer if report != nil {
 		expression_free(expr)
@@ -164,7 +191,8 @@ multiplication :: proc(p: ^Parser) -> (expr: Expression, report: Maybe(Error_Rep
 	return expr, nil
 }
 
-power :: proc(p: ^Parser) -> (expr: Expression, report: Maybe(Error_Report)) {
+power :: proc(p: ^Parser) -> (expr: Expression, report: Maybe(Error_Report)) 
+{
 	expr = unary(p) or_return
 	defer if report != nil {
 		expression_free(expr)
@@ -186,7 +214,8 @@ power :: proc(p: ^Parser) -> (expr: Expression, report: Maybe(Error_Report)) {
 	return expr, nil
 }
 
-unary :: proc(p: ^Parser) -> (expr: Expression, report: Maybe(Error_Report)) {
+unary :: proc(p: ^Parser) -> (expr: Expression, report: Maybe(Error_Report)) 
+{
 	if parser_match(p, {.MINUS}) {
 		expr = new(Unary)
 		expr.(^Unary).inner = unary(p) or_return
@@ -201,7 +230,8 @@ unary :: proc(p: ^Parser) -> (expr: Expression, report: Maybe(Error_Report)) {
 	return expr, nil
 }
 
-primary :: proc(p: ^Parser) -> (expr: Expression, report: Maybe(Error_Report)) {
+primary :: proc(p: ^Parser) -> (expr: Expression, report: Maybe(Error_Report)) 
+{
 	switch {
 	case parser_match(p, {.NUMBER}):
 		expr = new(Real)
@@ -217,11 +247,10 @@ primary :: proc(p: ^Parser) -> (expr: Expression, report: Maybe(Error_Report)) {
 			report = new_report(
 				p.tokens[max(0, p.current)],
 				.ExpectedRParen,
-				
 				"Opening parenthesis \"(\" at location %i not closed.",
-				opening_paren.column
+				opening_paren.column,
 			)
-			
+
 			expression_free(expr)
 			return nil, report
 		}
@@ -230,14 +259,20 @@ primary :: proc(p: ^Parser) -> (expr: Expression, report: Maybe(Error_Report)) {
 	case:
 		report = new_report(
 			p.tokens[max(0, p.current)],
-			parser_is_at_end(p) ? .UnexpectedEOF : .UnexpectedToken
+			parser_is_at_end(p) ? .UnexpectedEOF : .UnexpectedToken,
 		)
 	}
 
 	return expr, report
 }
 
-function_call :: proc(p: ^Parser) -> (expr: Expression, report: Maybe(Error_Report)) {
+function_call :: proc(
+	p: ^Parser,
+) -> (
+	expr: Expression,
+	report: Maybe(Error_Report),
+) 
+{
 	func_call := new(FunctionCall)
 	func_call.name = parser_previous(p).lexeme
 
@@ -245,11 +280,10 @@ function_call :: proc(p: ^Parser) -> (expr: Expression, report: Maybe(Error_Repo
 		report = new_report(
 			p.tokens[max(0, p.current)],
 			.ExpectedLParen,
-			
 			"Forgot to add opening parenthesis \"(\" when calling function \"%s\".",
-			func_call.name
+			func_call.name,
 		)
-		
+
 		expression_free(func_call)
 		return nil, report
 	}
@@ -260,7 +294,7 @@ function_call :: proc(p: ^Parser) -> (expr: Expression, report: Maybe(Error_Repo
 			p.tokens[max(0, p.current)],
 			.UnexpectedToken,
 			"Illegal closing parenthesis \")\" when calling function \"%s\". Nullary functions are not supported.",
-			func_call.name
+			func_call.name,
 		)
 
 		expression_free(func_call)
@@ -273,11 +307,10 @@ function_call :: proc(p: ^Parser) -> (expr: Expression, report: Maybe(Error_Repo
 		report = new_report(
 			p.tokens[max(0, p.current)],
 			.ExpectedRParen,
-			
 			"Forgot to add closing parenthesis \")\" when calling function \"%s\".",
-			func_call.name
+			func_call.name,
 		)
-		
+
 		expression_free(func_call)
 		return nil, report
 	}
@@ -285,7 +318,13 @@ function_call :: proc(p: ^Parser) -> (expr: Expression, report: Maybe(Error_Repo
 	return func_call, report
 }
 
-parameter_list :: proc(p: ^Parser) -> (list: [dynamic]Expression, report: Maybe(Error_Report)) {
+parameter_list :: proc(
+	p: ^Parser,
+) -> (
+	list: [dynamic]Expression,
+	report: Maybe(Error_Report),
+) 
+{
 	list = make([dynamic]Expression)
 	defer shrink(&list)
 
@@ -297,7 +336,8 @@ parameter_list :: proc(p: ^Parser) -> (list: [dynamic]Expression, report: Maybe(
 	return list, report
 }
 
-expression_free :: proc(expr: Expression, allocator := context.allocator) {
+expression_free :: proc(expr: Expression, allocator := context.allocator) 
+{
 	context.allocator = allocator
 	switch expr in expr {
 	case ^Real:
@@ -320,7 +360,13 @@ expression_free :: proc(expr: Expression, allocator := context.allocator) {
 	}
 }
 
-parser_parse :: proc(p: ^Parser) -> (expr: Expression, report: Maybe(Error_Report)) {
+parser_parse :: proc(
+	p: ^Parser,
+) -> (
+	expr: Expression,
+	report: Maybe(Error_Report),
+) 
+{
 	expr = expression(p) or_return
 
 	if !parser_is_at_end(p) {
@@ -330,7 +376,7 @@ parser_parse :: proc(p: ^Parser) -> (expr: Expression, report: Maybe(Error_Repor
 			.UnexpectedEOF,
 			"Unexpected trailing input after token \"%s\" at position %i.",
 			token.lexeme,
-			token.column
+			token.column,
 		)
 
 		expression_free(expr)
@@ -340,11 +386,13 @@ parser_parse :: proc(p: ^Parser) -> (expr: Expression, report: Maybe(Error_Repor
 	return expr, nil
 }
 
-parser_reset_state :: proc(p: ^Parser) {
+parser_reset_state :: proc(p: ^Parser) 
+{
 	p.current = 0
 }
 
-parser_match :: proc(p: ^Parser, types: bit_set[TokenType]) -> bool {
+parser_match :: proc(p: ^Parser, types: bit_set[TokenType]) -> bool 
+{
 	for type in types {
 		if parser_check(p, type) {
 			parser_advance(p)
@@ -355,7 +403,8 @@ parser_match :: proc(p: ^Parser, types: bit_set[TokenType]) -> bool {
 	return false
 }
 
-parser_check :: proc(p: ^Parser, t: TokenType) -> bool {
+parser_check :: proc(p: ^Parser, t: TokenType) -> bool 
+{
 	if parser_is_at_end(p) {
 		return false
 	}
@@ -365,7 +414,8 @@ parser_check :: proc(p: ^Parser, t: TokenType) -> bool {
 
 // consumes the current token and return it. if we are at the end, then
 // return the last token in the strean
-parser_advance :: proc(p: ^Parser) -> Token {
+parser_advance :: proc(p: ^Parser) -> Token 
+{
 	if !parser_is_at_end(p) {
 		p.current += 1
 	}
@@ -373,14 +423,17 @@ parser_advance :: proc(p: ^Parser) -> Token {
 	return parser_previous(p)
 }
 
-parser_is_at_end :: proc(p: ^Parser) -> bool {
+parser_is_at_end :: proc(p: ^Parser) -> bool 
+{
 	return parser_peek(p).type == .EOF
 }
 
-parser_peek :: proc(p: ^Parser) -> Token {
+parser_peek :: proc(p: ^Parser) -> Token 
+{
 	return p.tokens[p.current]
 }
 
-parser_previous :: proc(p: ^Parser) -> Token {
+parser_previous :: proc(p: ^Parser) -> Token 
+{
 	return p.tokens[p.current - 1]
 }

@@ -12,9 +12,9 @@ import "core:fmt"
 import "core:mem"
 
 App_State :: struct {
-	using gl:  GL_State,
-	using ui:  Ui_State,
-	running:   bool,
+	using gl: GL_State,
+	using ui: Ui_State,
+	running:  bool,
 }
 
 FUNCTION_BUF_SIZE :: 1024
@@ -100,7 +100,7 @@ main :: proc()
 		if !app.animation_paused {
 			advance_time(&app, delta_time)
 		}
-		
+
 		// 
 		free_all(context.temp_allocator)
 	}
@@ -118,7 +118,7 @@ setup_app :: proc(app: ^App_State)
 	app.saturation = 100
 	app.lightness = 100
 	app.framerate = 60 // if we can, we try to enable vsync automatically
-	                   // otherwise, we operate off of 60 fps
+	// otherwise, we operate off of 60 fps
 
 	// initialize to default values
 	app.err_msg = strings.clone_to_cstring("")
@@ -126,7 +126,7 @@ setup_app :: proc(app: ^App_State)
 	([^]u8)(app.function)[0] = 'z'
 }
 
-enforce_framerate :: proc (delta: u64, framerate: i32)
+enforce_framerate :: proc(delta: u64, framerate: i32) 
 {
 	desired_delta := (u64)(1000 / framerate)
 
@@ -135,7 +135,7 @@ enforce_framerate :: proc (delta: u64, framerate: i32)
 	}
 }
 
-advance_time :: proc (app: ^App_State, delta: u64)
+advance_time :: proc(app: ^App_State, delta: u64) 
 {
 	app.time += (f32)(delta) * 1e-3
 	opengl.Uniform1f(app.uniforms.time, app.time * app.time_speed)

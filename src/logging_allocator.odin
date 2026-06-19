@@ -24,16 +24,9 @@ logging_allocator_proc :: proc(
 			location = loc,
 		)
 	case .Free:
-		log.debugf(
-			"Free made of size %i",
-			size,
-			location = loc,
-		)
+		log.debugf("Free made of size %i", size, location = loc)
 	case .Free_All:
-		log.debugf(
-			"Freed all memory allocated",
-			location = loc,
-		)
+		log.debugf("Freed all memory allocated", location = loc)
 	case .Resize, .Resize_Non_Zeroed:
 		log.debugf(
 			"Resize made from size %i to size %i with alignment %i",
@@ -56,9 +49,7 @@ logging_allocator_proc :: proc(
 }
 
 @(require_results, no_sanitize_address)
-logging_allocator :: proc(data: ^mem.Tracking_Allocator) -> mem.Allocator {
-	return mem.Allocator{
-		data = data,
-		procedure = logging_allocator_proc,
-	}
+logging_allocator :: proc(data: ^mem.Tracking_Allocator) -> mem.Allocator 
+{
+	return mem.Allocator{data = data, procedure = logging_allocator_proc}
 }

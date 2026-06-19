@@ -199,12 +199,13 @@ validate :: proc(source: cstring) -> Maybe(cstring)
 
 translate :: proc(source: cstring, func_name := "f") -> cstring 
 {
-	expr := mp.parse(
-		cast(string)(source),
-		funcs,
-		{.Implicit_Multiplication},
-		context.temp_allocator,
-	) or_else unreachable()
+	expr :=
+		mp.parse(
+			cast(string)(source),
+			funcs,
+			{.Implicit_Multiplication},
+			context.temp_allocator,
+		) or_else unreachable()
 
 	glsl := fmt.ctprintf(
 		"vec2 %s(vec2 z) {{ return %s; }}",

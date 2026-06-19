@@ -2,7 +2,7 @@ package kolori
 
 import "../odin-imgui/imgui_impl_opengl3"
 import "../odin-imgui/imgui_impl_sdl3"
-import stbi "vendor:stb/image" // consider using sdl_image
+import stbi "vendor:stb/image"
 import opengl "vendor:OpenGL"
 import imgui "../odin-imgui"
 import sdl "vendor:sdl3"
@@ -38,11 +38,11 @@ Coloring_Method :: enum i32 {
 }
 
 Image_Data :: struct {
-	filename: string,
-	size: [2]i32,
+	filename:     string,
+	size:         [2]i32,
 	display_size: [2]f32,
-	pixels: [^]u8,
-	size_str: cstring,
+	pixels:       [^]u8,
+	size_str:     cstring,
 }
 
 IMGUI_CONFIG_FLAGS :: imgui.ConfigFlags{.NavEnableKeyboard, .DockingEnable}
@@ -75,7 +75,12 @@ setup_sdl :: proc(app: ^App_State)
 		app.main_scale = 1
 	}
 
-	window_flags := sdl.WindowFlags{.OPENGL, .RESIZABLE, .HIDDEN, .HIGH_PIXEL_DENSITY}
+	window_flags := sdl.WindowFlags {
+		.OPENGL,
+		.RESIZABLE,
+		.HIDDEN,
+		.HIGH_PIXEL_DENSITY,
+	}
 	app.window = sdl.CreateWindow(
 		"Kolori, from Stardance <3",
 		(i32)(800 * app.main_scale),
@@ -117,12 +122,12 @@ setup_imgui :: proc(app: ^App_State)
 	style_imgui() // app.main_scale
 
 	// these are simply the defaults as described in `imgui.odin`
-	font_cfg := imgui.FontConfig{
+	font_cfg := imgui.FontConfig {
 		FontDataOwnedByAtlas = false,
-		ExtraSizeScale = 1,
-		GlyphMaxAdvanceX = math.F32_MAX,
-		RasterizerMultiply = 1,
-		RasterizerDensity = 1,
+		ExtraSizeScale       = 1,
+		GlyphMaxAdvanceX     = math.F32_MAX,
+		RasterizerMultiply   = 1,
+		RasterizerDensity    = 1,
 	}
 
 	// this will also be used as the main ui font,
@@ -132,14 +137,14 @@ setup_imgui :: proc(app: ^App_State)
 		raw_data(MAIN_FONT_DATA),
 		(i32)(len(MAIN_FONT_DATA)),
 		18,
-		&font_cfg
+		&font_cfg,
 	)
 }
 
 style_imgui :: proc(scale: f32 = 1) 
 {
 	style := imgui.GetStyle()
-	
+
 	imgui.Style_ScaleAllSizes(style, scale)
 	style.FontScaleDpi = scale
 
@@ -166,16 +171,16 @@ draw_ui :: proc(app: ^App_State)
 	imgui.SetNextWindowBgAlpha(0.35)
 
 	imgui.Begin("Plotter", flags = {.AlwaysAutoResize})
-		function_input(app)
-		animation_settings(app)
-		coloring_settings(app)
+	function_input(app)
+	animation_settings(app)
+	coloring_settings(app)
 	imgui.End()
 
 	imgui.Render()
 	imgui_impl_opengl3.RenderDrawData(imgui.GetDrawData())
 }
 
-function_input :: proc(app: ^App_State)
+function_input :: proc(app: ^App_State) 
 {
 	@(static) failure: bool
 
@@ -215,7 +220,7 @@ function_input :: proc(app: ^App_State)
 	}
 }
 
-animation_settings :: proc(app: ^App_State)
+animation_settings :: proc(app: ^App_State) 
 {
 	if !imgui.CollapsingHeader("Animation Settings") {
 		return
@@ -234,7 +239,14 @@ animation_settings :: proc(app: ^App_State)
 		slider_fmt = "%d FPS"
 	}
 
-	imgui.SliderInt("Framerate", &app.framerate, 5, MAX_FRAMERATE, slider_fmt, {.ClampOnInput})
+	imgui.SliderInt(
+		"Framerate",
+		&app.framerate,
+		5,
+		MAX_FRAMERATE,
+		slider_fmt,
+		{.ClampOnInput},
+	)
 
 	if app.vsync {
 		imgui.EndDisabled()
@@ -245,7 +257,10 @@ animation_settings :: proc(app: ^App_State)
 		if ok := sdl.GL_GetSwapInterval(&_vsync); ok {
 			ok &= sdl.GL_SetSwapInterval(_vsync == 0 ? 1 : 0)
 			if !ok {
-				log.warn("Failed to change swap interval. Error msg:", sdl.GetError())
+				log.warn(
+					"Failed to change swap interval. Error msg:",
+					sdl.GetError(),
+				)
 				app.vsync = !app.vsync
 			}
 		}
@@ -261,14 +276,13 @@ animation_settings :: proc(app: ^App_State)
 	}
 }
 
-coloring_settings :: proc(app: ^App_State)
+coloring_settings :: proc(app: ^App_State) 
 {
 	if !imgui.CollapsingHeader("Coloring Settings", {.DefaultOpen}) {
 		return
 	}
 
-	combo_items: cstring =
-		"HSL Coloring\x00HSLuv Coloring\x00Custom Color Palette\x00Use an Image\x00" 
+	combo_items: cstring = "HSL Coloring\x00HSLuv Coloring\x00Custom Color Palette\x00Use an Image\x00"
 
 	if imgui.Combo(
 		"Coloring Method",
@@ -291,14 +305,17 @@ coloring_settings :: proc(app: ^App_State)
 		if imgui.SliderFloat("Lightness", &app.lightness, 0, 100, "%.1f%%") {
 			opengl.Uniform1f(app.uniforms.lightness, app.lightness)
 		}
-		
+
 		if imgui.SliderFloat(
 			"Gamma Correction",
 			&app.gamma_correction,
 			-1,
 			1,
 		) {
-			opengl.Uniform1f(app.uniforms.gamma_correction, app.gamma_correction)
+			opengl.Uniform1f(
+				app.uniforms.gamma_correction,
+				app.gamma_correction,
+			)
 		}
 	case .Use_Palette:
 		rand_color :: proc() -> (color: Color) 
@@ -337,25 +354,40 @@ coloring_settings :: proc(app: ^App_State)
 			app.img.pixels = nil
 
 			delete(app.img.size_str)
-			app.img.size_str = fmt.caprintf("%ix%i", app.img.size.x, app.img.size.y)
+			app.img.size_str = fmt.caprintf(
+				"%ix%i",
+				app.img.size.x,
+				app.img.size.y,
+			)
 
 			// preserve aspect ratio while resizing to preferred size
 			app.img.display_size = ([2]f32)(app.img.size)
-			if (app.img.size.x >= PREFERRED_IMG_SIZE) || (app.img.size.y >= PREFERRED_IMG_SIZE) {
-				scale_by := PREFERRED_IMG_SIZE / (f32)(max(app.img.size.x, app.img.size.y))
+			if (app.img.size.x >= PREFERRED_IMG_SIZE) ||
+			   (app.img.size.y >= PREFERRED_IMG_SIZE) {
+				scale_by :=
+					PREFERRED_IMG_SIZE /
+					(f32)(max(app.img.size.x, app.img.size.y))
 				app.img.display_size *= scale_by
 			}
 
-			log.infof("Loaded %s image at \"%s\"", app.img.size_str, app.img.filename)
+			log.infof(
+				"Loaded %s image at \"%s\"",
+				app.img.size_str,
+				app.img.filename,
+			)
 			img_set = true
 		}
-		
+
 		if img_set {
 			tex_id := (imgui.TextureID)(app.texture)
-			tex_ref := imgui.TextureRef{ _TexID = tex_id }
+			tex_ref := imgui.TextureRef {
+				_TexID = tex_id,
+			}
 
 			// horizontally center image
-			imgui.SetCursorPosX((imgui.GetWindowSize().x - app.img.display_size.x)*0.5)
+			imgui.SetCursorPosX(
+				(imgui.GetWindowSize().x - app.img.display_size.x) * 0.5,
+			)
 			imgui.Image(tex_ref, app.img.display_size, {0, 1}, {1, 0})
 
 			imgui.PushStyleVarImVec2(.SelectableTextAlign, {0.5, 0.5})
@@ -363,7 +395,7 @@ coloring_settings :: proc(app: ^App_State)
 			imgui.PopStyleVar()
 		}
 
-		if imgui.Button("Choose Image") {			
+		if imgui.Button("Choose Image") {
 			// stb image supports JPG, PNG, TGA, BMP, PSD, GIF, HDR, and PIC images
 			@(static, rodata)
 			filters := [?]sdl.DialogFileFilter {
@@ -394,21 +426,33 @@ coloring_settings :: proc(app: ^App_State)
 
 		imgui.Text("Horizontal Repeat:")
 		imgui.SameLine()
-		upd_tex_params |=
-			imgui.RadioButtonIntPtr("Normal##norm_wrap_s", &app.texture_wrap_s, opengl.REPEAT)
+		upd_tex_params |= imgui.RadioButtonIntPtr(
+			"Normal##norm_wrap_s",
+			&app.texture_wrap_s,
+			opengl.REPEAT,
+		)
 		imgui.SameLine()
-		upd_tex_params |=
-			imgui.RadioButtonIntPtr("Mirrored##mirr_wrap_s", &app.texture_wrap_s, opengl.MIRRORED_REPEAT)
-		
+		upd_tex_params |= imgui.RadioButtonIntPtr(
+			"Mirrored##mirr_wrap_s",
+			&app.texture_wrap_s,
+			opengl.MIRRORED_REPEAT,
+		)
+
 		imgui.Text("Vertical Repeat:")
 		imgui.SameLine()
-		upd_tex_params |= 
-			imgui.RadioButtonIntPtr("Normal##norm_wrap_t", &app.texture_wrap_t, opengl.REPEAT)
+		upd_tex_params |= imgui.RadioButtonIntPtr(
+			"Normal##norm_wrap_t",
+			&app.texture_wrap_t,
+			opengl.REPEAT,
+		)
 		imgui.SameLine()
-		upd_tex_params |=
-			imgui.RadioButtonIntPtr("Mirrored##mirr_wrap_t", &app.texture_wrap_t, opengl.MIRRORED_REPEAT)
-		// rgba swizzle?
-		// min filter? mag filter?
+		upd_tex_params |= imgui.RadioButtonIntPtr(
+			"Mirrored##mirr_wrap_t",
+			&app.texture_wrap_t,
+			opengl.MIRRORED_REPEAT,
+		)
+	// rgba swizzle?
+	// min filter? mag filter?
 	}
 }
 
@@ -421,19 +465,25 @@ load_image :: proc "c" (
 	if filelist == nil || filelist[0] == nil {
 		return
 	}
-	
+
 	context = runtime.default_context()
 	app := (^App_State)(app_ptr)
 
 	stbi.set_flip_vertically_on_load((i32)(true))
 	app.img.filename = strings.clone_from_cstring(filelist[0])
-	app.img.pixels = stbi.load(filelist[0], &app.img.size.x, &app.img.size.y, nil, 3)
+	app.img.pixels = stbi.load(
+		filelist[0],
+		&app.img.size.x,
+		&app.img.size.y,
+		nil,
+		3,
+	)
 
 	if app.img.pixels == nil {
 		msg := fmt.ctprintf(
 			"Failed to load the image file \"%s\". Reason:\n\n\"%s\"",
 			filelist[0],
-			stbi.failure_reason() // not threadsafe
+			stbi.failure_reason(), // not threadsafe
 		)
 
 		sdl.ShowSimpleMessageBox(
