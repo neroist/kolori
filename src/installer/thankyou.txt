@@ -1,0 +1,3 @@
+Thank you for installing Kolori <3
+
+See https://github.com/neroist/kolori/blob/main/README.md for more information about Kolori.

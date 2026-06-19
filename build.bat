@@ -22,4 +22,7 @@ if %release_mode% equ 0 (
 
 	REM link compiled resource file into executable
 	odin build src -out:kolori.exe -show-timings -subsystem:windows -extra-linker-flags:icon.res
+
+	REM build installer
+	iscc /O. /Qp ./src/installer/script.iss
 )

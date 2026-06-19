@@ -3,6 +3,7 @@ DEBUG_FLAGS := -debug -o:none
 RELEASE_FLAGS := 
 RC :=
 RC_FLAGS :=
+ISCC_FLAGS := -O. -Q
 
 # Check for Windows_NT environment variable (cmd.exe/PowerShell)
 ifeq ($(shell echo %OS% 2>/dev/null),Windows_NT)
@@ -47,6 +48,11 @@ release: icon.res
 icon.res:
 ifeq ($(IS_WINDOWS),1)
 	$(RC) $(RC_FLAGS) ./src/icon.rc
+endif
+
+installer: release
+ifeq ($(IS_WINDOWS),1)
+	iscc $(ISCC_FLAGS) ./src/installer/script.iss
 endif
 
 .PHONY clean:
