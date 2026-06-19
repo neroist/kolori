@@ -1,4 +1,4 @@
-FLAGS := -show-timings
+FLAGS :=
 DEBUG_FLAGS := -debug -o:none
 RELEASE_FLAGS := 
 RC :=
