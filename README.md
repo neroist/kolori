@@ -123,7 +123,14 @@ This step only needs to be done once.
 > need to compile with `gcc` instead of `clang`, it is sufficient to do a simple
 > search-and-replace operation on `build.py` in its entirety.
 
-3. Build the project.
+3. Build stb_image
+```sh
+$ sudo make -C $(odin root)/vendor/stb/src
+```
+
+Whether or not you need `sudo` depends on where you installed Odin.
+
+4. Build the project.
 ```sh
 $ make
 ```
