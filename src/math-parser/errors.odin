@@ -2,24 +2,6 @@ package math_parser
 
 import "core:fmt"
 
-// ScanError :: enum {
-// 	None,
-// 	UnexpectedCharacter,
-// }
-
-// SyntaxError :: enum {
-// 	None,
-// 	ExpectedLParen,
-// 	ExpectedRParen,
-// 	UnexpectedToken,
-// 	UnexpectedEOF,
-// }
-
-// Error :: union #shared_nil {
-//     ScanError,
-//     SyntaxError
-// }
-
 Error :: enum {
 	// Scan errors
 	None,
