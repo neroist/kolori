@@ -43,6 +43,7 @@ Image_Data :: struct {
 	display_size: [2]f32,
 	pixels:       [^]u8,
 	size_str:     cstring,
+	is_resident:  bool,
 }
 
 IMGUI_CONFIG_FLAGS :: imgui.ConfigFlags{.NavEnableKeyboard, .DockingEnable}
@@ -346,48 +347,20 @@ coloring_settings :: proc(app: ^App_State)
 			opengl.Uniform3fv(app.uniforms.abcd, 4, ([^]f32)(&app.abcd))
 		}
 	case .Use_Image:
-		@(static) img_set: bool
-
-		if app.img.pixels != nil {
-			load_texture(app, app.img.size.x, app.img.size.y, app.img.pixels)
+		if !app.img.is_resident && app.img.pixels != nil {
+			load_texture(app, &app.img)
 			stbi.image_free(app.img.pixels)
-			app.img.pixels = nil
-
-			delete(app.img.size_str)
-			app.img.size_str = fmt.caprintf(
-				"%ix%i",
-				app.img.size.x,
-				app.img.size.y,
-			)
-
-			// preserve aspect ratio while resizing to preferred size
-			app.img.display_size = ([2]f32)(app.img.size)
-			if (app.img.size.x >= PREFERRED_IMG_SIZE) ||
-			   (app.img.size.y >= PREFERRED_IMG_SIZE) {
-				scale_by :=
-					PREFERRED_IMG_SIZE /
-					(f32)(max(app.img.size.x, app.img.size.y))
-				app.img.display_size *= scale_by
-			}
-
-			log.infof(
-				"Loaded %s image at \"%s\"",
-				app.img.size_str,
-				app.img.filename,
-			)
-			img_set = true
 		}
-
-		if img_set {
-			tex_id := (imgui.TextureID)(app.texture)
-			tex_ref := imgui.TextureRef {
-				_TexID = tex_id,
-			}
-
+		
+		if app.img.is_resident {
 			// horizontally center image
 			imgui.SetCursorPosX(
 				(imgui.GetWindowSize().x - app.img.display_size.x) * 0.5,
 			)
+
+			tex_ref := imgui.TextureRef {
+				_TexID = (imgui.TextureID)(app.texture),
+			}
 			imgui.Image(tex_ref, app.img.display_size, {0, 1}, {1, 0})
 
 			imgui.PushStyleVarImVec2(.SelectableTextAlign, {0.5, 0.5})
@@ -404,7 +377,7 @@ coloring_settings :: proc(app: ^App_State)
 			}
 
 			// multi-threaded on windows, so we can't use opengl functions in
-			// the dialog callback 
+			// the dialog callback.
 			// also not asan friendly on windows
 			sdl.ShowOpenFileDialog(
 				load_image,
@@ -451,8 +424,9 @@ coloring_settings :: proc(app: ^App_State)
 			&app.texture_wrap_t,
 			opengl.MIRRORED_REPEAT,
 		)
-	// rgba swizzle?
-	// min filter? mag filter?
+
+		// rgba swizzle?
+		// min filter? mag filter?
 	}
 }
 
@@ -469,7 +443,7 @@ load_image :: proc "c" (
 	context = runtime.default_context()
 	app := (^App_State)(app_ptr)
 
-	stbi.set_flip_vertically_on_load((i32)(true))
+	stbi.set_flip_vertically_on_load(1)
 	app.img.filename = strings.clone_from_cstring(filelist[0])
 	app.img.pixels = stbi.load(
 		filelist[0],
@@ -479,7 +453,30 @@ load_image :: proc "c" (
 		3,
 	)
 
-	if app.img.pixels == nil {
+	if app.img.pixels != nil {
+		delete(app.img.size_str)
+		app.img.size_str = fmt.caprintf(
+			"%ix%i",
+			app.img.size.x,
+			app.img.size.y,
+		)
+
+		// preserve aspect ratio while resizing to preferred size
+		app.img.display_size = ([2]f32)(app.img.size)
+		if (app.img.size.x >= PREFERRED_IMG_SIZE) ||
+			(app.img.size.y >= PREFERRED_IMG_SIZE) {
+			scale_by :=
+				PREFERRED_IMG_SIZE /
+				(f32)(max(app.img.size.x, app.img.size.y))
+			app.img.display_size *= scale_by
+		}
+
+		log.infof(
+			"Loaded %s image at \"%s\" from disk",
+			app.img.size_str,
+			app.img.filename,
+		)
+	} else {
 		msg := fmt.ctprintf(
 			"Failed to load the image file \"%s\". Reason:\n\n\"%s\"",
 			filelist[0],

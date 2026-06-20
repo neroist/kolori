@@ -316,8 +316,17 @@ reload_shaders :: proc(app: ^App_State)
 	opengl.Uniform1f(app.uniforms.lightness, app.lightness)
 }
 
-load_texture :: proc(app: ^App_State, w, h: i32, pixels: [^]u8) 
+load_texture :: proc(app: ^App_State, img: ^Image_Data) 
 {
+	defer {
+		img.is_resident = true
+		log.infof(
+			"Uploaded %s image at \"%s\" onto GPU",
+			img.size_str,
+			img.filename,
+		)
+	}
+
 	opengl.DeleteTextures(1, &app.texture)
 	opengl.GenTextures(1, &app.texture)
 	opengl.BindTexture(opengl.TEXTURE_2D, app.texture)
@@ -329,16 +338,15 @@ load_texture :: proc(app: ^App_State, w, h: i32, pixels: [^]u8)
 		opengl.TEXTURE_2D,
 		0,
 		opengl.RGB,
-		w,
-		h,
+		img.size.x,
+		img.size.y,
 		0,
 		opengl.RGB,
 		opengl.UNSIGNED_BYTE,
-		pixels,
+		img.pixels,
 	)
 	set_tex_parameters(app.texture_wrap_s, app.texture_wrap_t)
 	opengl.GenerateMipmap(opengl.TEXTURE_2D)
-
 }
 
 set_tex_parameters :: proc(wrap_s, wrap_t: i32) 
