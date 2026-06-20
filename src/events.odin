@@ -47,34 +47,35 @@ handle_event :: proc(app: ^App_State, event: ^sdl.Event)
 		}
 
 		handle_key(app, event)
-	case .MOUSE_WHEEL:
-		if app.io.WantCaptureMouse || event.wheel.y == 0 {
+	case .MOUSE_WHEEL, .PINCH_UPDATE:
+		no_zoom := event.type == .MOUSE_WHEEL ? event.wheel.y == 0 :
+				                                event.pinch.scale == 0
+		if app.io.WantCaptureMouse || no_zoom {
 			break
 		}
 
-		speed: f32 = ZOOM_SPEED
-
-		if event.wheel.y > 0 {
-			speed *= 1 / (ZOOM_SPEED * ZOOM_SPEED)
+		speed: f32
+		if event.type == .MOUSE_WHEEL {
+			speed = event.wheel.y < 0 ? ZOOM_SPEED : 1/ZOOM_SPEED
+		} else {
+			speed = event.pinch.scale
 		}
 
-		// there's a more elegant, set-theoretic way to check this
-		if mod_state := sdl.GetModState();
-		   .LSHIFT in mod_state || .RSHIFT in mod_state {
+		// we'd use `in` but then we get a:
+		// "Missing type in compound literal" error from the checker.
+		// if we use the union "&" operator instead, it works fine.
+		if sdl.GetModState() & {.LSHIFT, .RSHIFT} != {} {
 			speed *= speed
 		}
 
 		zoom(app, speed)
 	case .MOUSE_MOTION:
-		if app.io.WantCaptureMouse {
+		if app.io.WantCaptureMouse || !(.LEFT in event.motion.state) {
 			break
 		}
 
-		if .LEFT in event.motion.state {
-			mod_state := sdl.GetModState()
-			speed: f32 = .LSHIFT in mod_state || .RSHIFT in mod_state ? 2 : 1
-			pan(app, {-event.motion.xrel, event.motion.yrel}, speed)
-		}
+		speed: f32 = sdl.GetModState() & {.LSHIFT, .RSHIFT} != {} ? 2 : 1
+		pan(app, {-event.motion.xrel, event.motion.yrel}, speed)
 	case .DROP_FILE:
 		log.infof("Recieved file \"%s\"", event.drop.data)
 		load_image(app, &event.drop.data)
