@@ -1,8 +1,9 @@
 package kolori
 
 import "../odin-imgui/imgui_impl_sdl3"
-import imgui "../odin-imgui"
+import stbi "vendor:stb/image"
 import opengl "vendor:OpenGL"
+import imgui "../odin-imgui"
 import sdl "vendor:sdl3"
 import "core:time"
 import "core:log"
@@ -79,6 +80,8 @@ handle_event :: proc(app: ^App_State, event: ^sdl.Event)
 	case .DROP_FILE:
 		log.infof("Recieved file \"%s\"", event.drop.data)
 		load_image(app, &event.drop.data)
+		load_texture(app, &app.img)
+		stbi.image_free(app.img.pixels)
 
 		if app.img.pixels != nil {
 			app.time = 0
