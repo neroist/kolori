@@ -5,7 +5,7 @@
 - [x] Ability to take screenshots
 - [x] Ability for animations with "t" variable 
 - [x] Support adjustment of HSL gamma correction
-- [ ] Ability to switch coloring scheme (HSL color space, HSLuv, palette
+- [x] Ability to switch coloring scheme (HSL color space, HSLuv, palette
 generation, etc.)
 - [ ] Ability to configure keyboard bindings
 - [ ] Support drawing of level curves (of phase and modulus)
