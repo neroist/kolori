@@ -172,14 +172,8 @@ scanner_scan_token :: proc(s: ^Scanner)
 		//       number when the next character is a digit and the 
 		//       preceeding tokens do not imply that it may be used as
 		//       an operator instead
-		exclude: bit_set[TokenType] = {
-			.RIGHT_PAREN,
-			.FUNCTION,
-			.VARIABLE,
-			.NUMBER,
-		}
-		is_operator :=
-			len(s.tokens) == 0 || s.tokens[len(s.tokens) - 1].type in exclude
+		exclude: bit_set[TokenType] = {.RIGHT_PAREN, .FUNCTION, .VARIABLE, .NUMBER}
+		is_operator := len(s.tokens) == 0 || s.tokens[len(s.tokens) - 1].type in exclude
 		if is_digit(scanner_peek(s)) && !is_operator {
 			scanner_scan_number(s)
 			break
@@ -205,10 +199,7 @@ scanner_scan_token :: proc(s: ^Scanner)
 			scanner_scan_identifier(s)
 		} else {
 			scanner_add_token(s, .ERROR)
-			append(
-				&s.errors,
-				new_report(s.tokens[len(s.tokens) - 1], .UnexpectedCharacter),
-			)
+			append(&s.errors, new_report(s.tokens[len(s.tokens) - 1], .UnexpectedCharacter))
 		}
 	}
 }
@@ -228,11 +219,7 @@ scanner_insert_muls :: proc(s: ^Scanner)
 			inject_at(
 				&s.tokens,
 				idx + 1,
-				Token {
-					type = .ASTERISK,
-					lexeme = "*",
-					column = (uint)(idx + 1),
-				},
+				Token{type = .ASTERISK, lexeme = "*", column = (uint)(idx + 1)},
 			)
 		}
 	}

@@ -145,8 +145,8 @@ handle_key :: proc(app: ^App_State, event: ^sdl.Event)
 			}
 
 			if !ok {
-				log.warn(
-					"[sdl.ShowCursor] Failed to change cursor visiblity. Error msg:",
+				log.warnf(
+					"[sdl.ShowCursor] Failed to change cursor visiblity. Error msg: \"%s\"",
 					sdl.GetError(),
 				)
 			}
@@ -172,15 +172,7 @@ take_screenshot :: proc(window: ^sdl.Window, width, height: i32)
 
 	opengl.ReadBuffer(opengl.BACK)
 	opengl.PixelStorei(opengl.PACK_ALIGNMENT, 1)
-	opengl.ReadPixels(
-		0,
-		0,
-		width,
-		height,
-		opengl.RGB,
-		opengl.UNSIGNED_BYTE,
-		surface.pixels,
-	)
+	opengl.ReadPixels(0, 0, width, height, opengl.RGB, opengl.UNSIGNED_BYTE, surface.pixels)
 
 	sdl.FlipSurface(surface, .VERTICAL)
 	defer sdl.DestroySurface(surface)
@@ -190,17 +182,8 @@ take_screenshot :: proc(window: ^sdl.Window, width, height: i32)
 	if sdl.SavePNG(surface, filename) {
 		log.info("Saved screenshot to", filename)
 	} else {
-		log.warnf(
-			"[sdl.SavePNG] Failed to save screenshot. Error msg:\n\n\"%s\".",
-			sdl.GetError(),
-		)
-
-		sdl.ShowSimpleMessageBox(
-			{.WARNING},
-			"Failure!",
-			"Failed to save screenshot :(",
-			window,
-		)
+		log.warnf("[sdl.SavePNG] Failed to save screenshot. Error msg:\n\n\"%s\".", sdl.GetError())
+		sdl.ShowSimpleMessageBox({.WARNING}, "Failure!", "Failed to save screenshot :(", window)
 	}
 }
 

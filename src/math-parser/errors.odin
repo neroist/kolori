@@ -46,7 +46,7 @@ new_report_default_message :: proc(token: Token, error: Error) -> Error_Report
 	case .UnexpectedEOF:
 		report.msg = fmt.tprintf(format)
 	case .None:
-        /* */
+	/* */
 	}
 
 	return report

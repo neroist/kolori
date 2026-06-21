@@ -130,7 +130,6 @@ translate_expr :: proc(expr: mp.Expression) -> string
 		return fmt.tprintf("-%s", translate_expr(expr.inner))
 	}
 
-	// since odin asks me to add a return here
 	unreachable()
 }
 
@@ -199,19 +198,14 @@ validate :: proc(source: cstring) -> Maybe(cstring)
 
 translate :: proc(source: cstring, func_name := "f") -> cstring 
 {
-	expr :=
-		mp.parse(
-			cast(string)(source),
-			funcs,
-			{.Implicit_Multiplication},
-			context.temp_allocator,
-		) or_else unreachable()
+	expr := mp.parse(
+		cast(string)(source),
+		funcs,
+		{.Implicit_Multiplication},
+		context.temp_allocator,
+	) or_else unreachable()
 
-	glsl := fmt.ctprintf(
-		"vec2 %s(vec2 z) {{ return %s; }}",
-		func_name,
-		translate_expr(expr),
-	)
+	glsl := fmt.ctprintf("vec2 %s(vec2 z) {{ return %s; }}", func_name, translate_expr(expr))
 
 	log.debug("generated glsl:", glsl)
 	return glsl

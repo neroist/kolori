@@ -75,8 +75,8 @@ setup_gl :: proc(app: ^App_State)
 {
 	app.gl.ctx = sdl.GL_CreateContext(app.window)
 	if app.gl.ctx == nil {
-		log.fatal(
-			"[sdl.GL_CreateContext] Failed to create an OpenGL context. Error msg:",
+		log.fatalf(
+			"[sdl.GL_CreateContext] Failed to create an OpenGL context. Error msg: \"%s\"",
 			sdl.GetError(),
 		)
 
@@ -94,10 +94,7 @@ setup_gl :: proc(app: ^App_State)
 
 	// See odin-lang/Odin issue 2123: https://github.com/odin-lang/odin/issues/2123
 	sdl.GL_SetAttribute(.CONTEXT_FLAGS, transmute(i32)(context_flags))
-	sdl.GL_SetAttribute(
-		.CONTEXT_PROFILE_MASK,
-		(i32)(sdl.GL_CONTEXT_PROFILE_CORE),
-	)
+	sdl.GL_SetAttribute(.CONTEXT_PROFILE_MASK, (i32)(sdl.GL_CONTEXT_PROFILE_CORE))
 	sdl.GL_SetAttribute(.CONTEXT_MAJOR_VERSION, GL_MAJOR_VERSION)
 	sdl.GL_SetAttribute(.CONTEXT_MINOR_VERSION, GL_MINOR_VERSION)
 	sdl.GL_SetAttribute(.DOUBLEBUFFER, 1)
@@ -108,11 +105,7 @@ setup_gl :: proc(app: ^App_State)
 
 	sdl.GL_MakeCurrent(app.window, app.gl.ctx)
 
-	opengl.load_up_to(
-		GL_MAJOR_VERSION,
-		GL_MINOR_VERSION,
-		sdl.gl_set_proc_address,
-	)
+	opengl.load_up_to(GL_MAJOR_VERSION, GL_MINOR_VERSION, sdl.gl_set_proc_address)
 
 	when ODIN_DEBUG {
 		opengl.DebugMessageCallback(debug_proc, nil)
@@ -125,7 +118,6 @@ setup_gl :: proc(app: ^App_State)
 	opengl.Viewport(0, 0, width, height)
 
 	vertices := [?]f32 {
-		// Coordinates 
 		-1,
 		1,
 		1,
@@ -141,6 +133,7 @@ setup_gl :: proc(app: ^App_State)
 
 	opengl.GenTextures(1, &app.texture)
 	opengl.BindTexture(opengl.TEXTURE_2D, app.texture)
+	opengl.Uniform1i(opengl.GetUniformLocation(app.program, "tex"), 0)
 	app.texture_wrap_s = opengl.REPEAT // these are the default
 	app.texture_wrap_t = opengl.REPEAT
 	app.texture_min_fltr = opengl.LINEAR_MIPMAP_LINEAR
@@ -149,52 +142,29 @@ setup_gl :: proc(app: ^App_State)
 	vbo: u32
 	opengl.GenBuffers(1, &vbo)
 	opengl.BindBuffer(opengl.ARRAY_BUFFER, vbo)
-
-	opengl.BufferData(
-		opengl.ARRAY_BUFFER, // target
-		size_of(vertices), // size of the buffer object's data store
-		&vertices, // data used for initialization
-		opengl.STATIC_DRAW, // usage
-	)
-
-	opengl.VertexAttribPointer(
-		0, // index
-		2, // size
-		opengl.FLOAT, // type
-		opengl.FALSE, // normalized
-		2 * size_of(f32), // stride
-		0, // offset
-	)
-
+	opengl.BufferData(opengl.ARRAY_BUFFER, size_of(vertices), &vertices, opengl.STATIC_DRAW)
+	opengl.VertexAttribPointer(0, 2, opengl.FLOAT, opengl.FALSE, 2 * size_of(f32), 0)
 	opengl.EnableVertexAttribArray(0)
 
 	ok: bool
-	app.vertex_shader_id, ok = opengl.compile_shader_from_source(
-		VERTEX_SHADER,
-		.VERTEX_SHADER,
-	)
+	app.vertex_shader_id, ok = opengl.compile_shader_from_source(VERTEX_SHADER, .VERTEX_SHADER)
 	if !ok {
-		log.fatal("Could not compile vertex shader")
+		log.fatal("Could not compile vertex shader.")
+
+		app.running = false
+		return
 	}
 
 	reload_shaders(app)
-	opengl.Uniform1i(opengl.GetUniformLocation(app.program, "tex"), 0)
 }
 
 render_graph :: proc(app: ^App_State) 
 {
 	opengl.UseProgram(app.program)
 	opengl.BindVertexArray(app.vao)
-
-	// Draw commands.
 	opengl.ClearColor(0.1, 0.1, 0.1, 1)
 	opengl.Clear(opengl.COLOR_BUFFER_BIT)
-
-	opengl.DrawArrays(
-		opengl.TRIANGLE_STRIP, // Draw triangles.
-		0, // Begin drawing at index 0.
-		4, // Use 4 indices.
-	)
+	opengl.DrawArrays(opengl.TRIANGLE_STRIP, 0, 4)
 }
 
 reload_shaders :: proc(app: ^App_State) 
@@ -207,21 +177,12 @@ reload_shaders :: proc(app: ^App_State)
 		}
 
 		id = opengl.CreateShader(opengl.FRAGMENT_SHADER)
-		opengl.ShaderSource(
-			id,
-			(i32)(len(sources)),
-			raw_data(sources),
-			raw_data(lengths),
-		)
+		opengl.ShaderSource(id, (i32)(len(sources)), raw_data(sources), raw_data(lengths))
 		opengl.CompileShader(id)
 
 		success: i32
 		opengl.GetShaderiv(id, opengl.COMPILE_STATUS, &success)
-		if success == 0 {
-			return id, false
-		}
-
-		return id, true
+		return id, (bool)(success)
 	}
 
 	opengl.UseProgram(0)
@@ -251,39 +212,39 @@ reload_shaders :: proc(app: ^App_State)
 
 	if !ok {
 		info_log: [512]u8
-		opengl.GetShaderInfoLog(
-			fragment_shader_id,
-			len(info_log),
-			nil,
-			([^]u8)(&info_log),
+		opengl.GetShaderInfoLog(fragment_shader_id, len(info_log), nil, ([^]u8)(&info_log))
+
+		log.fatalf(
+			"[compile_fragment_shader] Failed to compile fragment shader. Error msg: \"%s\"",
+			info_log
 		)
-		msg := fmt.ctprintf(
-			"[compile_fragment_shader] Failed to compile fragment shader. Error msg:\n\n\"%s\".",
-			info_log,
+		sdl.ShowSimpleMessageBox(
+			{.ERROR},
+			"Failure!",
+			fmt.ctprintf("Failed to compile fragment shader.\n\nError message: \"%s\"", info_log),
+			app.window
 		)
 
-		log.fatal(msg)
-		sdl.ShowSimpleMessageBox({.ERROR}, "Failure!", msg, app.window)
 		app.running = false
-
 		return
 	}
 
-	app.program, ok = opengl.create_and_link_program(
-		{app.vertex_shader_id, fragment_shader_id},
-	)
+	app.program, ok = opengl.create_and_link_program({app.vertex_shader_id, fragment_shader_id})
 
 	if !ok {
 		gl_err_msg, _ := opengl.get_last_error_message()
-		msg := fmt.ctprintf(
-			"[opengl.create_and_link_program] Failed to compile shader program. Error msg:\n\n\"%s\".",
+		log.fatalf(
+			"[opengl.create_and_link_program] Failed to compile shader program. Error msg: \"%s\"",
 			gl_err_msg,
 		)
+		sdl.ShowSimpleMessageBox(
+			{.ERROR},
+			"Failure!",
+			fmt.ctprintf("Failed to compile shader program.\n\nError message: \"%s\"", gl_err_msg),
+			app.window
+		)
 
-		log.fatal(msg)
-		sdl.ShowSimpleMessageBox({.ERROR}, "Failure!", msg, app.window)
 		app.running = false
-
 		return
 	}
 
@@ -297,15 +258,13 @@ reload_shaders :: proc(app: ^App_State)
 		abcd             = opengl.GetUniformLocation(app.program, "abcd"),
 		saturation       = opengl.GetUniformLocation(app.program, "saturation"),
 		lightness        = opengl.GetUniformLocation(app.program, "lightness"),
-		gamma_correction = opengl.GetUniformLocation(
-			app.program,
-			"gamma_correction",
-		),
+		gamma_correction = opengl.GetUniformLocation(app.program, "gamma_correction"),
 	}
 
 	width, height: i32
 	sdl.GetWindowSizeInPixels(app.window, &width, &height)
 	opengl.Viewport(0, 0, width, height)
+
 	opengl.Uniform2f(app.uniforms.resolution, (f32)(width), (f32)(height))
 	opengl.Uniform2f(app.uniforms.shift, app.shift.x, app.shift.y)
 	opengl.Uniform1f(app.uniforms.zoom, app.zoom)
@@ -320,11 +279,7 @@ load_texture :: proc(app: ^App_State, img: ^Image_Data)
 {
 	defer {
 		img.is_resident = true
-		log.infof(
-			"Uploaded %s image at \"%s\" onto GPU",
-			img.size_str,
-			img.filename,
-		)
+		log.infof("Uploaded %s image at \"%s\" onto GPU", img.size_str, img.filename)
 	}
 
 	opengl.DeleteTextures(1, &app.texture)
@@ -353,16 +308,8 @@ set_tex_parameters :: proc(wrap_s, wrap_t: i32)
 {
 	opengl.TexParameteri(opengl.TEXTURE_2D, opengl.TEXTURE_WRAP_S, wrap_s)
 	opengl.TexParameteri(opengl.TEXTURE_2D, opengl.TEXTURE_WRAP_T, wrap_t)
-	opengl.TexParameteri(
-		opengl.TEXTURE_2D,
-		opengl.TEXTURE_MIN_FILTER,
-		opengl.LINEAR_MIPMAP_LINEAR,
-	)
-	opengl.TexParameteri(
-		opengl.TEXTURE_2D,
-		opengl.TEXTURE_MAG_FILTER,
-		opengl.LINEAR,
-	)
+	opengl.TexParameteri(opengl.TEXTURE_2D, opengl.TEXTURE_MIN_FILTER, opengl.LINEAR_MIPMAP_LINEAR)
+	opengl.TexParameteri(opengl.TEXTURE_2D, opengl.TEXTURE_MAG_FILTER, opengl.LINEAR)
 }
 
 debug_proc :: proc "c" (

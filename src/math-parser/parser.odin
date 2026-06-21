@@ -133,12 +133,7 @@ expression :: proc(p: ^Parser) -> (Expression, Maybe(Error_Report))
 	return addition(p)
 }
 
-addition :: proc(
-	p: ^Parser,
-) -> (
-	expr: Expression,
-	report: Maybe(Error_Report),
-) 
+addition :: proc(p: ^Parser) -> (expr: Expression, report: Maybe(Error_Report)) 
 {
 	expr = multiplication(p) or_return
 	defer if report != nil {
@@ -162,12 +157,7 @@ addition :: proc(
 	return expr, nil
 }
 
-multiplication :: proc(
-	p: ^Parser,
-) -> (
-	expr: Expression,
-	report: Maybe(Error_Report),
-) 
+multiplication :: proc(p: ^Parser) -> (expr: Expression, report: Maybe(Error_Report)) 
 {
 	expr = power(p) or_return
 	defer if report != nil {
@@ -266,12 +256,7 @@ primary :: proc(p: ^Parser) -> (expr: Expression, report: Maybe(Error_Report))
 	return expr, report
 }
 
-function_call :: proc(
-	p: ^Parser,
-) -> (
-	expr: Expression,
-	report: Maybe(Error_Report),
-) 
+function_call :: proc(p: ^Parser) -> (expr: Expression, report: Maybe(Error_Report)) 
 {
 	func_call := new(FunctionCall)
 	func_call.name = parser_previous(p).lexeme
@@ -318,12 +303,7 @@ function_call :: proc(
 	return func_call, report
 }
 
-parameter_list :: proc(
-	p: ^Parser,
-) -> (
-	list: [dynamic]Expression,
-	report: Maybe(Error_Report),
-) 
+parameter_list :: proc(p: ^Parser) -> (list: [dynamic]Expression, report: Maybe(Error_Report)) 
 {
 	list = make([dynamic]Expression)
 	defer shrink(&list)
@@ -360,12 +340,7 @@ expression_free :: proc(expr: Expression, allocator := context.allocator)
 	}
 }
 
-parser_parse :: proc(
-	p: ^Parser,
-) -> (
-	expr: Expression,
-	report: Maybe(Error_Report),
-) 
+parser_parse :: proc(p: ^Parser) -> (expr: Expression, report: Maybe(Error_Report)) 
 {
 	expr = expression(p) or_return
 

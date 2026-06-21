@@ -17,12 +17,7 @@ logging_allocator_proc :: proc(
 {
 	#partial switch mode {
 	case .Alloc, .Alloc_Non_Zeroed:
-		log.debugf(
-			"Allocation made of size %i and alignment %i",
-			size,
-			alignment,
-			location = loc,
-		)
+		log.debugf("Allocation made of size %i and alignment %i", size, alignment, location = loc)
 	case .Free:
 		log.debugf("Free made of size %i", size, location = loc)
 	case .Free_All:

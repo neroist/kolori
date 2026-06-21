@@ -50,7 +50,7 @@ IMGUI_CONFIG_FLAGS :: imgui.ConfigFlags{.NavEnableKeyboard, .DockingEnable}
 APP_ICON_DATA :: #load("../favicon/favicon-64x64.png", []u8)
 MAIN_FONT_DATA :: #load("../fonts/DMSans.ttf", []u8)
 MAX_FRAMERATE :: 260
-PREFERRED_IMG_SIZE :: 196 // 128, 256
+PREFERRED_IMG_SIZE :: 196 // alternatives: 128, 256
 
 setup_sdl :: proc(app: ^App_State) 
 {
@@ -61,10 +61,7 @@ setup_sdl :: proc(app: ^App_State)
 	)
 
 	if !sdl.Init({.VIDEO}) {
-		log.fatal(
-			"[sdl.Init] Failed to initialize SDL3. Error msg:",
-			sdl.GetError(),
-		)
+		log.fatal("[sdl.Init] Failed to initialize SDL3. Error msg:", sdl.GetError())
 
 		app.running = false
 		return
@@ -76,12 +73,7 @@ setup_sdl :: proc(app: ^App_State)
 		app.main_scale = 1
 	}
 
-	window_flags := sdl.WindowFlags {
-		.OPENGL,
-		.RESIZABLE,
-		.HIDDEN,
-		.HIGH_PIXEL_DENSITY,
-	}
+	window_flags := sdl.WindowFlags{.OPENGL, .RESIZABLE, .HIDDEN, .HIGH_PIXEL_DENSITY}
 	app.window = sdl.CreateWindow(
 		"Kolori, from Stardance <3",
 		(i32)(800 * app.main_scale),
@@ -90,10 +82,7 @@ setup_sdl :: proc(app: ^App_State)
 	)
 
 	if app.window == nil {
-		log.fatal(
-			"[sdl.CreateWindow] Failed to create window. Error msg:",
-			sdl.GetError(),
-		)
+		log.fatal("[sdl.CreateWindow] Failed to create window. Error msg:", sdl.GetError())
 
 		app.running = false
 		return
@@ -103,11 +92,7 @@ setup_sdl :: proc(app: ^App_State)
 	app.window_icon = sdl.LoadPNG_IO(stream, true)
 	sdl.SetWindowIcon(app.window, app.window_icon)
 
-	sdl.SetWindowPosition(
-		app.window,
-		sdl.WINDOWPOS_CENTERED,
-		sdl.WINDOWPOS_CENTERED,
-	)
+	sdl.SetWindowPosition(app.window, sdl.WINDOWPOS_CENTERED, sdl.WINDOWPOS_CENTERED)
 	sdl.ShowWindow(app.window)
 }
 
@@ -189,27 +174,22 @@ function_input :: proc(app: ^App_State)
 	imgui.Text("f(z) =")
 	imgui.PopFont()
 
-	imgui.SameLine() // x-offset: 62-ish
+	imgui.SameLine(62.5)
 
 	if imgui.InputText("##function", app.function, FUNCTION_BUF_SIZE) {
 		err: cstring
 		err, failure = validate(app.function).?
 
-		// `err != err_msg` as a predicate compiles
-		// when `err` is nil and `err_msg` is a string.
-		// what does that even do?
 		if !failure {
 			// if the function hasn't changed since 
 			// last time do we really need to do this?
 			app.time = 0
 			app.animation_paused = false
 			reload_shaders(app)
-		} else // we have a new error message, show it
-		if err != app.err_msg {
+		} else if err != app.err_msg {
 			delete(app.err_msg)
 			app.err_msg = err
-		} else // same error message, we dont need this one
-		{
+		} else {
 			delete(err)
 		}
 	}
@@ -240,14 +220,7 @@ animation_settings :: proc(app: ^App_State)
 		slider_fmt = "%d FPS"
 	}
 
-	imgui.SliderInt(
-		"Framerate",
-		&app.framerate,
-		5,
-		MAX_FRAMERATE,
-		slider_fmt,
-		{.ClampOnInput},
-	)
+	imgui.SliderInt("Framerate", &app.framerate, 5, MAX_FRAMERATE, slider_fmt, {.ClampOnInput})
 
 	if app.vsync {
 		imgui.EndDisabled()
@@ -255,15 +228,14 @@ animation_settings :: proc(app: ^App_State)
 
 	if imgui.Checkbox("Enable VSync", &app.vsync) {
 		_vsync: i32
-		if ok := sdl.GL_GetSwapInterval(&_vsync); ok {
+		ok := sdl.GL_GetSwapInterval(&_vsync)
+		if ok {
 			ok &= sdl.GL_SetSwapInterval(_vsync == 0 ? 1 : 0)
-			if !ok {
-				log.warn(
-					"Failed to change swap interval. Error msg:",
-					sdl.GetError(),
-				)
-				app.vsync = !app.vsync
-			}
+		} 
+		
+		if !ok {
+			log.warnf("Failed to change swap interval. Error msg: \"%s\"", sdl.GetError())
+			app.vsync = !app.vsync
 		}
 	}
 
@@ -285,11 +257,7 @@ coloring_settings :: proc(app: ^App_State)
 
 	combo_items: cstring = "HSL Coloring\x00HSLuv Coloring\x00Custom Color Palette\x00Use an Image\x00"
 
-	if imgui.Combo(
-		"Coloring Method",
-		(^i32)(&app.coloring_method),
-		combo_items,
-	) {
+	if imgui.Combo("Coloring Method", (^i32)(&app.coloring_method), combo_items) {
 		app.time = 0
 		app.animation_paused = false
 		reload_shaders(app)
@@ -307,16 +275,8 @@ coloring_settings :: proc(app: ^App_State)
 			opengl.Uniform1f(app.uniforms.lightness, app.lightness)
 		}
 
-		if imgui.SliderFloat(
-			"Gamma Correction",
-			&app.gamma_correction,
-			-1,
-			1,
-		) {
-			opengl.Uniform1f(
-				app.uniforms.gamma_correction,
-				app.gamma_correction,
-			)
+		if imgui.SliderFloat("Gamma Correction", &app.gamma_correction, -1, 1) {
+			opengl.Uniform1f(app.uniforms.gamma_correction, app.gamma_correction)
 		}
 	case .Use_Palette:
 		rand_color :: proc() -> (color: Color) 
@@ -351,12 +311,10 @@ coloring_settings :: proc(app: ^App_State)
 			load_texture(app, &app.img)
 			stbi.image_free(app.img.pixels)
 		}
-		
+
 		if app.img.is_resident {
 			// horizontally center image
-			imgui.SetCursorPosX(
-				(imgui.GetWindowSize().x - app.img.display_size.x) * 0.5,
-			)
+			imgui.SetCursorPosX((imgui.GetWindowSize().x - app.img.display_size.x) * 0.5)
 
 			tex_ref := imgui.TextureRef {
 				_TexID = (imgui.TextureID)(app.texture),
@@ -430,11 +388,7 @@ coloring_settings :: proc(app: ^App_State)
 	}
 }
 
-load_image :: proc "c" (
-	app_ptr: rawptr,
-	filelist: [^]cstring,
-	filter: i32 = 0,
-) 
+load_image :: proc "c" (app_ptr: rawptr, filelist: [^]cstring, filter: i32 = 0) 
 {
 	if filelist == nil || filelist[0] == nil {
 		return
@@ -445,50 +399,29 @@ load_image :: proc "c" (
 
 	stbi.set_flip_vertically_on_load(1)
 	app.img.filename = strings.clone_from_cstring(filelist[0])
-	app.img.pixels = stbi.load(
-		filelist[0],
-		&app.img.size.x,
-		&app.img.size.y,
-		nil,
-		3,
-	)
+	app.img.pixels = stbi.load(filelist[0], &app.img.size.x, &app.img.size.y, nil, 3)
+	app.img.is_resident = false
 
 	if app.img.pixels != nil {
 		delete(app.img.size_str)
-		app.img.size_str = fmt.caprintf(
-			"%ix%i",
-			app.img.size.x,
-			app.img.size.y,
-		)
+		app.img.size_str = fmt.caprintf("%ix%i", app.img.size.x, app.img.size.y)
 
 		// preserve aspect ratio while resizing to preferred size
 		app.img.display_size = ([2]f32)(app.img.size)
-		if (app.img.size.x >= PREFERRED_IMG_SIZE) ||
-			(app.img.size.y >= PREFERRED_IMG_SIZE) {
-			scale_by :=
-				PREFERRED_IMG_SIZE /
-				(f32)(max(app.img.size.x, app.img.size.y))
+		if (app.img.size.x >= PREFERRED_IMG_SIZE) || (app.img.size.y >= PREFERRED_IMG_SIZE) {
+			scale_by := PREFERRED_IMG_SIZE / (f32)(max(app.img.size.x, app.img.size.y))
 			app.img.display_size *= scale_by
 		}
 
-		log.infof(
-			"Loaded %s image at \"%s\" from disk",
-			app.img.size_str,
-			app.img.filename,
-		)
+		log.infof("Loaded %s image at \"%s\" from disk", app.img.size_str, app.img.filename)
 	} else {
 		msg := fmt.ctprintf(
-			"Failed to load the image file \"%s\". Reason:\n\n\"%s\"",
+			"Failed to load the image file \"%s\".\n\nReason:\"%s\"",
 			filelist[0],
-			stbi.failure_reason(), // not threadsafe
+			stbi.failure_reason(), // not threadsafe?
 		)
 
-		sdl.ShowSimpleMessageBox(
-			{.WARNING},
-			"Could not load image",
-			msg,
-			app.window,
-		)
+		sdl.ShowSimpleMessageBox({.WARNING}, "Could not load image", msg, app.window)
 	}
 }
 
