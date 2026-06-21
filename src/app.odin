@@ -104,12 +104,12 @@ setup_app :: proc(app: ^App_State)
 	app.running = true
 
 	// default settings
-	app.zoom = 1
-	app.show_ui = true
+	app.zoom.val = 1
+	app.gamma_correction.val = 0.65
+	app.saturation.val = 100
+	app.lightness.val = 100
 	app.time_speed = 1
-	app.gamma_correction = 0.65
-	app.saturation = 100
-	app.lightness = 100
+	app.show_ui = true
 	app.framerate = 60 // if we can, we try to enable vsync automatically
 	// otherwise, we operate off of 60 fps
 
@@ -130,6 +130,7 @@ enforce_framerate :: proc(delta: u64, framerate: i32)
 
 advance_time :: proc(app: ^App_State, delta: u64) 
 {
-	app.time += (f32)(delta) * 1e-3
-	opengl.Uniform1f(app.uniforms.time, app.time * app.time_speed)
+	app.time.val += (f32)(delta) * 1e-3 * app.time_speed
+	// opengl.Uniform1f(app.time.loc, app.time.val * app.time_speed)
+	update_uniform(app.time)
 }

@@ -30,13 +30,6 @@ Ui_State :: struct {
 	vsync:            bool,
 }
 
-Coloring_Method :: enum i32 {
-	Use_HSL,
-	Use_HSLuv,
-	Use_Palette,
-	Use_Image,
-}
-
 Image_Data :: struct {
 	filename:     string,
 	size:         [2]i32,
@@ -44,6 +37,13 @@ Image_Data :: struct {
 	pixels:       [^]u8,
 	size_str:     cstring,
 	is_resident:  bool,
+}
+
+Coloring_Method :: enum i32 {
+	Use_HSL,
+	Use_HSLuv,
+	Use_Palette,
+	Use_Image,
 }
 
 IMGUI_CONFIG_FLAGS :: imgui.ConfigFlags{.NavEnableKeyboard, .DockingEnable}
@@ -183,7 +183,7 @@ function_input :: proc(app: ^App_State)
 		if !failure {
 			// if the function hasn't changed since 
 			// last time do we really need to do this?
-			app.time = 0
+			app.time.val = 0
 			app.animation_paused = false
 			reload_shaders(app)
 		} else if err != app.err_msg {
@@ -244,7 +244,7 @@ animation_settings :: proc(app: ^App_State)
 	imgui.SliderFloat("Anim. Speed", &app.time_speed, 0.1, 10)
 	imgui.Checkbox("Pause Anim.", &app.animation_paused)
 	if imgui.Button("Reset Anim.") {
-		app.time = 0
+		app.time.val = 0
 		app.animation_paused = false
 	}
 }
@@ -258,7 +258,7 @@ coloring_settings :: proc(app: ^App_State)
 	combo_items: cstring = "HSL Coloring\x00HSLuv Coloring\x00Custom Color Palette\x00Use an Image\x00"
 
 	if imgui.Combo("Coloring Method", (^i32)(&app.coloring_method), combo_items) {
-		app.time = 0
+		app.time.val = 0
 		app.animation_paused = false
 		reload_shaders(app)
 	}
@@ -267,16 +267,19 @@ coloring_settings :: proc(app: ^App_State)
 
 	switch app.coloring_method {
 	case .Use_HSL, .Use_HSLuv:
-		if imgui.SliderFloat("Saturation", &app.saturation, 0, 100, "%.1f%%") {
-			opengl.Uniform1f(app.uniforms.saturation, app.saturation)
+		if imgui.SliderFloat("Saturation", &app.saturation.val, 0, 100, "%.1f%%") {
+			// opengl.Uniform1f(app.saturation, app.saturation)
+			update_uniform(app.saturation)
 		}
 
-		if imgui.SliderFloat("Lightness", &app.lightness, 0, 100, "%.1f%%") {
-			opengl.Uniform1f(app.uniforms.lightness, app.lightness)
+		if imgui.SliderFloat("Lightness", &app.lightness.val, 0, 100, "%.1f%%") {
+			// opengl.Uniform1f(app.lightness, app.lightness)
+			update_uniform(app.lightness)
 		}
 
-		if imgui.SliderFloat("Gamma Correction", &app.gamma_correction, -1, 1) {
-			opengl.Uniform1f(app.uniforms.gamma_correction, app.gamma_correction)
+		if imgui.SliderFloat("Gamma Correction", &app.gamma_correction.val, -1, 1) {
+			// opengl.Uniform1f(app.gamma_correction, app.gamma_correction)
+			update_uniform(app.gamma_correction)
 		}
 	case .Use_Palette:
 		rand_color :: proc() -> (color: Color) 
@@ -289,22 +292,23 @@ coloring_settings :: proc(app: ^App_State)
 
 		flags := imgui.ColorEditFlags{.InputRGB, .Uint8}
 		colors_changed :=
-			imgui.ColorEdit3("A", &app.abcd[0], flags) |
-			imgui.ColorEdit3("B", &app.abcd[1], flags) |
-			imgui.ColorEdit3("C", &app.abcd[2], flags) |
-			imgui.ColorEdit3("D", &app.abcd[3], flags)
+			imgui.ColorEdit3("A", &app.abcd.val[0], flags) |
+			imgui.ColorEdit3("B", &app.abcd.val[1], flags) |
+			imgui.ColorEdit3("C", &app.abcd.val[2], flags) |
+			imgui.ColorEdit3("D", &app.abcd.val[3], flags)
 
 		if imgui.Button("Random Palette") {
-			app.abcd[0] = rand_color()
-			app.abcd[1] = rand_color()
-			app.abcd[2] = rand_color()
-			app.abcd[3] = rand_color()
+			app.abcd.val[0] = rand_color()
+			app.abcd.val[1] = rand_color()
+			app.abcd.val[2] = rand_color()
+			app.abcd.val[3] = rand_color()
 
 			colors_changed = true
 		}
 
 		if colors_changed {
-			opengl.Uniform3fv(app.uniforms.abcd, 4, ([^]f32)(&app.abcd))
+			// opengl.Uniform3fv(app.uniforms.abcd, 4, ([^]f32)(&app.abcd))
+			update_uniform(app.abcd)
 		}
 	case .Use_Image:
 		if !app.img.is_resident && app.img.pixels != nil {
@@ -317,7 +321,7 @@ coloring_settings :: proc(app: ^App_State)
 			imgui.SetCursorPosX((imgui.GetWindowSize().x - app.img.display_size.x) * 0.5)
 
 			tex_ref := imgui.TextureRef {
-				_TexID = (imgui.TextureID)(app.texture),
+				_TexID = (imgui.TextureID)(app.texture.id),
 			}
 			imgui.Image(tex_ref, app.img.display_size, {0, 1}, {1, 0})
 
@@ -352,20 +356,20 @@ coloring_settings :: proc(app: ^App_State)
 
 		upd_tex_params: bool
 		defer if upd_tex_params {
-			set_tex_parameters(app.texture_wrap_s, app.texture_wrap_t)
+			set_tex_parameters(app.texture.wrap_s, app.texture.wrap_t)
 		}
 
 		imgui.Text("Horizontal Repeat:")
 		imgui.SameLine()
 		upd_tex_params |= imgui.RadioButtonIntPtr(
 			"Normal##norm_wrap_s",
-			&app.texture_wrap_s,
+			&app.texture.wrap_s,
 			opengl.REPEAT,
 		)
 		imgui.SameLine()
 		upd_tex_params |= imgui.RadioButtonIntPtr(
 			"Mirrored##mirr_wrap_s",
-			&app.texture_wrap_s,
+			&app.texture.wrap_s,
 			opengl.MIRRORED_REPEAT,
 		)
 
@@ -373,13 +377,13 @@ coloring_settings :: proc(app: ^App_State)
 		imgui.SameLine()
 		upd_tex_params |= imgui.RadioButtonIntPtr(
 			"Normal##norm_wrap_t",
-			&app.texture_wrap_t,
+			&app.texture.wrap_t,
 			opengl.REPEAT,
 		)
 		imgui.SameLine()
 		upd_tex_params |= imgui.RadioButtonIntPtr(
 			"Mirrored##mirr_wrap_t",
-			&app.texture_wrap_t,
+			&app.texture.wrap_t,
 			opengl.MIRRORED_REPEAT,
 		)
 

@@ -41,7 +41,9 @@ handle_event :: proc(app: ^App_State, event: ^sdl.Event)
 		}
 
 		opengl.Viewport(0, 0, width, height)
-		opengl.Uniform2f(app.uniforms.resolution, (f32)(width), (f32)(height))
+		app.resolution.val = {(f32)(width), (f32)(height)}
+		update_uniform(app.resolution)
+		// opengl.Uniform2f(app.resolution, (f32)(width), (f32)(height))
 	case .KEY_DOWN:
 		if app.io.WantCaptureKeyboard {
 			break
@@ -62,9 +64,6 @@ handle_event :: proc(app: ^App_State, event: ^sdl.Event)
 			speed = event.pinch.scale
 		}
 
-		// we'd use `in` but then we get a:
-		// "Missing type in compound literal" error from the checker.
-		// if we use the union "&" operator instead, it works fine.
 		if sdl.GetModState() & {.LSHIFT, .RSHIFT} != {} {
 			speed *= speed
 		}
@@ -84,7 +83,7 @@ handle_event :: proc(app: ^App_State, event: ^sdl.Event)
 		stbi.image_free(app.img.pixels)
 
 		if app.img.pixels != nil {
-			app.time = 0
+			app.time.val = 0
 			app.animation_paused = false
 			app.coloring_method = .Use_Image
 			reload_shaders(app)
@@ -116,7 +115,7 @@ handle_key :: proc(app: ^App_State, event: ^sdl.Event)
 		sdl.SyncWindow(app.window)
 	case sdl.K_Q:
 		if ctrl_key || shift_key {
-			app.time = 0
+			app.time.val = 0
 			app.animation_paused = false
 
 			if ctrl_key {
@@ -189,8 +188,9 @@ take_screenshot :: proc(window: ^sdl.Window, width, height: i32)
 
 zoom :: proc(app: ^App_State, speed: f32) 
 {
-	app.zoom *= speed
-	opengl.Uniform1f(app.uniforms.zoom, app.zoom)
+	app.zoom.val *= speed
+	update_uniform(app.zoom)
+	// opengl.Uniform1f(app.uniforms.zoom, app.zoom)
 }
 
 pan :: proc(app: ^App_State, direction: [2]f32, speed: f32 = 1) 
@@ -199,18 +199,21 @@ pan :: proc(app: ^App_State, direction: [2]f32, speed: f32 = 1)
 	sdl.GetWindowSize(app.window, &width, &height)
 
 	scale := (f32)(min(width, height))
-	app.shift += speed * direction / scale * app.zoom
+	app.shift.val += speed * direction / scale * app.zoom.val
 
-	opengl.Uniform2f(app.uniforms.shift, app.shift.x, app.shift.y)
+	update_uniform(app.shift)
+	// opengl.Uniform2f(app.uniforms.shift, app.shift.x, app.shift.y)
 }
 
 reset_view :: proc(app: ^App_State) 
 {
-	app.zoom = 1
-	app.shift = {0, 0}
+	app.zoom.val = 1
+	app.shift.val  = {0, 0}
 
-	opengl.Uniform1f(app.uniforms.zoom, app.zoom)
-	opengl.Uniform2f(app.uniforms.shift, app.shift.x, app.shift.y)
+	update_uniform(app.zoom)
+	update_uniform(app.shift)
+	// opengl.Uniform1f(app.uniforms.zoom, app.zoom)
+	// opengl.Uniform2f(app.uniforms.shift, app.shift.x, app.shift.y)
 }
 
 @(private = "file")

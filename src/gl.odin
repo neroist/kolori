@@ -7,54 +7,39 @@ import "core:log"
 import "core:fmt"
 
 GL_State :: struct {
-	abcd:             [4]Color,
-	uniforms:         Uniforms,
-	shift:            [2]f32,
-	// resolution:       [2]f32,
+	using uniforms:   Uniforms,
+	texture:          Texture,
 	ctx:              sdl.GLContext,
 	vao:              u32,
 	program:          u32,
 	vertex_shader_id: u32,
-	texture:          u32,
-	zoom:             f32,
-	time:             f32,
-	gamma_correction: f32,
-	saturation:       f32,
-	lightness:        f32,
-	texture_wrap_s:   i32,
-	texture_wrap_t:   i32,
-	texture_min_fltr: i32,
-	texture_mag_fltr: i32,
+}
+
+Uniforms :: struct {
+	abcd:             Uniform([4]Color),
+	resolution:       Uniform([2]f32),
+	shift:            Uniform([2]f32),
+	zoom:             Uniform(f32),
+	time:             Uniform(f32),
+	gamma_correction: Uniform(f32),
+	saturation:       Uniform(f32),
+	lightness:        Uniform(f32),
+}
+
+Texture :: struct {
+	id:       u32,
+	wrap_s:   i32,
+	wrap_t:   i32,
+	min_filter: i32,
+	mag_filter: i32,
+}
+
+Uniform :: struct($T: typeid) {
+	loc: i32,
+	val: T
 }
 
 Color :: [3]f32
-
-// use uniform buffer object and a single "set_uniforms" proc (UBO)?
-// Uniform :: struct($T: typeid) {
-// 	location: i32,
-// 	value: T
-// }
-// Uniforms :: struct {
-// 	zoom:             Uniform(f32),
-// 	time:             Uniform(f32),
-// 	resolution:       Uniform([2]f32),
-// 	shift:            Uniform([2]f32),
-// 	abcd:             Uniform([4]Color),
-// 	gamma_correction: Uniform(f32),
-// 	saturation:       Uniform(f32),
-// 	lightness:        Uniform(f32),
-// }
-
-Uniforms :: struct {
-	zoom:             i32,
-	time:             i32,
-	resolution:       i32,
-	shift:            i32,
-	abcd:             i32,
-	gamma_correction: i32,
-	saturation:       i32,
-	lightness:        i32,
-}
 
 when ODIN_DEBUG {
 	// for glDebugMessageCallback
@@ -131,13 +116,13 @@ setup_gl :: proc(app: ^App_State)
 	opengl.GenVertexArrays(1, &app.vao)
 	opengl.BindVertexArray(app.vao)
 
-	opengl.GenTextures(1, &app.texture)
-	opengl.BindTexture(opengl.TEXTURE_2D, app.texture)
+	opengl.GenTextures(1, &app.texture.id)
+	opengl.BindTexture(opengl.TEXTURE_2D, app.texture.id)
 	opengl.Uniform1i(opengl.GetUniformLocation(app.program, "tex"), 0)
-	app.texture_wrap_s = opengl.REPEAT // these are the default
-	app.texture_wrap_t = opengl.REPEAT
-	app.texture_min_fltr = opengl.LINEAR_MIPMAP_LINEAR
-	app.texture_mag_fltr = opengl.LINEAR
+	app.texture.wrap_s = opengl.REPEAT
+	app.texture.wrap_t = opengl.REPEAT
+	app.texture.min_filter = opengl.LINEAR_MIPMAP_LINEAR
+	app.texture.mag_filter = opengl.LINEAR
 
 	vbo: u32
 	opengl.GenBuffers(1, &vbo)
@@ -250,29 +235,66 @@ reload_shaders :: proc(app: ^App_State)
 
 	opengl.UseProgram(app.program)
 
-	app.uniforms = {
-		zoom             = opengl.GetUniformLocation(app.program, "zoom"),
-		time             = opengl.GetUniformLocation(app.program, "time"),
-		resolution       = opengl.GetUniformLocation(app.program, "resolution"),
-		shift            = opengl.GetUniformLocation(app.program, "shift"),
-		abcd             = opengl.GetUniformLocation(app.program, "abcd"),
-		saturation       = opengl.GetUniformLocation(app.program, "saturation"),
-		lightness        = opengl.GetUniformLocation(app.program, "lightness"),
-		gamma_correction = opengl.GetUniformLocation(app.program, "gamma_correction"),
-	}
+	app.zoom.loc             = opengl.GetUniformLocation(app.program, "zoom")
+	app.time.loc             = opengl.GetUniformLocation(app.program, "time")
+	app.resolution.loc       = opengl.GetUniformLocation(app.program, "resolution")
+	app.shift.loc            = opengl.GetUniformLocation(app.program, "shift")
+	app.abcd.loc             = opengl.GetUniformLocation(app.program, "abcd")
+	app.saturation.loc       = opengl.GetUniformLocation(app.program, "saturation")
+	app.lightness.loc        = opengl.GetUniformLocation(app.program, "lightness")
+	app.gamma_correction.loc = opengl.GetUniformLocation(app.program, "gamma_correction")
 
 	width, height: i32
 	sdl.GetWindowSizeInPixels(app.window, &width, &height)
 	opengl.Viewport(0, 0, width, height)
+	app.resolution.val = {(f32)(width), (f32)(height)}
 
-	opengl.Uniform2f(app.uniforms.resolution, (f32)(width), (f32)(height))
-	opengl.Uniform2f(app.uniforms.shift, app.shift.x, app.shift.y)
-	opengl.Uniform1f(app.uniforms.zoom, app.zoom)
-	opengl.Uniform1f(app.uniforms.time, app.time)
-	opengl.Uniform1f(app.uniforms.gamma_correction, app.gamma_correction)
-	opengl.Uniform3fv(app.uniforms.abcd, 4, ([^]f32)(&app.abcd))
-	opengl.Uniform1f(app.uniforms.saturation, app.saturation)
-	opengl.Uniform1f(app.uniforms.lightness, app.lightness)
+	update_uniform(app.resolution)
+	update_uniform(app.zoom)
+	update_uniform(app.shift)
+	update_uniform(app.time)
+	update_uniform(app.time)
+	update_uniform(app.gamma_correction)
+	update_uniform(app.abcd)
+	update_uniform(app.saturation)
+	update_uniform(app.lightness)
+}
+
+update_uniform_single :: proc (uniform: Uniform(f32))
+{
+	opengl.Uniform1f(uniform.loc, uniform.val)
+}
+
+update_uniform_vec :: proc (uniform: Uniform([$L]f32))
+{
+	uniform := uniform
+
+	switch L {
+	case 1: opengl.Uniform1fv(uniform.loc, 1, ([^]f32)(&uniform.val))
+	case 2: opengl.Uniform2fv(uniform.loc, 1, ([^]f32)(&uniform.val))
+	case 3: opengl.Uniform3fv(uniform.loc, 1, ([^]f32)(&uniform.val))
+	case 4: opengl.Uniform4fv(uniform.loc, 1, ([^]f32)(&uniform.val))
+	case: unimplemented()
+	}
+}
+
+update_uniform_2dvec :: proc (uniform: Uniform([$L1][$L2]f32))
+{
+	uniform := uniform
+
+	switch L2 {
+	case 1: opengl.Uniform1fv(uniform.loc, L1, ([^]f32)(&uniform.val))
+	case 2: opengl.Uniform2fv(uniform.loc, L1, ([^]f32)(&uniform.val))
+	case 3: opengl.Uniform3fv(uniform.loc, L1, ([^]f32)(&uniform.val))
+	case 4: opengl.Uniform4fv(uniform.loc, L1, ([^]f32)(&uniform.val))
+	case: unimplemented()
+	}
+}
+
+update_uniform :: proc {
+	update_uniform_single,
+	update_uniform_vec,
+	update_uniform_2dvec,
 }
 
 load_texture :: proc(app: ^App_State, img: ^Image_Data) 
@@ -282,9 +304,9 @@ load_texture :: proc(app: ^App_State, img: ^Image_Data)
 		log.infof("Uploaded %s image at \"%s\" onto GPU", img.size_str, img.filename)
 	}
 
-	opengl.DeleteTextures(1, &app.texture)
-	opengl.GenTextures(1, &app.texture)
-	opengl.BindTexture(opengl.TEXTURE_2D, app.texture)
+	opengl.DeleteTextures(1, &app.texture.id)
+	opengl.GenTextures(1, &app.texture.id)
+	opengl.BindTexture(opengl.TEXTURE_2D, app.texture.id)
 
 	// https://stackoverflow.com/a/49126350
 	opengl.PixelStorei(opengl.UNPACK_ALIGNMENT, 1)
@@ -300,7 +322,7 @@ load_texture :: proc(app: ^App_State, img: ^Image_Data)
 		opengl.UNSIGNED_BYTE,
 		img.pixels,
 	)
-	set_tex_parameters(app.texture_wrap_s, app.texture_wrap_t)
+	set_tex_parameters(app.texture.wrap_s, app.texture.wrap_t)
 	opengl.GenerateMipmap(opengl.TEXTURE_2D)
 }
 
