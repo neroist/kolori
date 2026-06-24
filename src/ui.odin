@@ -51,6 +51,7 @@ APP_ICON_DATA :: #load("../favicon/favicon-64x64.png", []u8)
 MAIN_FONT_DATA :: #load("../fonts/DMSans.ttf", []u8)
 MAX_FRAMERATE :: 260
 PREFERRED_IMG_SIZE :: 196 // alternatives: 128, 256
+UI_CONFIG_FILE :: #config(UI_CONFIG_FILE, "kolori.ini")
 
 setup_sdl :: proc(app: ^App_State) 
 {
@@ -104,6 +105,7 @@ setup_imgui :: proc(app: ^App_State)
 
 	app.io = imgui.GetIO()
 	app.io.ConfigFlags += IMGUI_CONFIG_FLAGS
+	app.io.IniFilename = UI_CONFIG_FILE
 
 	style_imgui() // app.main_scale
 
