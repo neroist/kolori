@@ -97,9 +97,13 @@ held here: <https://odin-lang.org/docs/install/>.
 - For Mac OS, we also use *Clang* to build the ImGui binaries, and *Python* to
 run the build commands.
 
-- Finally, on Linux and Mac OS, install **SDL3** (>= 3.2.0) and **libc++** using your
-system's package manager (`apt`, `pacman`, `brew`, etc.). On Windows,
-binaries are already provided.
+- Finally, on Linux and Mac OS, install **SDL3** (>= 3.2.0) and **libc++**
+using your system's package manager (`apt`, `pacman`, `brew`, etc.). On
+Windows, binaries are already provided.
+
+> For distribution releases, we use Inno Setup for creating the Windows
+> installer (make sure to add `iscc` to `PATH`!) and `linuxdeploy` and
+> `appimagetool` for creating AppImages.
 
 ### Steps
 1. Clone the repo.
