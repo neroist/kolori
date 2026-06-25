@@ -44,6 +44,8 @@ else
 endif
 
 .PHONY: clean installer
+.SILENT:
+
 default: release
 release: kolori
 debug: kolori_debug
@@ -66,17 +68,17 @@ endif
 
 kolori-x86_64.AppImage: release
 ifneq ($(IS_WINDOWS),1)
-	@mkdir -p AppDir/usr/share/icons/hicolor/{$(ICON_SIZES)}/apps/
-	@mkdir -p AppDir/usr/share/metainfo/
-
-	@for i in $$(echo $(ICON_SIZES) | tr ',' '\n'); do \
+	mkdir -p AppDir/usr/share/icons/hicolor/{$(ICON_SIZES)}/apps/
+	mkdir -p AppDir/usr/share/metainfo/
+	
+	for i in $$(echo $(ICON_SIZES) | tr ',' '\n'); do \
 		cp ./favicon/favicon-$$i.png AppDir/usr/share/icons/hicolor/$$i/apps/io.github.neroist.kolori.png; \
 	done
 
 	cp ./src/AppImage/io.github.neroist.kolori.appdata.xml ./AppDir/usr/share/metainfo/
 
 	# https://github.com/linuxdeploy/linuxdeploy/issues/272
-	@export NO_STRIP=true; \
+	export NO_STRIP=true; \
 	linuxdeploy -e ./kolori -d ./src/AppImage/io.github.neroist.kolori.desktop -l /usr/lib/libm.so.6 -l /usr/lib/libc.so.6 -l /usr/lib/libgcc_s.so.1 --appdir ./AppDir/
 	appimagetool AppDir
 
@@ -86,17 +88,13 @@ endif
 installer: clean kolori-x86_64.exe kolori-x86_64.AppImage
 
 clean:
-	@rm -rf kolori_debug
-	@rm -rf kolori
-	@rm -f *.bin
-	@rm -f *.exe
-	@rm -f *.pdb
-	@rm -f *.res
-	@rm -f *.ini
-	@rm -f kolori_screenshot*.png
-<<<<<<< HEAD
-	@rm -f *.ini
-=======
-	@rm -rf AppDir
-	@rm -rf AppImage
->>>>>>> 3f92b15 (feat: support creation of AppImages for distribution on Linux)
+	rm -f kolori_debug
+	rm -f kolori
+	rm -f *.bin
+	rm -f *.exe
+	rm -f *.pdb
+	rm -f *.res
+	rm -f *.ini
+	rm -f kolori_screenshot*.png
+	rm -rf AppDir
+	rm -rf AppImage
