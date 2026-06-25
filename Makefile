@@ -49,6 +49,7 @@ endif
 default: release
 release: kolori
 debug: kolori_debug
+dist: clean kolori-x86_64.exe kolori-x86_64.AppImage
 
 kolori_debug: $(wildcard src/*) $(wildcard odin-imgui/*)
 	odin build src $(DEBUG_FLAGS)
@@ -84,8 +85,6 @@ ifneq ($(IS_WINDOWS),1)
 
 	mv Kolori-x86_64.AppImage kolori-x86_64.AppImage
 endif
-
-installer: clean kolori-x86_64.exe kolori-x86_64.AppImage
 
 clean:
 	rm -f kolori_debug
