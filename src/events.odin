@@ -167,22 +167,32 @@ handle_key :: proc(app: ^App_State, event: ^sdl.Event)
 
 take_screenshot :: proc(window: ^sdl.Window, width, height: i32) 
 {
-	surface := sdl.CreateSurface(width, height, .RGB24)
+	pixels := make([^]u8, width * height, context.temp_allocator)
 
 	opengl.ReadBuffer(opengl.BACK)
 	opengl.PixelStorei(opengl.PACK_ALIGNMENT, 1)
-	opengl.ReadPixels(0, 0, width, height, opengl.RGB, opengl.UNSIGNED_BYTE, surface.pixels)
-
-	sdl.FlipSurface(surface, .VERTICAL)
-	defer sdl.DestroySurface(surface)
+	opengl.ReadPixels(0, 0, width, height, opengl.RGB, opengl.UNSIGNED_BYTE, pixels)
 
 	filename := fmt.ctprintf("kolori_screenshot%s.png", now_to_string())
 
-	if sdl.SavePNG(surface, filename) {
-		log.info("Saved screenshot to", filename)
+	stbi.flip_vertically_on_write(true)
+	ok := stbi.write_png(filename, width, height, 3, pixels, width*3)
+
+	if ok != 0 {
+		log.info("Saved (%ix%i) screenshot to", width, height, filename)
 	} else {
-		log.warnf("[sdl.SavePNG] Failed to save screenshot. Error msg:\n\n\"%s\".", sdl.GetError())
-		sdl.ShowSimpleMessageBox({.WARNING}, "Failure!", "Failed to save screenshot :(", window)
+		err_msg := stbi.failure_reason()
+		log.warnf(
+			"[stbi.write_png] Failed to save screenshot. Error msg: \"%s\".",
+			err_msg,
+		)
+
+		sdl.ShowSimpleMessageBox(
+			{.WARNING},
+			"Failure!",
+			fmt.ctprintf("Failed to save screenshot :(\n\nReason: \"%s\"", err_msg),
+			window
+		)
 	}
 }
 

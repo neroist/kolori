@@ -97,7 +97,7 @@ held here: <https://odin-lang.org/docs/install/>.
 - For Mac OS, we also use *Clang* to build the ImGui binaries, and *Python* to
 run the build commands.
 
-- Finally, on Linux and Mac OS, install **SDL3** (>= 3.4.0) and **libc++** using your
+- Finally, on Linux and Mac OS, install **SDL3** (>= 3.2.0) and **libc++** using your
 system's package manager (`apt`, `pacman`, `brew`, etc.). On Windows,
 binaries are already provided.
 
@@ -127,7 +127,7 @@ This step only needs to be done once.
 $ sudo make -C $(odin root)/vendor/stb/src
 ```
 
-Whether or not you need `sudo` depends on where you installed Odin.
+This step (also) only needs to be done once; whether or not you need `sudo` depends on where you installed Odin.
 
 4. Build the project.
 ```sh

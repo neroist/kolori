@@ -2,6 +2,7 @@ package kolori
 
 import "../odin-imgui/imgui_impl_opengl3"
 import "../odin-imgui/imgui_impl_sdl3"
+import stbi "vendor:stb/image"
 import opengl "vendor:OpenGL"
 import imgui "../odin-imgui"
 import sdl "vendor:sdl3"
@@ -54,6 +55,7 @@ main :: proc()
 	defer {
 		sdl.GL_DestroyContext(app.gl.ctx)
 		sdl.DestroySurface(app.window_icon)
+		stbi.image_free(app.window_icon.pixels)
 		sdl.DestroyWindow(app.window)
 		sdl.Quit()
 	}

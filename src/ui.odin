@@ -47,7 +47,7 @@ Coloring_Method :: enum i32 {
 }
 
 IMGUI_CONFIG_FLAGS :: imgui.ConfigFlags{.NavEnableKeyboard, .DockingEnable}
-APP_ICON_DATA :: #load("../favicon/favicon-64x64.png", []u8)
+APP_ICON_PNG_DATA :: #load("../favicon/favicon-64x64.png", []u8)
 MAIN_FONT_DATA :: #load("../fonts/DMSans.ttf", []u8)
 MAX_FRAMERATE :: 260
 PREFERRED_IMG_SIZE :: 196 // alternatives: 128, 256
@@ -89,9 +89,16 @@ setup_sdl :: proc(app: ^App_State)
 		return
 	}
 
-	stream := sdl.IOFromMem(raw_data(APP_ICON_DATA), len(APP_ICON_DATA))
-	app.window_icon = sdl.LoadPNG_IO(stream, true)
-	sdl.SetWindowIcon(app.window, app.window_icon)
+	discard: i32
+	app.window_icon = sdl.CreateSurfaceFrom(64, 64, .RGB24, nil, 3*64)
+	app.window_icon.pixels = stbi.load_from_memory(
+		raw_data(APP_ICON_PNG_DATA),
+		(i32)(len(APP_ICON_PNG_DATA)),
+		&discard, // we get a seg fault if these are set to nil
+		&discard,
+		&discard,
+		3,
+	)
 
 	sdl.SetWindowPosition(app.window, sdl.WINDOWPOS_CENTERED, sdl.WINDOWPOS_CENTERED)
 	sdl.ShowWindow(app.window)
