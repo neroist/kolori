@@ -69,6 +69,7 @@ endif
 kolori-x86_64.exe: release icon.res ./src/installer/* LICENSE
 ifeq ($(IS_WINDOWS),1)
 	iscc $(ISCC_FLAGS) ./src/installer/script.iss
+	rm kolori.exe
 endif
 
 kolori-x86_64.AppImage: release $(wildcard ./src/AppImage/*) $(wildcard ./favicon/*)
@@ -87,6 +88,7 @@ ifneq ($(IS_WINDOWS),1)
 	linuxdeploy -e ./kolori -d ./src/AppImage/io.github.neroist.kolori.desktop -l /usr/lib/libm.so.6 -l /usr/lib/libc.so.6 -l /usr/lib/libgcc_s.so.1 --appdir ./AppDir/
 	appimagetool AppDir
 
+	rm kolori
 	mv Kolori-x86_64.AppImage kolori-x86_64.AppImage
 endif
 
