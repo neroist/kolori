@@ -66,17 +66,17 @@ We offer several different coloring modes for coloring the complex plane:
 
 - **HSL coloring**: This is the default. The hue of a pixel at a point z is 
 determined by the z's phase, and lightness determined by the function
-L(z) = 2/pi * atan(|r|^a), where "a" is a gamma correction constant by default
+*L(z) = 2/pi * atan(|r|^a)*, where "*a*" is a gamma correction constant by default
 set to 0.65. You are given an option to alter the gamma correction constant in
-the UI. In the future, you will be able to alter these functions to e.g.
-produce contour lines of phase/modulus.
+the UI, in addition to the saturation and lightness of colors. In the future,
+you will be able to alter these functions to e.g. produce contour lines of
+phase or modulus.
 
 - **HSLuv coloring**: HSLuv is a perceptually uniform alternative to HSL,
 where colors with similar lightness appear similarly bright to the human eye,
 unlike HSL or HSV. How we determine pixel hue and lightness is the same as
-HSL. You are again allowed to change gamma correction constant. However, we
-decrease the lightness by 67% so colors aren't too bright, and turn white too
-quickly.
+HSL. You are again allowed to change gamma correction constant and color 
+saturation and lightness.
 
 - **Custom palette generation**: Input four colors to generate a palette that
 colors the complex plane. Note that, for this coloring mode, only the real
