@@ -150,7 +150,6 @@ get_ini_path :: proc () -> cstring
 		ini_dir, _ = os.user_home_dir(context.temp_allocator)
 	}
 
-	ini_path_str: string
 	if !os.exists(ini_dir) {
 		err := os.make_directory(ini_dir)
 		if err != nil {
@@ -158,9 +157,7 @@ get_ini_path :: proc () -> cstring
 		}
 	}
 
-	ini_path_str, _ = os.join_path({ini_dir, "kolori.ini"}, context.temp_allocator)
-
-	log.infof("Storing ini file in directory \"%s\"", ini_path_str)
+	ini_path_str, _ := os.join_path({ini_dir, "kolori.ini"}, context.temp_allocator)
 	return strings.clone_to_cstring(ini_path_str)
 }
 
