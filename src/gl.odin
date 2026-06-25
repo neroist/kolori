@@ -118,7 +118,6 @@ setup_gl :: proc(app: ^App_State)
 
 	opengl.GenTextures(1, &app.texture.id)
 	opengl.BindTexture(opengl.TEXTURE_2D, app.texture.id)
-	opengl.Uniform1i(opengl.GetUniformLocation(app.program, "tex"), 0)
 	app.texture.wrap_s = opengl.REPEAT
 	app.texture.wrap_t = opengl.REPEAT
 	app.texture.min_filter = opengl.LINEAR_MIPMAP_LINEAR
@@ -141,6 +140,7 @@ setup_gl :: proc(app: ^App_State)
 	}
 
 	reload_shaders(app)
+	opengl.Uniform1i(opengl.GetUniformLocation(app.program, "tex"), 0)
 }
 
 render_graph :: proc(app: ^App_State) 
