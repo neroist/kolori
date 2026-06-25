@@ -1,4 +1,6 @@
 FLAGS :=
+VERSION := 0.3.0
+OUT := kolori
 DEBUG_FLAGS := -debug -o:none
 RELEASE_FLAGS := 
 RC :=
@@ -39,6 +41,9 @@ else
 	FLAGS += -out:kolori
 endif
 
+.PHONY: clean installer
+default: release
+
 debug:
 	odin build src $(FLAGS) $(DEBUG_FLAGS)
 
@@ -50,13 +55,13 @@ ifeq ($(IS_WINDOWS),1)
 	$(RC) $(RC_FLAGS) ./src/icon.rc
 endif
 
-installer: release
+installer: kolori-$(VERSION)-x86_64.exe
+kolori-$(VERSION)-x86_64.exe: release icon.res
 ifeq ($(IS_WINDOWS),1)
 	iscc $(ISCC_FLAGS) ./src/installer/script.iss
 endif
 
-.PHONY clean:
-	@rm -f kolori
+clean:
 	@rm -f *.bin
 	@rm -f *.exe
 	@rm -f *.pdb
