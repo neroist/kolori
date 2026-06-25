@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright 2026 neroist -->
+<component type="desktop-application">
+  <id>io.github.neroist.kolori</id>
+
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>0BSD</project_license>
+  
+  <name>Kolori</name>
+  <summary>Create beautiful pieces of art using mathematical expressions</summary>
+
+  <description>
+    <p>
+      Kolori is an application that uses domain coloring to generate beautiful, colorful portraits from a mathematical expression.
+    </p>
+    <p>
+      Input a mathematical expression, and create an image or video generated from  We support every trigonometric function plus advanced ones such as the gamma, mod, floor, ceil, trunc, and frac functions.
+    </p>
+    <p>
+      The only thing that limits you, is your imagination.
+    </p>
+  </description>
+
+  <!-- todo add captions -->
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/neroist/kolori/refs/heads/main/gallery/misc/shades.png</image>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/neroist/kolori/refs/heads/main/gallery/log((z%5E2%2B1)%20div%20(z%5E2-1)).png</image>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/neroist/kolori/refs/heads/main/gallery/misc/lolipop.png</image>
+    </screenshot>
+  </screenshots>
+
+  <launchable type="desktop-id">io.github.neroist.kolori.desktop</launchable>
+
+  <icon type="stock">io.github.neroist.kolori</icon>
+
+  <url type="homepage">https://github.com/neroist/kolori</url>
+  <url type="bugtracker">https://github.com/neroist/kolori/issues</url>
+  <url type="help">https://github.com/neroist/kolori/blob/main/README.md</url>
+  <url type="vcs-browser">https://github.com/neroist/kolori</url>
+
+  <developer id="io.github.neroist">
+    <name>neroist</name>
+  </developer>
+
+  <categories>
+    <category>Math</category>
+    <category>Art</category>
+    <category>Graphics</category>
+  </categories>
+
+  <keywords>
+    <keyword>domain coloring</keyword>
+    <keyword>colorful</keyword>
+    <keyword>images</keyword>
+    <keyword>math</keyword>
+    <keyword>complex analysis</keyword>
+    <keyword>art</keyword>
+    <keyword>beautiful</keyword>
+    <keyword>opengl</keyword>
+    <keyword>gpu-accelerated</keyword>
+    <keyword>complex numbers</keyword>
+  </keywords>
+
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+    <control>touch</control>
+    <control>tablet</control>
+  </supports>
+
+  <requires>
+    <internet>offline-only</internet>
+  </requires>
+
+  <provides>
+    <binary>kolori</binary>
+  </provides>
+
+  <content_rating type="oars-1.0"/>
+
+  <releases>
+    <release version="0.4.0" date="2026-06-25"/>
+    <release version="0.3.0" date="2026-06-18"/>
+    <release version="0.2.0" date="2026-06-17"/>
+    <release version="0.1.0" date="2026-06-16"/>
+  </releases>
+</component>

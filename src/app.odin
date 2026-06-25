@@ -68,6 +68,7 @@ main :: proc()
 
 	setup_imgui(&app)
 	defer {
+		delete(app.io.IniFilename)
 		imgui_impl_opengl3.Shutdown()
 		imgui_impl_sdl3.Shutdown()
 		imgui.DestroyContext()

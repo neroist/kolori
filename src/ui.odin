@@ -141,7 +141,7 @@ setup_imgui :: proc(app: ^App_State)
 // directory meant for non-essential application data of the user running the
 // program. If we cannot retrieve the this directory or cannot create the user-
 // provided one in the environment variable, we do a final fallback to the
-// current working directory of the executable
+// current working directory of the process
 get_ini_path :: proc () -> cstring
 {
 	ini_dir := os.get_env("KOLORI_INI_DIRECTORY", context.temp_allocator)

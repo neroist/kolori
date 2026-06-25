@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.5
+Type=Application
+Name=Kolori
+Exec=kolori
+Icon=io.github.neroist.kolori
+Comment=Create beautiful pieces of art using mathematical expressions
+Categories=Graphics;Art;Math
+Terminal=false
+PrefersNonDefaultGPU=true
