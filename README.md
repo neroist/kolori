@@ -1,14 +1,14 @@
 # Kolori
-**Kolori** ("to color" in Esperanto) is an application that allows you to create
-beautiful images from mathematical functions. 
+**Kolori** ("to color" in Esperanto) is an application that allows you to
+create beautiful images from mathematical functions. 
 
 ![Demo image](./gallery/misc/shades.png)
 
 An important note--users with epilepsy are not recommended to use the
 animation feature (using "t" in your function input) with high speed values or
 otherwise rapidly-changing functions. Zooming out too far during an animation
-is also not recommended. This advice is very general and depends heavily on the
-function being graphed. Still stay cautious, however.
+is also not recommended. This advice is very general and depends heavily on
+the function being graphed. Still stay cautious, however.
 
 ### Gallery
 See the `gallery/` directory for a gallery of generated images.
@@ -23,8 +23,8 @@ device you may also simply use your finger.
 - `r` to reload shaders. Hold `Shift` to also reset zoom and pan.
 - `p` to pause/unpause animations. Animations will also unpause when switching
 functions.
-- `q` to reset zoom and pan. Hold `Shift` to also reset animations (set time to
-zero). Hold `Ctrl` to only perform the latter.
+- `q` to reset zoom and pan. Hold `Shift` to also reset animations (set time
+to zero). Hold `Ctrl` to only perform the latter.
 - `f` or `F11` to toggle fullscreen.
 - `F12` to take a screenshot. It will be saved in the curent woking directory
 with filename `kolori_screenshotDD-MM-YYYY_HHMMSS.png`.
@@ -71,11 +71,12 @@ set to 0.65. You are given an option to alter the gamma correction constant in
 the UI. In the future, you will be able to alter these functions to e.g.
 produce contour lines of phase/modulus.
 
-- **HSLuv coloring**: HSLuv is a perceptually uniform alternative to HSL, where
-colors with similar lightness appear similarly bright to the human eye, unlike
-HSL or HSV. How we determine pixel hue and lightness is the same as HSL. You
-are again allowed to change gamma correction constant. However, we decrease
-the lightness by 67% so colors aren't too bright, and turn white too quickly.
+- **HSLuv coloring**: HSLuv is a perceptually uniform alternative to HSL,
+where colors with similar lightness appear similarly bright to the human eye,
+unlike HSL or HSV. How we determine pixel hue and lightness is the same as
+HSL. You are again allowed to change gamma correction constant. However, we
+decrease the lightness by 67% so colors aren't too bright, and turn white too
+quickly.
 
 - **Custom palette generation**: Input four colors to generate a palette that
 colors the complex plane. Note that, for this coloring mode, only the real
@@ -83,9 +84,9 @@ part of the complex function you put in is evaluated. Pixel colors are
 determined using Inigo Quilez’s cosine-based formula for procedural palette
 generation. See his article: <https://iquilezles.org/articles/palettes/>.
 
-- **Image tiling**: Tile the complex plane with an image of your choice. Instead
-of a conventional domain coloring based on HSL, phase, and modulus, the plane 
-is instead colored based on a tiling of a user-input image.
+- **Image tiling**: Tile the complex plane with an image of your choice. 
+Instead of a conventional domain coloring based on HSL, phase, and modulus,
+the plane is instead colored based on a tiling of a user-input image.
 
 ## How to build?
 
