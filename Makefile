@@ -6,6 +6,7 @@ RC :=
 RC_FLAGS :=
 ISCC_FLAGS := -O. -Q
 ICON_SIZES := 16x16,24x24,32x32,48x48,64x64,128x128,180x180,192x192,256x256,512x512
+SOURCES := $(wildcard ./src/*) $(wildcard ./src/math-parser/*) $(wildcard ./src/shaders/*) $(wildcard ./odin-imgui/*) $(wildcard ./fonts/*) ./favicon/favicon-64x64.png
 
 # Check for Windows_NT environment variable (cmd.exe/PowerShell)
 ifeq ($(shell echo %OS% 2>/dev/null),Windows_NT)
@@ -26,6 +27,7 @@ endif
 # Fallback: Assume Unix-like if unrecognized
 
 ifeq ($(IS_WINDOWS),1)
+	SOURCES += SDL3.dll
 	DEBUG_FLAGS += -out:kolori_debug.exe
 	RELEASE_FLAGS += -out:kolori.exe
 	RELEASE_FLAGS += -subsystem:windows
@@ -51,23 +53,25 @@ release: kolori
 debug: kolori_debug
 dist: clean kolori-x86_64.exe kolori-x86_64.AppImage
 
-kolori_debug: $(wildcard src/*) $(wildcard odin-imgui/*)
+kolori_debug: $(SOURCES)
 	odin build src $(DEBUG_FLAGS)
 
-kolori: $(wildcard src/*) $(wildcard odin-imgui/*) icon.res
+kolori: $(SOURCES) icon.res
 	odin build src $(RELEASE_FLAGS)
 
-icon.res:
+icon.res: ./src/icon.rc
 ifeq ($(IS_WINDOWS),1)
 	$(RC) $(RC_FLAGS) ./src/icon.rc
 endif
 
-kolori-x86_64.exe: release icon.res
+./src/icon.rc: ./favicon/favicon.ico
+
+kolori-x86_64.exe: release icon.res ./src/installer/* LICENSE
 ifeq ($(IS_WINDOWS),1)
 	iscc $(ISCC_FLAGS) ./src/installer/script.iss
 endif
 
-kolori-x86_64.AppImage: release
+kolori-x86_64.AppImage: release $(wildcard ./src/AppImage/*) $(wildcard ./favicon/*)
 ifneq ($(IS_WINDOWS),1)
 	mkdir -p AppDir/usr/share/icons/hicolor/{$(ICON_SIZES)}/apps/
 	mkdir -p AppDir/usr/share/metainfo/
@@ -89,6 +93,7 @@ endif
 clean:
 	rm -f kolori_debug
 	rm -f kolori
+	rm -f *.tar.gz
 	rm -f *.bin
 	rm -f *.exe
 	rm -f *.pdb
