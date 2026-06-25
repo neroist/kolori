@@ -145,6 +145,11 @@ setup_gl :: proc(app: ^App_State)
 
 render_graph :: proc(app: ^App_State) 
 {
+	if app.coloring_method == .Use_Image {
+		opengl.ActiveTexture(opengl.TEXTURE0)
+		opengl.BindTexture(opengl.TEXTURE_2D, app.texture.id)
+	}
+
 	opengl.UseProgram(app.program)
 	opengl.BindVertexArray(app.vao)
 	opengl.ClearColor(0.1, 0.1, 0.1, 1)
