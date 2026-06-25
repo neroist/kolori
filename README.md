@@ -54,7 +54,7 @@ You may control how fast "t" increases using the "Speed" slider in the
 means that "t" will inrease by 1 every second. While the slider is clamped to
 0.1..10.0, you may input arbitrary values if you ctrl+click on the slider.
 > Example: With a speed of 1, the earlier example will rotate the plane at a
-rate of 1 radian per second.
+> rate of 1 radian per second.
 
 Since, with high speeds or rapidly-changing functions, this may lead to the
 display of rapidly flashing lights, using this feature with such is not
