@@ -12,6 +12,7 @@ import "base:runtime"
 import "core:math"
 import "core:fmt"
 import "core:log"
+import "core:os"
 
 Ui_State :: struct {
 	img:              Image_Data,
@@ -51,7 +52,6 @@ APP_ICON_PNG_DATA :: #load("../favicon/favicon-64x64.png", []u8)
 MAIN_FONT_DATA :: #load("../fonts/DMSans.ttf", []u8)
 MAX_FRAMERATE :: 260
 PREFERRED_IMG_SIZE :: 196 // alternatives: 128, 256
-UI_CONFIG_FILE :: #config(UI_CONFIG_FILE, "kolori.ini")
 
 setup_sdl :: proc(app: ^App_State) 
 {
@@ -112,7 +112,7 @@ setup_imgui :: proc(app: ^App_State)
 
 	app.io = imgui.GetIO()
 	app.io.ConfigFlags += IMGUI_CONFIG_FLAGS
-	app.io.IniFilename = UI_CONFIG_FILE
+	app.io.IniFilename = get_ini_path()
 
 	style_imgui() // app.main_scale
 
@@ -134,6 +134,34 @@ setup_imgui :: proc(app: ^App_State)
 		18,
 		&font_cfg,
 	)
+}
+
+// read from the `KOLORI_INI_DIRECTORY` environment variable to get where to 
+// store the imgui-generated ini file. if unset or empty, we default to the
+// home directory of the user running the program. If we cannot retrieve the
+// home directory or cannot create the user provided one in the environment
+// variable, we do a final fallback to the current working directory of the
+// executable
+get_ini_path :: proc () -> cstring
+{
+	ini_dir := os.get_env("KOLORI_INI_DIRECTORY", context.temp_allocator)
+	if len(ini_dir) == 0 {
+		delete(ini_dir)
+		ini_dir, _ = os.user_home_dir(context.temp_allocator)
+	}
+
+	ini_path_str: string
+	if !os.exists(ini_dir) {
+		err := os.make_directory(ini_dir)
+		if err != nil {
+			log.warn("Unable to create ini file directory, falling back to cwd")
+		}
+	}
+
+	ini_path_str, _ = os.join_path({ini_dir, "kolori.ini"}, context.temp_allocator)
+
+	log.infof("Storing ini file in directory \"%s\"", ini_path_str)
+	return strings.clone_to_cstring(ini_path_str)
 }
 
 style_imgui :: proc(scale: f32 = 1) 
