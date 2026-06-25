@@ -138,16 +138,16 @@ setup_imgui :: proc(app: ^App_State)
 
 // read from the `KOLORI_INI_DIRECTORY` environment variable to get where to 
 // store the imgui-generated ini file. if unset or empty, we default to the
-// home directory of the user running the program. If we cannot retrieve the
-// home directory or cannot create the user provided one in the environment
-// variable, we do a final fallback to the current working directory of the
-// executable
+// directory meant for non-essential application data of the user running the
+// program. If we cannot retrieve the this directory or cannot create the user-
+// provided one in the environment variable, we do a final fallback to the
+// current working directory of the executable
 get_ini_path :: proc () -> cstring
 {
 	ini_dir := os.get_env("KOLORI_INI_DIRECTORY", context.temp_allocator)
 	if len(ini_dir) == 0 {
 		delete(ini_dir)
-		ini_dir, _ = os.user_home_dir(context.temp_allocator)
+		ini_dir, _ = os.user_state_dir(context.temp_allocator)
 	}
 
 	if !os.exists(ini_dir) {
