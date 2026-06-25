@@ -32,6 +32,7 @@ kolori_screenshot*
 
 # Executables
 kolori
+kolori_debug
 *.exe
 *.out
 *.app
