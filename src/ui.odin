@@ -55,7 +55,7 @@ UI_CONFIG_FILE :: #config(UI_CONFIG_FILE, "kolori.ini")
 
 setup_sdl :: proc(app: ^App_State) 
 {
-	_ = sdl.SetAppMetadata("Kolori", "0.2.0", "com.neroist.kolori")
+	_ = sdl.SetAppMetadata("Kolori", "0.2.0", "io.github.neroist.kolori")
 	_ = sdl.SetAppMetadataProperty(
 		sdl.PROP_APP_METADATA_URL_STRING,
 		"https://github.com/neroist/kolori",
