@@ -27,9 +27,9 @@ Uniforms :: struct {
 }
 
 Texture :: struct {
-	id:       u32,
-	wrap_s:   i32,
-	wrap_t:   i32,
+	id:         u32,
+	wrap_s:     i32,
+	wrap_t:     i32,
 	min_filter: i32,
 	mag_filter: i32,
 }
@@ -103,14 +103,10 @@ setup_gl :: proc(app: ^App_State)
 	opengl.Viewport(0, 0, width, height)
 
 	vertices := [?]f32 {
-		-1,
-		1,
-		1,
-		1,
-		-1,
-		-1,
-		1,
-		-1,
+		-1,  1,
+		 1,  1,
+		-1, -1,
+		 1, -1,
 	}
 
 	opengl.GenVertexArrays(1, &app.vao)
@@ -118,6 +114,7 @@ setup_gl :: proc(app: ^App_State)
 
 	opengl.GenTextures(1, &app.texture.id)
 	opengl.BindTexture(opengl.TEXTURE_2D, app.texture.id)
+	defer opengl.Uniform1i(opengl.GetUniformLocation(app.program, "tex"), 0)
 	app.texture.wrap_s = opengl.REPEAT
 	app.texture.wrap_t = opengl.REPEAT
 	app.texture.min_filter = opengl.LINEAR_MIPMAP_LINEAR
@@ -140,7 +137,6 @@ setup_gl :: proc(app: ^App_State)
 	}
 
 	reload_shaders(app)
-	opengl.Uniform1i(opengl.GetUniformLocation(app.program, "tex"), 0)
 }
 
 render_graph :: proc(app: ^App_State) 
@@ -327,16 +323,16 @@ load_texture :: proc(app: ^App_State, img: ^Image_Data)
 		opengl.UNSIGNED_BYTE,
 		img.pixels,
 	)
-	set_tex_parameters(app.texture.wrap_s, app.texture.wrap_t)
+	set_tex_parameters(app.texture)
 	opengl.GenerateMipmap(opengl.TEXTURE_2D)
 }
 
-set_tex_parameters :: proc(wrap_s, wrap_t: i32) 
+set_tex_parameters :: proc(tex: Texture) 
 {
-	opengl.TexParameteri(opengl.TEXTURE_2D, opengl.TEXTURE_WRAP_S, wrap_s)
-	opengl.TexParameteri(opengl.TEXTURE_2D, opengl.TEXTURE_WRAP_T, wrap_t)
-	opengl.TexParameteri(opengl.TEXTURE_2D, opengl.TEXTURE_MIN_FILTER, opengl.LINEAR_MIPMAP_LINEAR)
-	opengl.TexParameteri(opengl.TEXTURE_2D, opengl.TEXTURE_MAG_FILTER, opengl.LINEAR)
+	opengl.TexParameteri(opengl.TEXTURE_2D, opengl.TEXTURE_WRAP_S, tex.wrap_s)
+	opengl.TexParameteri(opengl.TEXTURE_2D, opengl.TEXTURE_WRAP_T, tex.wrap_t)
+	opengl.TexParameteri(opengl.TEXTURE_2D, opengl.TEXTURE_MIN_FILTER, tex.min_filter)
+	opengl.TexParameteri(opengl.TEXTURE_2D, opengl.TEXTURE_MAG_FILTER, tex.mag_filter)
 }
 
 debug_proc :: proc "c" (

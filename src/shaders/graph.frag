@@ -4,8 +4,7 @@ precision highp float;
 precision highp int;
 precision highp sampler2D;
 
-// in vec2 pos;
-// in vec2 tex_coord;
+in vec2 tex_aspect_ratio;
 out vec4 FragColor;
 
 uniform float time;
@@ -734,7 +733,7 @@ vec4 color_rgb(vec2 z)
 
 vec4 color_image(vec2 z)
 {
-	return vec4(texture(tex, z).xyz, 1.);
+	return vec4(texture(tex, z * tex_aspect_ratio).rgb, 1.);
 }
 
 // From https://iquilezles.org/articles/palettes/

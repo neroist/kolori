@@ -390,7 +390,7 @@ coloring_settings :: proc(app: ^App_State)
 
 		upd_tex_params: bool
 		defer if upd_tex_params {
-			set_tex_parameters(app.texture.wrap_s, app.texture.wrap_t)
+			set_tex_parameters(app.texture)
 		}
 
 		imgui.Text("Horizontal Repeat:")
