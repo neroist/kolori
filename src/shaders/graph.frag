@@ -405,7 +405,7 @@ vec2 c_inv(vec2 c) {
 	return vec2(c.x, -c.y) / norm*norm;
 }
 
-float arg(vec2 c) {
+float c_arg(vec2 c) {
 	return atan(c.y, c.x);
 }
 
