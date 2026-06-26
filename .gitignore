@@ -33,6 +33,8 @@ kolori_screenshot*
 # Executables
 kolori
 kolori_debug
+appimagetool*
+linuxdeploy*
 *.exe
 *.out
 *.app
