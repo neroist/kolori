@@ -1,5 +1,9 @@
 #version 300 es
 
+precision highp float;
+precision highp int;
+precision highp sampler2D;
+
 layout (location = 0) in vec2 in_pos;
 
 out vec2 tex_aspect_ratio;
