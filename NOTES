@@ -14,6 +14,11 @@
 - (windows) SDL3.dll needs to be next to executable
 - (windows) small freeze-up when taking a screenshot
 - (windows) screen flashes black and white for a period when turning fullscreen
+- (wsl) linuxdeploy gives "ERROR: Could not find suitable icon for Icon entry"
+        see: <https://github.com/linuxdeploy/linuxdeploy/issues/234#issuecomment-4805285724>
+        (in VSCode, this is setting is at the bottom right, between "UTF-8" and "Plain Text")
+        submit a PR fixing this behavior at some point
+- (wsl) libunwind warnings: "libunwind: __unw_add_dynamic_fde: bad fde: FDE is really a CIE" when using AppImage
 - ldd (Linux):
         linux-vdso.so.1
         libc++.so.1

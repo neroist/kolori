@@ -1,12 +1,19 @@
 # please don't read. my god this is a mess.
 
+# for making linux distributables:
+#         `make dist LINUXDEPLOY=... APPIMAGETOOL=..."
+# make sure to use relative (or absolute) paths!
+# (e.g. NO: "linuxdeploy.AppImage" YES: "./linuxdeploy.AppImage")
+
 DEBUG_FLAGS := -debug -o:none
 RELEASE_FLAGS := 
 RC :=
 RC_FLAGS :=
 ISCC_FLAGS := -O. -Q
-ICON_SIZES := 16x16,24x24,32x32,48x48,64x64,128x128,180x180,192x192,256x256,512x512
+ICON_SIZES := 16x16 24x24 32x32 48x48 64x64 128x128 180x180 192x192 256x256 512x512
 SOURCES := $(wildcard ./src/*) $(wildcard ./src/math-parser/*) $(wildcard ./src/shaders/*) $(wildcard ./odin-imgui/*) $(wildcard ./fonts/*) ./favicon/favicon-64x64.png
+LINUXDEPLOY := linuxdeploy
+APPIMAGETOOL := appimagetool
 
 # Check for Windows_NT environment variable (cmd.exe/PowerShell)
 ifeq ($(shell echo %OS% 2>/dev/null),Windows_NT)
@@ -66,7 +73,7 @@ endif
 
 ./src/icon.rc: ./favicon/favicon.ico
 
-kolori-x86_64.exe: release icon.res ./src/installer/* LICENSE
+kolori-x86_64.exe: release icon.res $(wildcard ./src/installer/*) LICENSE
 ifeq ($(IS_WINDOWS),1)
 	iscc $(ISCC_FLAGS) ./src/installer/script.iss
 	rm kolori.exe
@@ -74,22 +81,31 @@ endif
 
 kolori-x86_64.AppImage: release $(wildcard ./src/AppImage/*) $(wildcard ./favicon/*)
 ifneq ($(IS_WINDOWS),1)
-	mkdir -p AppDir/usr/share/icons/hicolor/{$(ICON_SIZES)}/apps/
-	mkdir -p AppDir/usr/share/metainfo/
-	
-	for i in $$(echo $(ICON_SIZES) | tr ',' '\n'); do \
-		cp ./favicon/favicon-$$i.png AppDir/usr/share/icons/hicolor/$$i/apps/io.github.neroist.kolori.png; \
+	for i in $(ICON_SIZES); do \
+		mkdir -p ./AppDir/usr/share/icons/hicolor/$$i/apps/; \
+		cp ./favicon/favicon-$$i.png ./AppDir/usr/share/icons/hicolor/$$i/apps/io.github.neroist.kolori.png; \
 	done
 
+	mkdir -p ./AppDir/usr/share/metainfo/
 	cp ./src/AppImage/io.github.neroist.kolori.appdata.xml ./AppDir/usr/share/metainfo/
 
-	# https://github.com/linuxdeploy/linuxdeploy/issues/272
+	# see: https://github.com/linuxdeploy/linuxdeploy/issues/272
+	# was running into this issue on Arch, but not on WSL Ubuntu
 	export NO_STRIP=true; \
-	linuxdeploy -e ./kolori -d ./src/AppImage/io.github.neroist.kolori.desktop -l /usr/lib/libm.so.6 -l /usr/lib/libc.so.6 -l /usr/lib/libgcc_s.so.1 --appdir ./AppDir/
-	appimagetool AppDir
+	$(LINUXDEPLOY) -e ./kolori -d ./src/AppImage/io.github.neroist.kolori.desktop --appdir ./AppDir/
+	$(APPIMAGETOOL) AppDir
 
+	# AppImage created, begin cleaning up artifacts
 	rm kolori
-	mv Kolori-x86_64.AppImage kolori-x86_64.AppImage
+
+	# we want to make lowercase the "K" in the resulting AppImage
+	# this roundabout way is used as a workaround for this error:
+	# 	"mv: 'Kolori-x86_64.AppImage' and 'kolori-x86_64.AppImage' are the same file"
+	# which i got on WSL
+	mkdir tmp
+	mv Kolori-x86_64.AppImage tmp/kolori-x86_64.AppImage
+	mv tmp/kolori-x86_64.AppImage .
+	rmdir tmp
 endif
 
 clean:
@@ -101,6 +117,6 @@ clean:
 	rm -f *.pdb
 	rm -f *.res
 	rm -f *.ini
+	rm -f *.AppImage
 	rm -f kolori_screenshot*.png
 	rm -rf AppDir
-	rm -rf AppImage
