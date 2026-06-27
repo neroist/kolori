@@ -132,6 +132,8 @@ handle_key :: proc(app: ^App_State, event: ^sdl.Event)
 		reload_shaders(app)
 	case sdl.K_P:
 		app.animation_paused = !app.animation_paused
+	case sdl.K_0:
+		app.time.val = 0
 	case sdl.K_H:
 		app.show_ui = !app.show_ui
 
