@@ -171,9 +171,6 @@ reload_shaders :: proc(app: ^App_State)
 		return id, (bool)(success)
 	}
 
-	opengl.UseProgram(0)
-	opengl.DeleteProgram(app.program)
-
 	@(static, rodata)
 	coloring_method_headers := [Coloring_Method]cstring {
 		.Use_HSL     = "#define USE_HSL\n",
@@ -215,7 +212,8 @@ reload_shaders :: proc(app: ^App_State)
 		return
 	}
 
-	app.program, ok = opengl.create_and_link_program({app.vertex_shader_id, fragment_shader_id})
+	new_program: u32
+	new_program, ok = opengl.create_and_link_program({app.vertex_shader_id, fragment_shader_id})
 
 	if !ok {
 		gl_err_msg, _ := opengl.get_last_error_message()
@@ -234,7 +232,14 @@ reload_shaders :: proc(app: ^App_State)
 		return
 	}
 
+	opengl.DeleteProgram(app.program)
+	app.program = new_program
 	opengl.UseProgram(app.program)
+
+	width, height: i32
+	sdl.GetWindowSizeInPixels(app.window, &width, &height)
+	opengl.Viewport(0, 0, width, height)
+	app.resolution.val = {(f32)(width), (f32)(height)}
 
 	app.zoom.loc             = opengl.GetUniformLocation(app.program, "zoom")
 	app.time.loc             = opengl.GetUniformLocation(app.program, "time")
@@ -244,11 +249,6 @@ reload_shaders :: proc(app: ^App_State)
 	app.saturation.loc       = opengl.GetUniformLocation(app.program, "saturation")
 	app.lightness.loc        = opengl.GetUniformLocation(app.program, "lightness")
 	app.gamma_correction.loc = opengl.GetUniformLocation(app.program, "gamma_correction")
-
-	width, height: i32
-	sdl.GetWindowSizeInPixels(app.window, &width, &height)
-	opengl.Viewport(0, 0, width, height)
-	app.resolution.val = {(f32)(width), (f32)(height)}
 
 	update_uniform(app.resolution)
 	update_uniform(app.zoom)
