@@ -11,6 +11,7 @@ import "core:strings"
 import "core:log"
 import "core:fmt"
 import "core:mem"
+import "core:os"
 
 App_State :: struct {
 	using gl: GL_State,
@@ -119,14 +120,60 @@ setup_app :: proc(app: ^App_State)
 	app.saturation.val = 100
 	app.lightness.val = 100
 	app.time_speed = 1
-	app.show_ui = true
-	app.framerate = 60 // if we can, we try to enable vsync automatically
-	// otherwise, we operate off of 60 fps
+	app.log_path = get_log_path()
 
-	// initialize to default values
-	app.err_msg = strings.clone_to_cstring("")
-	app.function = (cstring)(make([^]u8, FUNCTION_BUF_SIZE))
-	([^]u8)(app.function)[0] = 'z'
+	// if we can, we try to enable vsync automatically
+	// otherwise, we operate off of 60 fps
+	app.framerate = 60
+
+	// set default function, f(z) = z
+	buf := make([^]u8, FUNCTION_BUF_SIZE)
+	buf[0] = 'z'
+	app.function = (cstring)(buf)
+}
+
+get_logger :: proc (log_path: string) -> (logger: log.Logger, is_file_logger: bool)
+{
+	when ODIN_DEBUG {
+		logger = log.create_console_logger()
+	} else {
+		log_file, err := os.open(log_path, {.Create, .Read, .Write, .Trunc})
+		if err != nil {
+			log.errorf("Failed to open log file. Reason: \"%s\"", os.error_string(err))
+			logger = log.create_console_logger() // log to console as fallback
+		} else {
+			logger = log.create_file_logger(log_file)
+			is_file_logger = true
+		}
+	}
+	
+	logger.lowest_level = ODIN_DEBUG ? .Debug : .Info
+	logger.options -= {.Date}
+
+	return 
+}
+
+get_log_path :: proc (allocator := context.allocator, loc := #caller_location) -> cstring
+{
+	log_dir, err := os.user_log_dir(context.temp_allocator)
+	if err != nil {
+		log.warnf(
+			"Failed to get application log file directory. Probably will fall back to cwd. Error msg: \"%s\"",
+			os.error_string(err)
+		)
+
+		log_dir = "."
+	}
+
+	if !os.exists(log_dir) && len(log_dir) != 0 {
+		err := os.make_directory(log_dir)
+		if err != nil {
+			log.warn("Unable to create log file directory, falling back to cwd")
+		}
+	}
+
+	log_path_str, _ := os.join_path({log_dir, LOG_FILENAME}, context.temp_allocator)
+	return strings.clone_to_cstring(log_path_str, allocator, loc)
 }
 
 enforce_framerate :: proc(delta: u64, framerate: i32) 
