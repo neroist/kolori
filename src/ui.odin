@@ -113,15 +113,16 @@ setup_imgui :: proc(app: ^App_State)
 	imgui_impl_opengl3.Init("#version 300 es")
 	imgui_impl_sdl3.InitForOpenGL(app.window, app.gl.ctx)
 
-	app.ini_path = get_ini_path()
-
 	app.io = imgui.GetIO()
 	app.io.ConfigFlags += IMGUI_CONFIG_FLAGS
-	// seems kind of redundant, why not set `app.io.*Filename` directly?
-	// but we get a heap-use-after-free error if we don't do this </3
-	app.io.IniFilename = app.ini_path
-	
+	app.io.IniFilename = nil
+	app.io.LogFilename = nil
+
 	when !ODIN_DEBUG {
+		app.ini_path = get_ini_path()
+		// seems kind of redundant, why not set `app.io.IniFilename` directly?
+		// but we get a heap-use-after-free error if we don't do this </3
+		app.io.IniFilename = app.ini_path
 		app.io.LogFilename = app.log_path
 	}
 
