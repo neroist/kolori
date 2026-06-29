@@ -21,7 +21,6 @@ Ui_State :: struct {
 	io:               ^imgui.IO,
 	math_font:        ^imgui.Font,
 	ini_path:         cstring,
-	log_path:         cstring,
 	function:         cstring,
 	err_msg:          cstring,
 	coloring_method:  Coloring_Method,
@@ -115,14 +114,16 @@ setup_imgui :: proc(app: ^App_State)
 	imgui_impl_sdl3.InitForOpenGL(app.window, app.gl.ctx)
 
 	app.ini_path = get_ini_path()
-	app.log_path = get_log_path()
 
 	app.io = imgui.GetIO()
 	app.io.ConfigFlags += IMGUI_CONFIG_FLAGS
 	// seems kind of redundant, why not set `app.io.*Filename` directly?
 	// but we get a heap-use-after-free error if we don't do this </3
 	app.io.IniFilename = app.ini_path
-	app.io.LogFilename = app.log_path
+	
+	when !ODIN_DEBUG {
+		app.io.LogFilename = app.log_path
+	}
 
 	style_imgui() // app.main_scale
 
@@ -157,7 +158,7 @@ setup_imgui :: proc(app: ^App_State)
  * 
  * if unset, we return nil, implying ui state should not be saved.
  */
-get_ini_path :: proc () -> cstring
+get_ini_path :: proc (allocator := context.allocator, loc := #caller_location) -> cstring
 {
 	ini_dir, found := os.lookup_env("KOLORI_INI_DIRECTORY", context.temp_allocator)
 	if !found {
@@ -170,33 +171,12 @@ get_ini_path :: proc () -> cstring
 		err := os.make_directory(ini_dir)
 		if err != nil {
 			log.warn("Unable to create ini file directory, falling back to cwd")
+			ini_dir = "."
 		}
 	}
 
 	ini_path_str, _ := os.join_path({ini_dir, INI_FILENAME}, context.temp_allocator)
-	return strings.clone_to_cstring(ini_path_str)
-}
-
-get_log_path :: proc () -> cstring
-{
-	log_dir, err := os.user_log_dir(context.temp_allocator)
-	if err != nil {
-		log.warnf(
-			"Failed to get application log file directory. Probably will fall back to cwd. Error msg: \"%s\"",
-			os.error_string(err)
-		)
-		log_dir = ""
-	}
-
-	if !os.exists(log_dir) {
-		err := os.make_directory(log_dir)
-		if err != nil {
-			log.warn("Unable to create log file directory, falling back to cwd")
-		}
-	}
-
-	log_path_str, _ := os.join_path({log_dir, LOG_FILENAME}, context.temp_allocator)
-	return strings.clone_to_cstring(log_path_str)
+	return strings.clone_to_cstring(ini_path_str, allocator, loc)
 }
 
 style_imgui :: proc(scale: f32 = 1) 

@@ -15,17 +15,22 @@ import "core:mem"
 App_State :: struct {
 	using gl: GL_State,
 	using ui: Ui_State,
+	log_path: cstring, // cstring for compat w/ ImGui
 	running:  bool,
 }
 
 FUNCTION_BUF_SIZE :: 1024
+LOG_FILENAME :: "kolori.log"
 
 main :: proc() 
 {
-	context.logger = log.create_console_logger()
-	context.logger.lowest_level = ODIN_DEBUG ? .Debug : .Info
-	context.logger.options -= {.Date}
-	defer log.destroy_console_logger(context.logger)
+	is_file_logger: bool
+	context.logger, is_file_logger = get_logger((string)(get_log_path(context.temp_allocator)))
+	defer if is_file_logger {
+		log.destroy_file_logger(context.logger)
+	} else {
+		log.destroy_console_logger(context.logger)
+	}
 
 	// Lets all love Odin.
 	when ODIN_DEBUG {
@@ -48,6 +53,7 @@ main :: proc()
 	setup_app(&app)
 	defer {
 		delete(app.function)
+		delete(app.log_path)
 		delete(app.err_msg)
 	}
 
@@ -71,9 +77,8 @@ main :: proc()
 		imgui_impl_opengl3.Shutdown()
 		imgui_impl_sdl3.Shutdown()
 		imgui.DestroyContext()
-		delete(app.ini_path)
-		delete(app.log_path)
 		delete(app.slice_colors)
+		delete(app.ini_path)
 	}
 
 	delta_time: u64
