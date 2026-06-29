@@ -20,6 +20,8 @@ Ui_State :: struct {
 	window_icon:      ^sdl.Surface,
 	io:               ^imgui.IO,
 	math_font:        ^imgui.Font,
+	ini_path:         cstring,
+	log_path:         cstring,
 	function:         cstring,
 	err_msg:          cstring,
 	coloring_method:  Coloring_Method,
@@ -52,6 +54,8 @@ APP_ICON_PNG_DATA :: #load("../favicon/favicon-64x64.png", []u8)
 MAIN_FONT_DATA :: #load("../fonts/DMSans.ttf", []u8)
 MAX_FRAMERATE :: 260
 PREFERRED_IMG_SIZE :: 196 // alternatives: 128, 256
+INI_FILENAME :: "kolori.ini"
+LOG_FILENAME :: "kolori.log"
 
 setup_sdl :: proc(app: ^App_State) 
 {
@@ -110,9 +114,15 @@ setup_imgui :: proc(app: ^App_State)
 	imgui_impl_opengl3.Init("#version 300 es")
 	imgui_impl_sdl3.InitForOpenGL(app.window, app.gl.ctx)
 
+	app.ini_path = get_ini_path()
+	app.log_path = get_log_path()
+
 	app.io = imgui.GetIO()
 	app.io.ConfigFlags += IMGUI_CONFIG_FLAGS
-	app.io.IniFilename = get_ini_path()
+	// seems kind of redundant, why not set `app.io.*Filename` directly?
+	// but we get a heap-use-after-free error if we don't do this </3
+	app.io.IniFilename = app.ini_path
+	app.io.LogFilename = app.log_path
 
 	style_imgui() // app.main_scale
 
@@ -163,8 +173,30 @@ get_ini_path :: proc () -> cstring
 		}
 	}
 
-	ini_path_str, _ := os.join_path({ini_dir, "kolori.ini"}, context.temp_allocator)
+	ini_path_str, _ := os.join_path({ini_dir, INI_FILENAME}, context.temp_allocator)
 	return strings.clone_to_cstring(ini_path_str)
+}
+
+get_log_path :: proc () -> cstring
+{
+	log_dir, err := os.user_log_dir(context.temp_allocator)
+	if err != nil {
+		log.warnf(
+			"Failed to get application log file directory. Probably will fall back to cwd. Error msg: \"%s\"",
+			os.error_string(err)
+		)
+		log_dir = ""
+	}
+
+	if !os.exists(log_dir) {
+		err := os.make_directory(log_dir)
+		if err != nil {
+			log.warn("Unable to create log file directory, falling back to cwd")
+		}
+	}
+
+	log_path_str, _ := os.join_path({log_dir, LOG_FILENAME}, context.temp_allocator)
+	return strings.clone_to_cstring(log_path_str)
 }
 
 style_imgui :: proc(scale: f32 = 1) 

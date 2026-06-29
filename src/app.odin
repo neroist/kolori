@@ -68,10 +68,12 @@ main :: proc()
 
 	setup_imgui(&app)
 	defer {
-		delete(app.io.IniFilename)
 		imgui_impl_opengl3.Shutdown()
 		imgui_impl_sdl3.Shutdown()
 		imgui.DestroyContext()
+		delete(app.ini_path)
+		delete(app.log_path)
+		delete(app.slice_colors)
 	}
 
 	delta_time: u64
