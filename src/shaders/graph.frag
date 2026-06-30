@@ -12,7 +12,7 @@ uniform float zoom;
 uniform float lightness;
 uniform float saturation;
 uniform float gamma_correction;
-uniform float slice_interpolation;
+// uniform float slice_interpolation;
 uniform vec2 shift;
 uniform vec3 abcd[4];
 uniform vec2 resolution;
@@ -812,7 +812,9 @@ vec4 color_discrete_slices(vec2 z)
 vec4 color_continuous_slices(vec2 z)
 {
 	float normalized_phase = (atan(z.y, z.x) + PI) / TAU;
-	vec2 texel_coordinate = vec2(normalized_phase, 0.);
+	float num_slices = float(textureSize(slices, 0).x);
+	// float adjusted_phase = smooth_ceil_fast(normalized_phase * num_slices, slice_interpolation) / num_slices;
+	vec2 texel_coordinate = vec2(normalized_phase, 0.); // vec2(adjusted_phase, 0.);
 	return texture(slices, texel_coordinate);
 }
 

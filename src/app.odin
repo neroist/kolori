@@ -165,7 +165,7 @@ get_log_path :: proc (allocator := context.allocator, loc := #caller_location) -
 		log_dir = "."
 	}
 
-	if !os.exists(log_dir) && len(log_dir) != 0 {
+	if !os.exists(log_dir) {
 		err := os.make_directory(log_dir)
 		if err != nil {
 			log.warn("Unable to create log file directory, falling back to cwd")

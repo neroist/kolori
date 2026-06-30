@@ -36,6 +36,7 @@ Uniforms :: struct {
 	gamma_correction: Uniform(f32),
 	saturation:       Uniform(f32),
 	lightness:        Uniform(f32),
+	// slice_interpolation: Uniform(f32),
 }
 
 Uniform :: struct($T: typeid) {
@@ -283,6 +284,7 @@ reload_shaders :: proc(app: ^App_State)
 	app.saturation.loc       = opengl.GetUniformLocation(app.program, "saturation")
 	app.lightness.loc        = opengl.GetUniformLocation(app.program, "lightness")
 	app.gamma_correction.loc = opengl.GetUniformLocation(app.program, "gamma_correction")
+	// app.slice_interpolation.loc = opengl.GetUniformLocation(app.program, "slice_interpolation")
 
 	update_uniform(app.resolution)
 	update_uniform(app.zoom)
@@ -293,6 +295,7 @@ reload_shaders :: proc(app: ^App_State)
 	update_uniform(app.abcd)
 	update_uniform(app.saturation)
 	update_uniform(app.lightness)
+	// update_uniform(app.slice_interpolation)
 
 	opengl.Uniform1i(opengl.GetUniformLocation(app.program, "image"), (i32)(app.image.unit))
 	opengl.Uniform1i(opengl.GetUniformLocation(app.program, "slices"), (i32)(app.slices.unit))

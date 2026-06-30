@@ -154,31 +154,23 @@ setup_imgui :: proc(app: ^App_State)
 	)
 }
 
-/* 
- * read from the `KOLORI_INI_DIRECTORY` environment variable to get where to
- * store the imgui-generated ini file.
- * 
- * if empty, we default to the directory meant for non-essential application
- * data of the user running the program. If we cannot retrieve or create this
- * directory or the user-provided one in the environment variable, we do a
- * final fallback to the current working directory of the process.
- * 
- * if unset, we return nil, implying ui state should not be saved.
- */
 get_ini_path :: proc (allocator := context.allocator, loc := #caller_location) -> cstring
 {
-	ini_dir, found := os.lookup_env("KOLORI_INI_DIRECTORY", context.temp_allocator)
-	if !found {
-		ini_dir, _ = os.user_state_dir(context.temp_allocator)
-	} else if len(ini_dir) == 0 {
+	ini_dir, err := os.user_state_dir(context.temp_allocator)
+	if err != nil {
+		log.warnf(
+			"Failed to get application ini file directory. Disabling ini file. Error msg: \"%s\"",
+			os.error_string(err)
+		)
+
 		return nil
 	}
 
 	if !os.exists(ini_dir) {
 		err := os.make_directory(ini_dir)
 		if err != nil {
-			log.warn("Unable to create ini file directory, falling back to cwd")
-			ini_dir = "."
+			log.warn("Unable to create ini file directory, disabling ini file")
+			return nil
 		}
 	}
 
@@ -441,6 +433,12 @@ coloring_settings :: proc(app: ^App_State)
 		}
 
 		imgui.SeparatorText("Slice Colors")
+
+		// if app.coloring_method == .Use_Continuous_Slices {
+		// 	if imgui.SliderFloat("Interpolation amount", &app.slice_interpolation.val, 0, 1, flags={.ClampOnInput}) {
+		// 		update_uniform(app.slice_interpolation)
+		// 	}
+		// }
 
 		for &color, idx in app.slice_colors {
 			// todo: inelegant
