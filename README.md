@@ -78,6 +78,12 @@ unlike HSL or HSV. How we determine pixel hue and lightness is the same as
 HSL. You are again allowed to change gamma correction constant and color 
 saturation and lightness.
 
+- **Pizza Slices**: A fun name for a simple concept. Imagining the complex 
+plane as a circle, or maybe, a *pizza*, we divide the "pizza" into *n* 
+equally-sized slices, each painted a distinct color. This is useful for 
+categorizing the phase of points on the complex plane, and creating distinct
+partitions of the plane.
+
 - **Custom palette generation**: Input four colors to generate a palette that
 colors the complex plane. Note that, for this coloring mode, only the real
 part of the complex function you put in is evaluated. Pixel colors are 
