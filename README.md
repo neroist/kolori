@@ -66,11 +66,11 @@ We offer several different coloring modes for coloring the complex plane:
 
 - **HSL coloring**: This is the default. The hue of a pixel at a point z is 
 determined by the z's phase, and lightness determined by the function
-*L(z) = 2/pi * atan(|r|^a)*, where "*a*" is a gamma correction constant by default
-set to 0.65. You are given an option to alter the gamma correction constant in
-the UI, in addition to the saturation and lightness of colors. In the future,
-you will be able to alter these functions to e.g. produce contour lines of
-phase or modulus.
+*L(z) = 2/pi * atan(|r|^a)*, where "*a*" is a gamma correction constant by
+default set to 0.65. You are given an option to alter the gamma correction
+constant in the UI, in addition to the saturation and lightness of colors. In
+the future, you will be able to alter these functions to e.g. produce contour
+lines of phase or modulus.
 
 - **HSLuv coloring**: HSLuv is a perceptually uniform alternative to HSL,
 where colors with similar lightness appear similarly bright to the human eye,
@@ -124,15 +124,16 @@ This step only needs to be done once.
 
 > You may also change the default compiler from `clang` to another compiler if
 > need be. We leave such modifications to you. However, in the case that you
-> need to compile with `gcc` instead of `clang`, it is sufficient to do a simple
-> search-and-replace operation on `build.py` in its entirety.
+> need to compile with `gcc` instead of `clang`, it is sufficient to do a
+> simple search-and-replace operation on `build.py` in its entirety.
 
 3. Build stb_image
 ```sh
 $ sudo make -C $(odin root)/vendor/stb/src
 ```
 
-This step (also) only needs to be done once; whether or not you need `sudo` depends on where you installed Odin.
+This step (also) only needs to be done once; whether or not you need `sudo`
+depends on where you installed Odin.
 
 4. Build the project.
 ```sh
