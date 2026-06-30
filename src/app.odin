@@ -136,6 +136,7 @@ get_logger :: proc (log_path: string) -> (logger: log.Logger, is_file_logger: bo
 {
 	when ODIN_DEBUG {
 		logger = log.create_console_logger()
+		logger.options -= {.Date}
 	} else {
 		log_file, err := os.open(log_path, {.Create, .Read, .Write, .Trunc})
 		if err != nil {
@@ -148,7 +149,6 @@ get_logger :: proc (log_path: string) -> (logger: log.Logger, is_file_logger: bo
 	}
 	
 	logger.lowest_level = ODIN_DEBUG ? .Debug : .Info
-	logger.options -= {.Date}
 
 	return 
 }
