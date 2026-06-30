@@ -5,10 +5,12 @@
 # make sure to use relative (or absolute) paths!
 # (e.g. NO: "linuxdeploy.AppImage" YES: "./linuxdeploy.AppImage")
 
+FLAGS :=
 DEBUG_FLAGS := -debug -o:none
 RELEASE_FLAGS := 
 RC :=
 RC_FLAGS :=
+ISCC := iscc
 ISCC_FLAGS := -O. -Q
 ICON_SIZES := 16x16 24x24 32x32 48x48 64x64 128x128 180x180 192x192 256x256 512x512
 SOURCES := $(wildcard ./src/*) $(wildcard ./src/math-parser/*) $(wildcard ./src/shaders/*) $(wildcard ./odin-imgui/*) $(wildcard ./fonts/*) ./favicon/favicon-64x64.png
@@ -61,10 +63,10 @@ debug: kolori_debug
 dist: clean kolori-x86_64.exe kolori-x86_64.AppImage
 
 kolori_debug: $(SOURCES)
-	odin build src $(DEBUG_FLAGS)
+	odin build src $(FLAGS) $(DEBUG_FLAGS)
 
 kolori: $(SOURCES) icon.res
-	odin build src $(RELEASE_FLAGS)
+	odin build src $(FLAGS) $(RELEASE_FLAGS)
 
 icon.res: ./src/icon.rc
 ifeq ($(IS_WINDOWS),1)
@@ -75,7 +77,7 @@ endif
 
 kolori-x86_64.exe: release icon.res $(wildcard ./src/installer/*) LICENSE
 ifeq ($(IS_WINDOWS),1)
-	iscc $(ISCC_FLAGS) ./src/installer/script.iss
+	$(ISCC) $(ISCC_FLAGS) ./src/installer/script.iss
 	rm kolori.exe
 endif
 
