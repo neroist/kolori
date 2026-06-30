@@ -1,9 +1,11 @@
 # please don't read. my god this is a mess.
 
 # for making linux distributables:
-#         `make dist LINUXDEPLOY=... APPIMAGETOOL=..."
-# make sure to use relative (or absolute) paths!
-# (e.g. NO: "linuxdeploy.AppImage" YES: "./linuxdeploy.AppImage")
+#         `make dist LINUXDEPLOY=... APPIMAGETOOL=...`
+# for making the windows installer:
+#         `make dist ISCC=...`
+# if you already have the required tools in your PATH, then feel no need to
+# explicitly declare where they are. Just run `make dist` and sit back!
 
 FLAGS :=
 DEBUG_FLAGS := -debug -o:none
@@ -54,7 +56,7 @@ else
 	RELEASE_FLAGS += -out:kolori
 endif
 
-.PHONY: clean installer
+.PHONY: clean default release debug dist
 .SILENT:
 
 default: release
@@ -75,13 +77,13 @@ endif
 
 ./src/icon.rc: ./favicon/favicon.ico
 
-kolori-x86_64.exe: release icon.res $(wildcard ./src/installer/*) LICENSE
+kolori-x86_64.exe: release icon.res $(wildcard ./src/dist/windows/*) LICENSE
 ifeq ($(IS_WINDOWS),1)
-	$(ISCC) $(ISCC_FLAGS) ./src/installer/script.iss
+	$(ISCC) $(ISCC_FLAGS) ./src/dist/windows/script.iss
 	rm kolori.exe
 endif
 
-kolori-x86_64.AppImage: release $(wildcard ./src/AppImage/*) $(wildcard ./favicon/*)
+kolori-x86_64.AppImage: release $(wildcard ./src/dist/linux/*) $(wildcard ./favicon/*)
 ifneq ($(IS_WINDOWS),1)
 	for i in $(ICON_SIZES); do \
 		mkdir -p ./AppDir/usr/share/icons/hicolor/$$i/apps/; \
@@ -89,12 +91,12 @@ ifneq ($(IS_WINDOWS),1)
 	done
 
 	mkdir -p ./AppDir/usr/share/metainfo/
-	cp ./src/AppImage/io.github.neroist.kolori.appdata.xml ./AppDir/usr/share/metainfo/
+	cp ./src/dist/linux/io.github.neroist.kolori.appdata.xml ./AppDir/usr/share/metainfo/
 
 	# see: https://github.com/linuxdeploy/linuxdeploy/issues/272
 	# was running into this issue on Arch, but not on WSL Ubuntu
 	export NO_STRIP=true; \
-	$(LINUXDEPLOY) -e ./kolori -d ./src/AppImage/io.github.neroist.kolori.desktop --appdir ./AppDir/
+	$(LINUXDEPLOY) -e ./kolori -d ./src/dist/linux/io.github.neroist.kolori.desktop --appdir ./AppDir/
 	$(APPIMAGETOOL) AppDir
 
 	# AppImage created, begin cleaning up artifacts

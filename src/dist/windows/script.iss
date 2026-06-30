@@ -25,7 +25,7 @@ ArchitecturesAllowed=x64compatible
 ; the 64-bit view of the registry.
 ArchitecturesInstallIn64BitMode=x64compatible
 DisableProgramGroupPage=yes
-LicenseFile=..\..\LICENSE
+LicenseFile=..\..\..\LICENSE
 InfoAfterFile=thankyou.txt
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=commandline
@@ -37,8 +37,8 @@ WizardStyle=modern dynamic
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "C:\Users\niko\Downloads\kolori\{#AppExeName}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Users\niko\Downloads\kolori\SDL3.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\..\..\{#AppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\..\..\SDL3.dll"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{autoprograms}\{#AppName}"; Filename: "{app}\{#AppExeName}"

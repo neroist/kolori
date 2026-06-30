@@ -24,5 +24,5 @@ if %release_mode% equ 0 (
 	odin build src -out:kolori.exe -subsystem:windows -extra-linker-flags:icon.res
 
 	REM build installer
-	iscc /O. /Qp ./src/installer/script.iss
+	iscc /O. /Qp ./src/dist/windows/script.iss
 )
