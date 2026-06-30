@@ -2,6 +2,10 @@
 #define AppVersion "0.4.0"
 #define AppPublisher "neroist"
 #define AppURL "https://github.com/neroist/kolori"
+#define AppPublisherURL "https://github.com/neroist"
+#define AppUpdatesURL "https://github.com/neroist/kolori/releases"
+#define AppSupportURL "https://github.com/neroist/kolori/issues/new"
+#define AppReadmeFile "https://github.com/neroist/kolori/blob/main/README.md"
 #define AppExeName "kolori.exe"
 #expr EmitLanguagesSection
 
@@ -11,9 +15,10 @@ AppName={#AppName}
 AppVersion={#AppVersion}
 AppVerName={#AppName} {#AppVersion}
 AppPublisher={#AppPublisher}
-AppPublisherURL={#AppURL}
-AppSupportURL={#AppURL}
-AppUpdatesURL={#AppURL}
+AppPublisherURL={#AppPublisherURL}
+AppUpdatesURL={#AppUpdatesURL}
+AppSupportURL={#AppSupportURL}
+AppReadmeFile={#AppReadmeFile}
 DefaultDirName={autopf}\{#AppName}
 UninstallDisplayIcon={app}\{#AppExeName}
 ; "ArchitecturesAllowed=x64compatible" specifies that Setup cannot run
@@ -29,7 +34,7 @@ LicenseFile=..\..\..\LICENSE
 InfoAfterFile=thankyou.txt
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=commandline
-OutputBaseFilename=kolori-{#AppVersion}-x86_64
+OutputBaseFilename=kolori-x86_64
 SolidCompression=yes
 WizardStyle=modern dynamic
 
