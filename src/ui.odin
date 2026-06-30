@@ -86,8 +86,8 @@ setup_sdl :: proc(app: ^App_State)
 	window_flags := sdl.WindowFlags{.OPENGL, .RESIZABLE, .HIDDEN, .HIGH_PIXEL_DENSITY}
 	app.window = sdl.CreateWindow(
 		"Kolori, from Stardance <3",
-		(i32)(800 * app.main_scale),
-		(i32)(600 * app.main_scale),
+		800, // (i32)(800 * app.main_scale),
+		600, // (i32)(600 * app.main_scale),
 		window_flags,
 	)
 
