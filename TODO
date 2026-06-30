@@ -7,6 +7,7 @@
 - [x] Support adjustment of HSL gamma correction
 - [x] Ability to switch coloring scheme (HSL color space, HSLuv, palette
 generation, etc.)
+- [ ] Statically link SDL3 into the executable
 - [ ] Ability to configure keyboard bindings
 - [ ] Support drawing of level curves (of phase and modulus)
 - [ ] Support drawing of grid
