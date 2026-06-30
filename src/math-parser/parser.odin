@@ -265,7 +265,7 @@ function_call :: proc(p: ^Parser) -> (expr: Expression, report: Maybe(Error_Repo
 		report = new_report(
 			p.tokens[max(0, p.current)],
 			.ExpectedLParen,
-			"Forgot to add opening parenthesis \"(\" when calling function \"%s\".",
+			"Forgot to add opening parenthesis \"(\" when calling function \"%s\"",
 			func_call.name,
 		)
 
@@ -292,7 +292,7 @@ function_call :: proc(p: ^Parser) -> (expr: Expression, report: Maybe(Error_Repo
 		report = new_report(
 			p.tokens[max(0, p.current)],
 			.ExpectedRParen,
-			"Forgot to add closing parenthesis \")\" when calling function \"%s\".",
+			"Forgot to add closing parenthesis \")\" when calling function \"%s\"",
 			func_call.name,
 		)
 

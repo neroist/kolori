@@ -117,6 +117,7 @@ clean:
 	rm -f *.pdb
 	rm -f *.res
 	rm -f *.ini
+	rm -f *.zip
 	rm -f *.AppImage
 	rm -f kolori_screenshot*.png
 	rm -rf AppDir

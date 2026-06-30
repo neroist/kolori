@@ -24,11 +24,11 @@ Error_Report :: struct {
 @(rodata)
 error_message_formats := [Error]string {
 	.None                = "",
-	.UnexpectedCharacter = "Unexpected character \"%s\" at position %i.",
-	.ExpectedLParen      = "Expected opening parenthesis \"(\" at position %i.", // these two arent used?
-	.ExpectedRParen      = "Expected closing parenthesis \")\" at position %i.",
-	.UnexpectedToken     = "Unexpected token \"%s\" at position %i.",
-	.UnexpectedEOF       = "Incomplete expression.",
+	.UnexpectedCharacter = "Unexpected character \"%s\" at position %i",
+	.ExpectedLParen      = "Expected opening parenthesis \"(\" at position %i", // these two arent used?
+	.ExpectedRParen      = "Expected closing parenthesis \")\" at position %i",
+	.UnexpectedToken     = "Unexpected token \"%s\" at position %i",
+	.UnexpectedEOF       = "Incomplete expression",
 }
 
 new_report_default_message :: proc(token: Token, error: Error) -> Error_Report 

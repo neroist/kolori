@@ -66,7 +66,6 @@ funcs := []string {
 @(rodata)
 binary_funcs := []string{"ncr", "mod", "logbase"}
 
-@(private = "file")
 translate_expr :: proc(expr: mp.Expression) -> string 
 {
 	@(static, rodata)
@@ -133,7 +132,7 @@ translate_expr :: proc(expr: mp.Expression) -> string
 	unreachable()
 }
 
-validate_expr :: proc(expr: mp.Expression) -> Maybe(cstring) 
+validate_expr :: proc(expr: mp.Expression) -> cstring
 {
 	switch expr in expr {
 	case ^mp.Variable:
@@ -175,7 +174,7 @@ validate_expr :: proc(expr: mp.Expression) -> Maybe(cstring)
 	unreachable()
 }
 
-validate :: proc(source: cstring) -> Maybe(cstring) 
+validate :: proc(source: cstring) -> cstring
 {
 	// issue in the odin compiler:
 	//

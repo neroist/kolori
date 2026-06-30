@@ -43,7 +43,6 @@ handle_event :: proc(app: ^App_State, event: ^sdl.Event)
 		opengl.Viewport(0, 0, width, height)
 		app.resolution.val = {(f32)(width), (f32)(height)}
 		update_uniform(app.resolution)
-		// opengl.Uniform2f(app.resolution, (f32)(width), (f32)(height))
 	case .KEY_DOWN:
 		if app.io.WantCaptureKeyboard {
 			break
@@ -52,7 +51,7 @@ handle_event :: proc(app: ^App_State, event: ^sdl.Event)
 		handle_key(app, event)
 	case .MOUSE_WHEEL, .PINCH_UPDATE:
 		no_zoom := event.type == .MOUSE_WHEEL ? event.wheel.y == 0 :
-				                                event.pinch.scale == 0
+		                                        event.pinch.scale == 0
 		if app.io.WantCaptureMouse || no_zoom {
 			break
 		}
@@ -78,11 +77,13 @@ handle_event :: proc(app: ^App_State, event: ^sdl.Event)
 		pan(app, {-event.motion.xrel, event.motion.yrel}, speed)
 	case .DROP_FILE:
 		log.infof("Recieved file \"%s\"", event.drop.data)
-		load_image(app, &event.drop.data)
-		load_texture(app, &app.img)
-		stbi.image_free(app.img.pixels)
 
-		if app.img.pixels != nil {
+		load_image(app, &event.drop.data)
+		defer stbi.image_free(app.image_data.pixels)
+
+		load_texture(app.image, &app.image_data)
+
+		if app.image_data.pixels != nil {
 			app.time.val = 0
 			app.animation_paused = false
 			app.coloring_method = .Use_Image
@@ -135,14 +136,14 @@ handle_key :: proc(app: ^App_State, event: ^sdl.Event)
 	case sdl.K_0:
 		app.time.val = 0
 	case sdl.K_H:
-		app.show_ui = !app.show_ui
+		app.hide_ui = !app.hide_ui
 
 		if shift_key {
 			ok: bool
-			if app.show_ui {
-				ok = sdl.ShowCursor()
-			} else {
+			if app.hide_ui {
 				ok = sdl.HideCursor()
+			} else {
+				ok = sdl.ShowCursor()
 			}
 
 			if !ok {
@@ -152,22 +153,18 @@ handle_key :: proc(app: ^App_State, event: ^sdl.Event)
 				)
 			}
 		}
-	case sdl.K_MINUS, sdl.K_Z:
-		zoom(app, ZOOM_SPEED * (shift_key ? ZOOM_SPEED : 1))
-	case sdl.K_EQUALS, sdl.K_X:
-		zoom(app, 1 / ZOOM_SPEED * (shift_key ? 1 / ZOOM_SPEED : 1))
-	case sdl.K_W, sdl.K_UP:
-		pan(app, {0, 1}, PAN_SPEED * (shift_key ? 2 : 1))
-	case sdl.K_A, sdl.K_LEFT:
-		pan(app, {-1, 0}, PAN_SPEED * (shift_key ? 2 : 1))
-	case sdl.K_S, sdl.K_DOWN:
-		pan(app, {0, -1}, PAN_SPEED * (shift_key ? 2 : 1))
-	case sdl.K_D, sdl.K_RIGHT:
-		pan(app, {1, 0}, PAN_SPEED * (shift_key ? 2 : 1))
+	// WASD       | plus and minus keys | "normal controls"
+	// arrow keys | Z/X                 | "rpgmaker-like controls"
+	case sdl.K_MINUS, sdl.K_Z:  zoom(app, ZOOM_SPEED * (shift_key ? ZOOM_SPEED : 1))
+	case sdl.K_EQUALS, sdl.K_X: zoom(app, 1 / ZOOM_SPEED * (shift_key ? 1 / ZOOM_SPEED : 1))
+	case sdl.K_W, sdl.K_UP:     pan(app, {0,  1}, PAN_SPEED * (shift_key ? 2 : 1))
+	case sdl.K_A, sdl.K_LEFT:   pan(app, {-1, 0}, PAN_SPEED * (shift_key ? 2 : 1))
+	case sdl.K_S, sdl.K_DOWN:   pan(app, {0, -1}, PAN_SPEED * (shift_key ? 2 : 1))
+	case sdl.K_D, sdl.K_RIGHT:  pan(app, {1,  0}, PAN_SPEED * (shift_key ? 2 : 1))
 	}
 }
 
-take_screenshot :: proc(window: ^sdl.Window, width, height: i32) 
+take_screenshot :: proc(window: ^sdl.Window, width, height: i32)
 {
 	pixels := make([^]u8, width * height, context.temp_allocator)
 
@@ -183,17 +180,17 @@ take_screenshot :: proc(window: ^sdl.Window, width, height: i32)
 	if ok != 0 {
 		log.info("Saved (%ix%i) screenshot to", width, height, filename)
 	} else {
-		err_msg := stbi.failure_reason()
+		failure_reason := stbi.failure_reason()
 		log.warnf(
-			"[stbi.write_png] Failed to save screenshot. Error msg: \"%s\".",
-			err_msg,
+			"[stbi.write_png] Failed to save screenshot. Reason: \"%s\"",
+			failure_reason,
 		)
 
 		sdl.ShowSimpleMessageBox(
 			{.WARNING},
 			"Failure!",
-			fmt.ctprintf("Failed to save screenshot :(\n\nReason: \"%s\"", err_msg),
-			window
+			fmt.ctprintf("Failed to save screenshot :(\n\nReason: \"%s\"", failure_reason),
+			window,
 		)
 	}
 }
@@ -202,7 +199,6 @@ zoom :: proc(app: ^App_State, speed: f32)
 {
 	app.zoom.val *= speed
 	update_uniform(app.zoom)
-	// opengl.Uniform1f(app.uniforms.zoom, app.zoom)
 }
 
 pan :: proc(app: ^App_State, direction: [2]f32, speed: f32 = 1) 
@@ -214,7 +210,6 @@ pan :: proc(app: ^App_State, direction: [2]f32, speed: f32 = 1)
 	app.shift.val += speed * direction / scale * app.zoom.val
 
 	update_uniform(app.shift)
-	// opengl.Uniform2f(app.uniforms.shift, app.shift.x, app.shift.y)
 }
 
 reset_view :: proc(app: ^App_State) 
@@ -224,8 +219,6 @@ reset_view :: proc(app: ^App_State)
 
 	update_uniform(app.zoom)
 	update_uniform(app.shift)
-	// opengl.Uniform1f(app.uniforms.zoom, app.zoom)
-	// opengl.Uniform2f(app.uniforms.shift, app.shift.x, app.shift.y)
 }
 
 @(private = "file")

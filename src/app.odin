@@ -60,9 +60,9 @@ main :: proc()
 
 	setup_sdl(&app)
 	defer {
-		sdl.GL_DestroyContext(app.gl.ctx)
-		sdl.DestroySurface(app.window_icon)
 		stbi.image_free(app.window_icon.pixels)
+		sdl.DestroySurface(app.window_icon)
+		sdl.GL_DestroyContext(app.gl.ctx)
 		sdl.DestroyWindow(app.window)
 		sdl.Quit()
 	}
@@ -180,14 +180,15 @@ enforce_framerate :: proc(delta: u64, framerate: i32)
 {
 	desired_delta := (u64)(1000 / framerate)
 
-	if (desired_delta > delta) {
+	if desired_delta > delta {
 		sdl.Delay((u32)(desired_delta - delta))
 	}
 }
 
 advance_time :: proc(app: ^App_State, delta: u64) 
 {
-	app.time.val += (f32)(delta) * 1e-3 * app.time_speed
-	// opengl.Uniform1f(app.time.loc, app.time.val * app.time_speed)
+	delta_secs := (f32)(delta) * 1e-3
+	app.time.val += delta_secs * app.time_speed
+
 	update_uniform(app.time)
 }

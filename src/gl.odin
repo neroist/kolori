@@ -8,13 +8,25 @@ import "core:fmt"
 
 GL_State :: struct {
 	using uniforms:   Uniforms,
-	texture:          Texture,
+	image:            Texture,
+	slices:           Texture,
 	ctx:              sdl.GLContext,
 	vao:              u32,
 	program:          u32,
 	vertex_shader_id: u32,
 }
 
+Texture :: struct {
+	id:         u32,
+	unit:       u32,
+	loc:        i32,
+	wrap_s:     i32,
+	wrap_t:     i32,
+	min_filter: i32,
+	mag_filter: i32,
+}
+
+// use `map[string]Uniform` insteas?
 Uniforms :: struct {
 	abcd:             Uniform([4]Color),
 	resolution:       Uniform([2]f32),
@@ -24,14 +36,6 @@ Uniforms :: struct {
 	gamma_correction: Uniform(f32),
 	saturation:       Uniform(f32),
 	lightness:        Uniform(f32),
-}
-
-Texture :: struct {
-	id:         u32,
-	wrap_s:     i32,
-	wrap_t:     i32,
-	min_filter: i32,
-	mag_filter: i32,
 }
 
 Uniform :: struct($T: typeid) {
@@ -60,9 +64,20 @@ setup_gl :: proc(app: ^App_State)
 {
 	app.gl.ctx = sdl.GL_CreateContext(app.window)
 	if app.gl.ctx == nil {
+		err_msg := sdl.GetError()
 		log.fatalf(
 			"[sdl.GL_CreateContext] Failed to create an OpenGL context. Error msg: \"%s\"",
-			sdl.GetError(),
+			err_msg,
+		)
+
+		sdl.ShowSimpleMessageBox(
+			{.ERROR},
+			"Fatal",
+			fmt.ctprintf(
+				"Failed to create an OpenGL context.\n\nError message: \"%s\"",
+				err_msg,
+			),
+			app.window,
 		)
 
 		app.running = false
@@ -77,7 +92,8 @@ setup_gl :: proc(app: ^App_State)
 		context_flags |= sdl.GL_CONTEXT_FORWARD_COMPATIBLE_FLAG
 	}
 
-	// See odin-lang/Odin issue 2123: https://github.com/odin-lang/odin/issues/2123
+	// See odin-lang/Odin issue 2123:
+	// https://github.com/odin-lang/odin/issues/2123
 	sdl.GL_SetAttribute(.CONTEXT_FLAGS, transmute(i32)(context_flags))
 	sdl.GL_SetAttribute(.CONTEXT_PROFILE_MASK, (i32)(sdl.GL_CONTEXT_PROFILE_CORE))
 	sdl.GL_SetAttribute(.CONTEXT_MAJOR_VERSION, GL_MAJOR_VERSION)
@@ -112,13 +128,19 @@ setup_gl :: proc(app: ^App_State)
 	opengl.GenVertexArrays(1, &app.vao)
 	opengl.BindVertexArray(app.vao)
 
-	opengl.GenTextures(1, &app.texture.id)
-	opengl.BindTexture(opengl.TEXTURE_2D, app.texture.id)
-	defer opengl.Uniform1i(opengl.GetUniformLocation(app.program, "tex"), 0)
-	app.texture.wrap_s = opengl.REPEAT
-	app.texture.wrap_t = opengl.REPEAT
-	app.texture.min_filter = opengl.LINEAR_MIPMAP_LINEAR
-	app.texture.mag_filter = opengl.LINEAR
+	opengl.GenTextures(1, &app.image.id)
+	app.image.unit = 0
+	app.image.wrap_s = opengl.REPEAT
+	app.image.wrap_t = opengl.REPEAT
+	app.image.min_filter = opengl.LINEAR_MIPMAP_LINEAR
+	app.image.mag_filter = opengl.LINEAR
+		
+	opengl.GenTextures(1, &app.slices.id)
+	app.slices.unit = 1
+	app.slices.wrap_s = opengl.REPEAT
+	app.slices.wrap_t = opengl.REPEAT
+	app.slices.min_filter = opengl.LINEAR // opengl.NEAREST
+	app.slices.mag_filter = opengl.LINEAR // opengl.NEAREST
 
 	vbo: u32
 	opengl.GenBuffers(1, &vbo)
@@ -130,7 +152,13 @@ setup_gl :: proc(app: ^App_State)
 	ok: bool
 	app.vertex_shader_id, ok = opengl.compile_shader_from_source(VERTEX_SHADER, .VERTEX_SHADER)
 	if !ok {
-		log.fatal("Could not compile vertex shader.")
+		log.fatal("[opengl.compile_shader_from_source] Could not compile vertex shader.")
+		sdl.ShowSimpleMessageBox(
+			{.ERROR},
+			"Fatal",
+			"Could not compile vertex shader.",
+			app.window
+		)
 
 		app.running = false
 		return
@@ -141,9 +169,13 @@ setup_gl :: proc(app: ^App_State)
 
 render_graph :: proc(app: ^App_State) 
 {
-	if app.coloring_method == .Use_Image {
-		opengl.ActiveTexture(opengl.TEXTURE0)
-		opengl.BindTexture(opengl.TEXTURE_2D, app.texture.id)
+	#partial switch app.coloring_method {
+	case .Use_Image:
+		opengl.ActiveTexture(opengl.TEXTURE0 + app.image.unit)
+		opengl.BindTexture(opengl.TEXTURE_2D, app.image.id)
+	case .Use_Discrete_Slices, .Use_Continuous_Slices:
+		opengl.ActiveTexture(opengl.TEXTURE0 + app.slices.unit)
+		opengl.BindTexture(opengl.TEXTURE_2D, app.slices.id)
 	}
 
 	opengl.UseProgram(app.program)
@@ -173,10 +205,12 @@ reload_shaders :: proc(app: ^App_State)
 
 	@(static, rodata)
 	coloring_method_headers := [Coloring_Method]cstring {
-		.Use_HSL     = "#define USE_HSL\n",
-		.Use_HSLuv   = "#define USE_HSLUV\n",
-		.Use_Palette = "#define USE_PALETTE\n",
-		.Use_Image   = "#define USE_IMAGE\n",
+		.Use_HSL                = "#define USE_HSL\n",
+		.Use_HSLuv              = "#define USE_HSLUV\n",
+		.Use_Discrete_Slices    = "#define USE_DISCRETE_SLICES\n",
+		.Use_Continuous_Slices  = "#define USE_CONTINUOUS_SLICES\n",
+		.Use_Palette            = "#define USE_PALETTE\n",
+		.Use_Image              = "#define USE_IMAGE\n",
 	}
 
 	// we all <3 pointer arithmetic!
@@ -259,6 +293,9 @@ reload_shaders :: proc(app: ^App_State)
 	update_uniform(app.abcd)
 	update_uniform(app.saturation)
 	update_uniform(app.lightness)
+
+	opengl.Uniform1i(opengl.GetUniformLocation(app.program, "image"), (i32)(app.image.unit))
+	opengl.Uniform1i(opengl.GetUniformLocation(app.program, "slices"), (i32)(app.slices.unit))
 }
 
 update_uniform_single :: proc (uniform: Uniform(f32))
@@ -298,16 +335,15 @@ update_uniform :: proc {
 	update_uniform_2dvec,
 }
 
-load_texture :: proc(app: ^App_State, img: ^Image_Data) 
+load_texture :: proc(tex: Texture, img: ^Image_Data) 
 {
 	defer {
 		img.is_resident = true
-		log.infof("Uploaded %s image at \"%s\" onto GPU", img.size_str, img.filename)
+		log.debugf("Uploaded %ix%i image at \"%s\" onto GPU", img.size.x, img.size.y, img.filename)
 	}
 
-	opengl.DeleteTextures(1, &app.texture.id)
-	opengl.GenTextures(1, &app.texture.id)
-	opengl.BindTexture(opengl.TEXTURE_2D, app.texture.id)
+	opengl.ActiveTexture(opengl.TEXTURE0 + tex.unit)
+	opengl.BindTexture(opengl.TEXTURE_2D, tex.id)
 
 	// https://stackoverflow.com/a/49126350
 	opengl.PixelStorei(opengl.UNPACK_ALIGNMENT, 1)
@@ -315,15 +351,15 @@ load_texture :: proc(app: ^App_State, img: ^Image_Data)
 	opengl.TexImage2D(
 		opengl.TEXTURE_2D,
 		0,
-		opengl.RGB,
+		opengl.RGB32F,
 		img.size.x,
 		img.size.y,
 		0,
 		opengl.RGB,
-		opengl.UNSIGNED_BYTE,
+		img.type,
 		img.pixels,
 	)
-	set_tex_parameters(app.texture)
+	set_tex_parameters(tex)
 	opengl.GenerateMipmap(opengl.TEXTURE_2D)
 }
 

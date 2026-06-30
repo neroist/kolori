@@ -15,7 +15,8 @@ import "core:log"
 import "core:os"
 
 Ui_State :: struct {
-	img:              Image_Data,
+	image_data:       Image_Data,
+	slice_colors:     [dynamic]Color,
 	window:           ^sdl.Window,
 	window_icon:      ^sdl.Surface,
 	io:               ^imgui.IO,
@@ -28,7 +29,7 @@ Ui_State :: struct {
 	main_scale:       f32,
 	framerate:        i32,
 	animation_paused: bool,
-	show_ui:          bool,
+	hide_ui:          bool,
 	vsync:            bool,
 }
 
@@ -36,14 +37,16 @@ Image_Data :: struct {
 	filename:     string,
 	size:         [2]i32,
 	display_size: [2]f32,
-	pixels:       [^]u8,
-	size_str:     cstring,
+	pixels:       rawptr,
+	type:         u32,
 	is_resident:  bool,
 }
 
 Coloring_Method :: enum i32 {
 	Use_HSL,
 	Use_HSLuv,
+	Use_Discrete_Slices,
+	Use_Continuous_Slices,
 	Use_Palette,
 	Use_Image,
 }
@@ -54,14 +57,17 @@ MAIN_FONT_DATA :: #load("../fonts/DMSans.ttf", []u8)
 MAX_FRAMERATE :: 260
 PREFERRED_IMG_SIZE :: 196 // alternatives: 128, 256
 INI_FILENAME :: "kolori.ini"
-LOG_FILENAME :: "kolori.log"
 
 setup_sdl :: proc(app: ^App_State) 
 {
-	_ = sdl.SetAppMetadata("Kolori", "0.2.0", "io.github.neroist.kolori")
+	_ = sdl.SetAppMetadata("Kolori", "0.4.0", "io.github.neroist.kolori")
 	_ = sdl.SetAppMetadataProperty(
-		sdl.PROP_APP_METADATA_URL_STRING,
-		"https://github.com/neroist/kolori",
+		sdl.PROP_APP_METADATA_CREATOR_STRING,
+		"neroist",
+	)
+	_ = sdl.SetAppMetadataProperty(
+		sdl.PROP_APP_METADATA_TYPE_STRING,
+		"application",
 	)
 
 	if !sdl.Init({.VIDEO}) {
@@ -71,11 +77,11 @@ setup_sdl :: proc(app: ^App_State)
 		return
 	}
 
-	primary_display := sdl.GetPrimaryDisplay()
-	app.main_scale = sdl.GetDisplayContentScale(primary_display)
-	if app.main_scale == 0 {
-		app.main_scale = 1
-	}
+	// primary_display := sdl.GetPrimaryDisplay()
+	// app.main_scale = sdl.GetDisplayContentScale(primary_display)
+	// if app.main_scale == 0 {
+	// 	app.main_scale = 1
+	// }
 
 	window_flags := sdl.WindowFlags{.OPENGL, .RESIZABLE, .HIDDEN, .HIGH_PIXEL_DENSITY}
 	app.window = sdl.CreateWindow(
@@ -199,7 +205,7 @@ style_imgui :: proc(scale: f32 = 1)
 
 draw_ui :: proc(app: ^App_State) 
 {
-	if !app.show_ui {
+	if app.hide_ui {
 		return
 	}
 
@@ -221,34 +227,36 @@ draw_ui :: proc(app: ^App_State)
 
 function_input :: proc(app: ^App_State) 
 {
-	@(static) failure: bool
+	// default to true, else we get a seg fault as `app.err_msg` is nil
+	@(static) ok_input := true
 
 	imgui.PushFontFloat(app.math_font, 22)
 	imgui.Text("f(z) =")
 	imgui.PopFont()
 
+	// ensure proper spacing between the text "f(z) =" and the following text
+	// input
 	imgui.SameLine(62.5)
 
-	if imgui.InputText("##function", app.function, FUNCTION_BUF_SIZE) {
-		err: cstring
-		err, failure = validate(app.function).?
+	if imgui.InputText("##function", (app.function), FUNCTION_BUF_SIZE) {
+		new_err_msg := validate(app.function)
+		ok_input = (new_err_msg == nil)
 
-		if !failure {
-			// if the function hasn't changed since 
-			// last time do we really need to do this?
+		if ok_input {
 			app.time.val = 0
 			app.animation_paused = false
 			reload_shaders(app)
-		} else if err != app.err_msg {
+		} else if new_err_msg != app.err_msg {
 			delete(app.err_msg)
-			app.err_msg = err
+			app.err_msg = new_err_msg
 		} else {
-			delete(err)
+			delete(new_err_msg)
 		}
 	}
 
-	if failure {
-		imgui.PushStyleColorImVec4(.Text, [4]f32{255, 0, 0, 255})
+	if !ok_input {
+		RED :: 0xFF_00_00_FF
+		imgui.PushStyleColor(.Text, RED)
 		imgui.TextWrapped(app.err_msg)
 		imgui.PopStyleColor()
 	}
@@ -288,6 +296,12 @@ animation_settings :: proc(app: ^App_State)
 		
 		if !ok {
 			log.warnf("Failed to change swap interval. Error msg: \"%s\"", sdl.GetError())
+
+			// the ImGui checkbox toggles the `app.vsync` boolean when it is
+			// clicked
+			// 
+			// since we have failed to actually to set/unset vsync, we undo
+			// the toggling of the boolean here
 			app.vsync = !app.vsync
 		}
 	}
@@ -304,16 +318,75 @@ animation_settings :: proc(app: ^App_State)
 
 coloring_settings :: proc(app: ^App_State) 
 {
+	rand_color :: proc() -> (color: Color) 
+	{
+		color.r = rand.float32()
+		color.g = rand.float32()
+		color.b = rand.float32()
+		return
+	}
+	
+	center_next_widget :: proc(width: f32)
+	{
+		avail := imgui.GetContentRegionAvail().x
+		off := max((avail - width) / 2, 0)
+		imgui.SetCursorPosX(imgui.GetCursorPosX() + off)
+	}
+	
+	centered_button :: proc(label: cstring) -> bool
+	{
+		frame_padding := imgui.GetStyle().FramePadding.x
+		width := imgui.CalcTextSize(label).x + frame_padding + 2
+		center_next_widget(width)
+		return imgui.Button(label)
+	}
+	
+	num_digits :: proc(#any_int n: int) -> f32
+	{
+		return math.trunc(math.log10((f32)(n))) + 1
+	}
+
 	if !imgui.CollapsingHeader("Coloring Settings", {.DefaultOpen}) {
 		return
 	}
 
-	combo_items: cstring = "HSL Coloring\x00HSLuv Coloring\x00Custom Color Palette\x00Use an Image\x00"
+	combo_labels := [Coloring_Method]cstring{
+		.Use_HSL = "HSL Coloring",
+		.Use_HSLuv = "HSLuv Coloring",
+		.Use_Discrete_Slices = "Pizza Slices",
+		.Use_Continuous_Slices = "Pizza Slices",
+		.Use_Palette = "Custom Color Palette",
+		.Use_Image = "Use an Image",
+	}
 
-	if imgui.Combo("Coloring Method", (^i32)(&app.coloring_method), combo_items) {
-		app.time.val = 0
-		app.animation_paused = false
-		reload_shaders(app)
+	// which `Use_*_Slices` item to skip
+	//
+	// used to help with persisting the coloring method when its one of the
+	// *_slices coloring methods
+	@static skip := bit_set[Coloring_Method]{.Use_Continuous_Slices}
+
+	if imgui.BeginCombo("##coloring_method_combo", combo_labels[app.coloring_method]) {
+		defer imgui.EndCombo()
+
+		for label, method in combo_labels {
+			// we don't want the same label to come up twice
+			if method in skip {
+				continue
+			}
+
+			item_is_selected := app.coloring_method == method
+
+			if imgui.Selectable(label, item_is_selected) {
+				app.time.val = 0
+				app.animation_paused = false
+				app.coloring_method = method
+				reload_shaders(app)
+			}
+
+			if item_is_selected {
+				imgui.SetItemDefaultFocus()
+			}
+		}
 	}
 
 	imgui.SeparatorText("Configuration")
@@ -321,28 +394,90 @@ coloring_settings :: proc(app: ^App_State)
 	switch app.coloring_method {
 	case .Use_HSL, .Use_HSLuv:
 		if imgui.SliderFloat("Saturation", &app.saturation.val, 0, 100, "%.1f%%") {
-			// opengl.Uniform1f(app.saturation, app.saturation)
 			update_uniform(app.saturation)
 		}
 
 		if imgui.SliderFloat("Lightness", &app.lightness.val, 0, 100, "%.1f%%") {
-			// opengl.Uniform1f(app.lightness, app.lightness)
 			update_uniform(app.lightness)
 		}
 
 		if imgui.SliderFloat("Gamma Correction", &app.gamma_correction.val, -1, 1) {
-			// opengl.Uniform1f(app.gamma_correction, app.gamma_correction)
 			update_uniform(app.gamma_correction)
 		}
-	case .Use_Palette:
-		rand_color :: proc() -> (color: Color) 
-		{
-			color.r = rand.float32()
-			color.g = rand.float32()
-			color.b = rand.float32()
-			return
+	case .Use_Discrete_Slices, .Use_Continuous_Slices:
+		update_slices: bool
+		defer if update_slices {
+			img_data: Image_Data
+			img_data.filename = "slice_colors"
+			img_data.size = {(i32)(len(app.slice_colors)), 1}
+			img_data.pixels = raw_data(app.slice_colors)
+			img_data.type = opengl.FLOAT
+
+			load_texture(app.slices, &img_data)
 		}
 
+		if imgui.RadioButtonIntPtr(
+			"Discrete",
+			(^i32)(&app.coloring_method),
+			(i32)(Coloring_Method.Use_Discrete_Slices),
+		) {
+			app.time.val = 0
+			app.animation_paused = false
+			skip -= {.Use_Discrete_Slices}
+			skip += {.Use_Continuous_Slices}
+			reload_shaders(app)
+		}
+		imgui.SameLine()
+		if imgui.RadioButtonIntPtr(
+			"Continuous",
+			(^i32)(&app.coloring_method),
+			(i32)(Coloring_Method.Use_Continuous_Slices)
+		) {
+			app.time.val = 0
+			app.animation_paused = false
+			skip -= {.Use_Continuous_Slices}
+			skip += {.Use_Discrete_Slices}
+			reload_shaders(app)
+		}
+
+		imgui.SeparatorText("Slice Colors")
+
+		for &color, idx in app.slice_colors {
+			// todo: inelegant
+			// note: limits max # of colors to 256
+			id: [10]u8
+			id[0] = '#'
+			id[1] = '#'
+			id[2] = (u8)(idx)
+			update_slices |= imgui.ColorEdit3(transmute(cstring)(&id), &color, {.Uint8})
+			
+			id[0] = '-'
+			id[1] = '#'
+			id[2] = '#'
+			id[3] = (u8)(idx)
+			imgui.SameLine()
+			if imgui.Button(transmute(cstring)(&id)) {
+				ordered_remove(&app.slice_colors, idx)
+				update_slices = true
+			}
+
+			id = {'R','a','n','d','o','m','#','#',(u8)(idx),0}
+			imgui.SameLine()
+			if imgui.Button(transmute(cstring)(&id)) {
+				color = rand_color()
+				update_slices = true
+			}
+		}
+
+		if centered_button("Add Color") {
+			if len(app.slice_colors) >= 255 {
+				break
+			}
+
+			update_slices = true
+			append(&app.slice_colors, Color{0.0, 0.0, 0.0})
+		}
+	case .Use_Palette:
 		flags := imgui.ColorEditFlags{.InputRGB, .Uint8}
 		colors_changed :=
 			imgui.ColorEdit3("A", &app.abcd.val[0], flags) |
@@ -360,27 +495,26 @@ coloring_settings :: proc(app: ^App_State)
 		}
 
 		if colors_changed {
-			// opengl.Uniform3fv(app.uniforms.abcd, 4, ([^]f32)(&app.abcd))
 			update_uniform(app.abcd)
 		}
 	case .Use_Image:
-		if !app.img.is_resident && app.img.pixels != nil {
-			load_texture(app, &app.img)
-			stbi.image_free(app.img.pixels)
+		if !app.image_data.is_resident && app.image_data.pixels != nil {
+			load_texture(app.image, &app.image_data)
+			stbi.image_free(app.image_data.pixels)
 		}
 
-		if app.img.is_resident {
+		if app.image_data.is_resident {
 			// horizontally center image
-			imgui.SetCursorPosX((imgui.GetWindowSize().x - app.img.display_size.x) * 0.5)
+			imgui.SetCursorPosX((imgui.GetWindowSize().x - app.image_data.display_size.x) * 0.5)
 
-			tex_ref := imgui.TextureRef {
-				_TexID = (imgui.TextureID)(app.texture.id),
-			}
-			imgui.Image(tex_ref, app.img.display_size, {0, 1}, {1, 0})
+			tex_ref := imgui.TextureRef { _TexID = (imgui.TextureID)(app.image.id) }
+			imgui.Image(tex_ref, app.image_data.display_size, {0, 1}, {1, 0})
 
-			imgui.PushStyleVarImVec2(.SelectableTextAlign, {0.5, 0.5})
-			imgui.Selectable(app.img.size_str)
-			imgui.PopStyleVar()
+			// todo: this obviously doesn't work, and its dumb to have even
+			// thought of
+			text_len := num_digits(app.image_data.size.x) + num_digits(app.image_data.size.y) + 1
+			center_next_widget(text_len)
+			imgui.Text("%ix%i", app.image_data.size.x, app.image_data.size.y)
 		}
 
 		if imgui.Button("Choose Image") {
@@ -392,7 +526,8 @@ coloring_settings :: proc(app: ^App_State)
 			}
 
 			// multi-threaded on windows, so we can't use opengl functions in
-			// the dialog callback.
+			// the dialog callback
+			//
 			// also not asan friendly on windows
 			sdl.ShowOpenFileDialog(
 				load_image,
@@ -407,36 +542,36 @@ coloring_settings :: proc(app: ^App_State)
 
 		imgui.SeparatorText("Image Settings")
 
-		upd_tex_params: bool
-		defer if upd_tex_params {
-			set_tex_parameters(app.texture)
+		update_tex_params: bool
+		defer if update_tex_params {
+			set_tex_parameters(app.image)
 		}
 
 		imgui.Text("Horizontal Repeat:")
 		imgui.SameLine()
-		upd_tex_params |= imgui.RadioButtonIntPtr(
+		update_tex_params |= imgui.RadioButtonIntPtr(
 			"Normal##norm_wrap_s",
-			&app.texture.wrap_s,
+			&app.image.wrap_s,
 			opengl.REPEAT,
 		)
 		imgui.SameLine()
-		upd_tex_params |= imgui.RadioButtonIntPtr(
+		update_tex_params |= imgui.RadioButtonIntPtr(
 			"Mirrored##mirr_wrap_s",
-			&app.texture.wrap_s,
+			&app.image.wrap_s,
 			opengl.MIRRORED_REPEAT,
 		)
 
 		imgui.Text("Vertical Repeat:")
 		imgui.SameLine()
-		upd_tex_params |= imgui.RadioButtonIntPtr(
+		update_tex_params |= imgui.RadioButtonIntPtr(
 			"Normal##norm_wrap_t",
-			&app.texture.wrap_t,
+			&app.image.wrap_t,
 			opengl.REPEAT,
 		)
 		imgui.SameLine()
-		upd_tex_params |= imgui.RadioButtonIntPtr(
+		update_tex_params |= imgui.RadioButtonIntPtr(
 			"Mirrored##mirr_wrap_t",
-			&app.texture.wrap_t,
+			&app.image.wrap_t,
 			opengl.MIRRORED_REPEAT,
 		)
 
@@ -445,53 +580,61 @@ coloring_settings :: proc(app: ^App_State)
 	}
 }
 
+// used both as a callback for `sdl.ShowOpenFileDialog` and as a regular
+// function to load image data into `app.image_data`
 load_image :: proc "c" (app_ptr: rawptr, filelist: [^]cstring, filter: i32 = 0) 
 {
 	if filelist == nil || filelist[0] == nil {
 		return
 	}
 
+	// for logging
 	context = runtime.default_context()
-	app := (^App_State)(app_ptr)
+
+	// we mostly deal with `image_data`, but we need access to the main window
+	// to display an error popup if the image failed to load, for whatever
+	// reason
+	app := (^App_State)(app_ptr) 
 
 	stbi.set_flip_vertically_on_load(1)
-	app.img.filename = strings.clone_from_cstring(filelist[0])
-	app.img.pixels = stbi.load(filelist[0], &app.img.size.x, &app.img.size.y, nil, 3)
-	app.img.is_resident = false
+	app.image_data.filename = strings.clone_from_cstring(filelist[0])
+	app.image_data.pixels = stbi.load(filelist[0], &app.image_data.size.x, &app.image_data.size.y, nil, 3)
+	app.image_data.type = opengl.UNSIGNED_BYTE
+	app.image_data.is_resident = false
 
-	if app.img.pixels != nil {
-		delete(app.img.size_str)
-		app.img.size_str = fmt.caprintf("%ix%i", app.img.size.x, app.img.size.y)
-
+	if app.image_data.pixels != nil {
 		// preserve aspect ratio while resizing to preferred size
-		app.img.display_size = ([2]f32)(app.img.size)
-		if (app.img.size.x >= PREFERRED_IMG_SIZE) || (app.img.size.y >= PREFERRED_IMG_SIZE) {
-			scale_by := PREFERRED_IMG_SIZE / (f32)(max(app.img.size.x, app.img.size.y))
-			app.img.display_size *= scale_by
+		app.image_data.display_size = ([2]f32)(app.image_data.size)
+		if (app.image_data.size.x >= PREFERRED_IMG_SIZE) ||
+		   (app.image_data.size.y >= PREFERRED_IMG_SIZE) {
+			// we want to resize by the minimum amount, to avoid distorting
+			// the image as much as possible
+			longest_side := (f32)(max(app.image_data.size.x, app.image_data.size.y))
+			scale_by := PREFERRED_IMG_SIZE / longest_side
+			app.image_data.display_size *= scale_by
 		}
 
-		log.infof("Loaded %s image at \"%s\" from disk", app.img.size_str, app.img.filename)
+		log.infof(
+			"Loaded %ix%i image at \"%s\" from disk",
+			app.image_data.size.x,
+			app.image_data.size.y,
+			app.image_data.filename
+		)
 	} else {
+		failure_reason := stbi.failure_reason() // not threadsafe?
+
+		log.warnf(
+			"Failed to load the image file \"%s\". Reason: \"%s\"",
+			filelist[0],
+			failure_reason,
+		)
+
 		msg := fmt.ctprintf(
 			"Failed to load the image file \"%s\".\n\nReason:\"%s\"",
 			filelist[0],
-			stbi.failure_reason(), // not threadsafe?
+			failure_reason,
 		)
 
 		sdl.ShowSimpleMessageBox({.WARNING}, "Could not load image", msg, app.window)
 	}
 }
-
-/*
-window_size_in_px :: proc (win: ^sdl.Window) -> (w, h: i32)
-{
-	sdl.GetWindowSizeInPixels(win, &w, &h)
-	return w, h
-}
-
-window_size :: proc (win: ^sdl.Window) -> (w, h: i32)
-{
-	sdl.GetWindowSize(win, &w, &h)
-	return w, h
-}
-*/
