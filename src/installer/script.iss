@@ -1,5 +1,5 @@
 #define AppName "Kolori"
-#define AppVersion "0.3.0"
+#define AppVersion "0.4.0"
 #define AppPublisher "neroist"
 #define AppURL "https://github.com/neroist/kolori"
 #define AppExeName "kolori.exe"
