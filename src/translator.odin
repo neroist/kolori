@@ -20,6 +20,8 @@ funcs := []string {
 	"ceil",
 	"frac",
 	"trunc",
+	"min", // by magnitude
+	"max", // ditto
 	"real",
 	"re", // synonym for "real"
 	"imag",
@@ -64,7 +66,7 @@ funcs := []string {
 
 // functions that require two arguments
 @(rodata)
-binary_funcs := []string{"ncr", "mod", "logbase"}
+binary_funcs := []string{"ncr", "mod", "min", "max", "logbase"}
 
 translate_expr :: proc(expr: mp.Expression) -> string 
 {

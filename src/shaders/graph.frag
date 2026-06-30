@@ -749,6 +749,18 @@ vec2 c_ncr(vec2 z, vec2 w)
 	return c_div(c_gamma(z + vec2(1., 0.)), c_mul(c_gamma(w + vec2(1., 0.)), c_gamma(z - w + vec2(1., 0.))));
 }
 
+vec2 c_min(vec2 z, vec2 w)
+{
+	if (length(z) < length(w)) return z;
+	else return w;
+}
+
+vec2 c_max(vec2 z, vec2 w)
+{
+	if (length(z) > length(w)) return z;
+	else return w;
+}
+
 /* See: https://math.stackexchange.com/q/3741957 */
 // k in [0, 1)
 float smooth_ceil_long(float x, float k)
