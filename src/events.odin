@@ -166,7 +166,7 @@ handle_key :: proc(app: ^App_State, event: ^sdl.Event)
 
 take_screenshot :: proc(window: ^sdl.Window, width, height: i32)
 {
-	pixels := make([^]u8, width * height, context.temp_allocator)
+	pixels := make([^]u8, width * height * 3, context.temp_allocator)
 
 	opengl.ReadBuffer(opengl.BACK)
 	opengl.PixelStorei(opengl.PACK_ALIGNMENT, 1)
@@ -178,7 +178,7 @@ take_screenshot :: proc(window: ^sdl.Window, width, height: i32)
 	ok := stbi.write_png(filename, width, height, 3, pixels, width*3)
 
 	if ok != 0 {
-		log.info("Saved (%ix%i) screenshot to", width, height, filename)
+		log.infof("Saved (%ix%i) screenshot to \"%s\"", width, height, filename)
 	} else {
 		failure_reason := stbi.failure_reason()
 		log.warnf(
